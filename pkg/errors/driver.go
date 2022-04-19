@@ -25,7 +25,7 @@ var (
 	errInvalidDSNUnsafeCollation = errors.New("invalid DSN: interpolateParams can not be used with unsafe collations")
 
 	ErrInvalidConn       = errors.New("invalid connection")
-	ErrMalformPkt        = errors.New("malformed packet")
+	ErrMalformedPkt      = errors.New("malformed packet")
 	ErrNoTLS             = errors.New("TLS requested but server does not support TLS")
 	ErrCleartextPassword = errors.New("this user requires clear text authentication. If you still want to use it, please add 'allowCleartextPasswords=1' to your DSN")
 	ErrNativePassword    = errors.New("this user requires mysql native password authentication.")
