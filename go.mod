@@ -11,8 +11,10 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/pingcap/check v0.0.0-20211026125417-57bd13f7b5f0
-	github.com/pingcap/errors v0.11.4
+	github.com/pingcap/errors v0.11.5-0.20211009033009-93128226aaa3
 	github.com/pingcap/log v0.0.0-20211215031037-e024ba4eb0ee
+	github.com/pingcap/parser v0.0.0-20210831085004-b5390aa83f65
+	github.com/pingcap/tidb v1.1.0-beta.0.20211201034153-ae76eac96fb6
 	github.com/pkg/errors v0.8.1
 	github.com/stretchr/testify v1.7.0
 	go.uber.org/zap v1.21.0
