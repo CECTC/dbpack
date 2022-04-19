@@ -18,6 +18,9 @@ jobs:
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v1
+        with:
+          persist-credentials: false
+          submodules: true
       - name: golangci-lint
         uses: ./.github/actions/review-dog
         with:
