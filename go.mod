@@ -16,6 +16,7 @@ require (
 	github.com/pingcap/tidb v1.1.0-beta.0.20211201034153-ae76eac96fb6
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
+	github.com/valyala/fasthttp v1.6.0
 	go.uber.org/goleak v1.1.11
 	go.uber.org/zap v1.21.0
 	golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420
@@ -120,6 +121,7 @@ require (
 	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
 	github.com/unrolled/render v1.0.1 // indirect
 	github.com/urfave/negroni v1.0.0 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/wangjohn/quickselect v0.0.0-20161129230411-ed8402a42d5f // indirect
 	github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2 // indirect
 	go.etcd.io/bbolt v1.3.5 // indirect
