@@ -1,0 +1,314 @@
+/*
+ * Copyright 2022 CECTC, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package api;
+
+import "gogo.proto";
+
+option go_package=".;api";
+
+enum ResultCode {
+    ResultCodeFailed = 0;
+    ResultCodeSuccess = 1;
+}
+
+message GlobalSession {
+    enum GlobalStatus {
+        // Un known global status.
+        UnknownGlobalStatus = 0;
+
+        // PHASE 1: can accept new branch registering.
+        Begin = 1;
+
+        // PHASE 2: Running Status: may be changed any time.
+        Committing = 2;
+
+        // Retrying commit after a recoverable failure.
+        CommitRetrying = 3;
+
+        // Rolling back global status.
+        RollingBack = 4;
+
+        // Retrying rollback after a recoverable failure.
+        RollbackRetrying = 5;
+
+        // Rolling back since timeout
+        TimeoutRollingBack = 6;
+
+        // Retrying rollback (since timeout) after a recoverable failure.
+        TimeoutRollbackRetrying = 7;
+
+        // All branches can be async committed. The committing is NOT done yet, but it can be seen as committed for TM/RM rpc_client.
+        AsyncCommitting = 8;
+
+        // Finally: global transaction is successfully committed.
+        Committed = 9;
+
+        // Finally: failed to commit
+        CommitFailed = 10;
+
+        // Finally: global transaction is successfully rollback.
+        RolledBack = 11;
+
+        // Finally: failed to rollback
+        RollbackFailed = 12;
+
+        // Finally: global transaction is successfully rollback since timeout.
+        TimeoutRolledBack = 13;
+
+        // Finally: global transaction rollback failed since timeout.
+        TimeoutRollbackFailed = 14;
+
+        // The Finished.
+        Finished = 15;
+    }
+
+    string Addressing = 1 [(gogoproto.moretags) = "xorm:\"addressing\""];
+    string XID = 2 [(gogoproto.moretags) = "xorm:\"xid\""];
+    int64 TransactionID = 3 [(gogoproto.moretags) = "xorm:\"transaction_id\""];
+    string TransactionName = 4 [(gogoproto.moretags) = "xorm:\"transaction_name\""];
+    int32 Timeout = 5 [(gogoproto.moretags) = "xorm:\"timeout\""];
+    int64 BeginTime = 6 [(gogoproto.moretags) = "xorm:\"begin_time\""];
+    GlobalStatus Status = 7 [(gogoproto.moretags) = "xorm:\"status\""];
+    bool Active = 8 [(gogoproto.moretags) = "xorm:\"active\""];
+}
+
+message BranchSession {
+    enum BranchType {
+        AT = 0;
+
+        TCC = 1;
+
+        SAGA = 2;
+
+        XA = 3;
+    }
+
+    enum BranchStatus {
+        // description:BranchStatus_Unknown branch status.
+        UnknownBranchStatus = 0;
+
+        // description:BranchStatus_Registered to TC.
+        Registered = 1;
+
+        // The Phase one done.
+        PhaseOneDone = 2;
+
+        // The Phase one failed.
+        PhaseOneFailed = 3;
+
+        // The Phase one timeout.
+        PhaseOneTimeout = 4;
+
+        // The Phase two committed.
+        PhaseTwoCommitted = 5;
+
+        // The Phase two commit failed retryable.
+        PhaseTwoCommitFailedRetryable = 6;
+
+        // The Phase two commit failed and can not retry.
+        PhaseTwoCommitFailedCanNotRetry = 7;
+
+        // The Phase two rollback completed.
+        PhaseTwoRolledBack = 8;
+
+        // The Phase two rollback failed retryable.
+        PhaseTwoRollbackFailedRetryable = 9;
+
+        // The Phase two rollback failed and can not retry.
+        PhaseTwoRollbackFailedCanNotRetry = 10;
+    }
+
+    string Addressing = 1 [(gogoproto.moretags) = "xorm:\"addressing\""];
+    string XID = 2 [(gogoproto.moretags) = "xorm:\"xid\""];
+    int64 BranchID = 3 [(gogoproto.moretags) = "xorm:\"branch_id\""];
+    int64 TransactionID = 4 [(gogoproto.moretags) = "xorm:\"transaction_id\""];
+    string ResourceID = 5 [(gogoproto.moretags) = "xorm:\"resource_id\""];
+    string LockKey = 6 [(gogoproto.moretags) = "xorm:\"lock_key\""];
+    BranchType Type = 7 [(gogoproto.moretags) = "xorm:\"branch_type\""];
+    BranchStatus Status = 8 [(gogoproto.moretags) = "xorm:\"status\""];
+    bytes ApplicationData = 9 [(gogoproto.moretags) = "xorm:\"application_data\""];
+    // if BranchType is AT, this field default is true
+    bool Async = 10 [(gogoproto.moretags) = "xorm:\"async\""];
+    // if BranchType is AT, this field must assign a value
+    bool SkipCheckLock = 11;
+}
+
+/* GlobalBeginRequest represents a global transaction begin */
+message GlobalBeginRequest {
+    string Addressing = 1;
+    int32 Timeout = 2;
+    string TransactionName = 3;
+}
+
+/* GlobalBeginResponse represents a response to GlobalBeginRequest */
+message GlobalBeginResponse {
+    ResultCode ResultCode = 1;
+    string Message = 2;
+    string XID = 3;
+}
+
+/* BranchRegisterRequest represents a branch transaction join in the global transaction */
+message BranchRegisterRequest {
+    string Addressing = 1;
+    string XID = 2;
+    string ResourceID = 3;
+    string LockKey = 4;
+    BranchSession.BranchType BranchType = 5;
+    bytes ApplicationData = 6;
+    bool Async = 7;
+}
+
+/* BranchRegisterResponse represents a response to BranchRegisterRequest */
+message BranchRegisterResponse {
+    ResultCode ResultCode = 1;
+    string Message = 2;
+    int64 BranchID = 3;
+}
+
+/* BranchReportRequest represents a request to report branch transaction execution status */
+message BranchReportRequest {
+    string XID = 1;
+    int64 BranchID = 2;
+    string ResourceID = 3;
+    BranchSession.BranchType BranchType = 4;
+    BranchSession.BranchStatus BranchStatus = 5;
+    bytes ApplicationData = 6;
+}
+
+/* BranchReportResponse represents a response to BranchReportRequest */
+message BranchReportResponse {
+    ResultCode ResultCode = 1;
+    string Message = 2;
+}
+
+/* GlobalLockQueryRequest represents a request to query the global lock */
+message GlobalLockQueryRequest {
+    string XID = 1;
+    string ResourceID = 2;
+    string LockKey = 3;
+    BranchSession.BranchType BranchType = 4;
+}
+
+/* GlobalLockQueryResponse represents a response to GlobalLockQueryRequest */
+message GlobalLockQueryResponse {
+    ResultCode ResultCode = 1;
+    string Message = 2;
+    bool Lockable = 3;
+}
+
+/* GlobalStatusRequest represents a request to query the global transaction status */
+message GlobalStatusRequest {
+    string XID = 1;
+}
+
+/* GlobalStatusResponse represents a response to GlobalStatusRequest */
+message GlobalStatusResponse {
+    ResultCode ResultCode = 1;
+    string Message = 2;
+    GlobalSession.GlobalStatus GlobalStatus = 3;
+}
+
+/* GlobalCommitRequest represents a request to commit global transaction */
+message GlobalCommitRequest {
+    string XID = 1;
+}
+
+/* GlobalCommitResponse represents a response to GlobalCommitRequest */
+message GlobalCommitResponse {
+    ResultCode ResultCode = 1;
+    string Message = 2;
+    GlobalSession.GlobalStatus GlobalStatus = 3;
+}
+
+/* GlobalRollbackRequest represents a request to rollback global transaction */
+message GlobalRollbackRequest {
+    string XID = 1;
+}
+
+/* GlobalRollbackResponse represents a response to GlobalRollbackRequest */
+message GlobalRollbackResponse {
+    ResultCode ResultCode = 1;
+    string Message = 2;
+    GlobalSession.GlobalStatus GlobalStatus = 3;
+}
+
+/* GlobalReportRequest represents a request to report global transaction execution status */
+message GlobalReportRequest {
+    string XID = 1;
+    GlobalSession.GlobalStatus GlobalStatus = 2;
+}
+
+/* GlobalReportResponse represents a response to GlobalReportRequest */
+message GlobalReportResponse {
+    ResultCode ResultCode = 1;
+    string Message = 2;
+    GlobalSession.GlobalStatus GlobalStatus = 3;
+}
+
+/* BranchCommitRequest represents a request to commit branch transaction */
+message BranchCommitRequest {
+    string XID = 1;
+    int64 BranchID = 2;
+    string ResourceID = 3;
+    string LockKey = 4;
+    BranchSession.BranchType BranchType = 5;
+    bytes ApplicationData = 6;
+}
+
+/* BranchCommitResponse represents a response to BranchCommitRequest */
+message BranchCommitResponse {
+    ResultCode ResultCode = 1;
+    string Message = 2;
+    string XID = 3;
+    int64 BranchID = 4;
+    BranchSession.BranchStatus BranchStatus = 5;
+}
+
+/* BranchCommitRequest represents a request to rollback branch transaction */
+message BranchRollbackRequest {
+    string XID = 1;
+    int64 BranchID = 2;
+    string ResourceID = 3;
+    string LockKey = 4;
+    BranchSession.BranchType BranchType = 5;
+    bytes ApplicationData = 6;
+}
+
+/* BranchRollbackResponse represents a response to BranchRollbackRequest */
+message BranchRollbackResponse {
+    ResultCode ResultCode = 1;
+    string Message = 2;
+    string XID = 3;
+    int64 BranchID = 4;
+    BranchSession.BranchStatus BranchStatus = 5;
+    repeated string LockKeys = 6;
+}
+
+service TransactionManagerService {
+    rpc Begin(GlobalBeginRequest) returns (GlobalBeginResponse);
+    rpc Commit(GlobalCommitRequest) returns (GlobalCommitResponse);
+    rpc Rollback(GlobalRollbackRequest) returns (GlobalRollbackResponse);
+    rpc BranchRegister(BranchRegisterRequest) returns (BranchRegisterResponse);
+    rpc BranchReport(BranchReportRequest) returns (BranchReportResponse);
+}
+
+service ResourceManagerService {
+    rpc BranchCommit(BranchCommitRequest) returns (BranchCommitResponse);
+    rpc BranchRollback(BranchRollbackRequest) returns (BranchRollbackResponse);
+}
