@@ -25,10 +25,10 @@
 
 ![architecture](https://github.com/CECTC/dbpack-doc/blob/master/images/sc_20220418101615.png)
 
-+ Listener：responsible for parsing the SQL protocol.
-+ Executor：responsible for forwarding SQL requests to the backend physical DB.
-+ Filter：responsible for metrics statistics, SQL interception, encryption and decryption of sensitive information, etc.
-+ ConnectionFilter：process the intercepted SQL on the connection.
++ Listener: responsible for parsing the SQL protocol.
++ Executor: responsible for forwarding SQL requests to the backend physical DB.
++ Filter: responsible for metrics statistics, SQL interception, encryption and decryption of sensitive information, etc.
++ ConnectionFilter: process the intercepted SQL on the connection.
 
 ## License
 DBPck is licensed under the [Apache License, Version 2.0](LICENSE).
