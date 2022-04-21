@@ -2,7 +2,7 @@
 [![LICENSE](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/opentrx/seata-golang/blob/v2/LICENSE)
 
 
-> DBPack means a database cluster tool pack. it can be deployed as a sidecar in a pod, it shields complex basic logic, so that business development does not need to rely on a specific SDK, simplifying the development process and improving development efficiency.
+> DBPack means a database cluster tool pack. It can be deployed as a sidecar in a pod, it shields complex basic logic, so that business development does not need to rely on a specific SDK, simplifying the development process and improving development efficiency.
 
 
 ## Feature
@@ -31,4 +31,4 @@
 + ConnectionFilter: process the intercepted SQL on the connection.
 
 ## License
-DBPck is licensed under the [Apache License, Version 2.0](LICENSE).
+DBPack is licensed under the [Apache License, Version 2.0](LICENSE).
