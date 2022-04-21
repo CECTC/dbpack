@@ -1,0 +1,69 @@
+listeners:
+  - protocol_type: mysql
+    socket_address:
+      address: 0.0.0.0
+      port: 13306
+    config:
+      users:
+        dksl: "123456"
+      server_version: "8.0.27"
+    executor: redirect
+
+executors:
+  - name: redirect
+    mode: sdb
+    config:
+      data_source_ref: employees
+
+data_source_cluster:
+  - name: employees
+    capacity: 10
+    max_capacity: 20
+    idle_timeout: 60s
+    dsn: root:123456@tcp(dbpack-mysql:3306)/employees?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8
+    ping_interval: 20s
+    ping_times_for_change_status: 3
+    filters:
+      - MysqlDistributedTransaction
+
+filters:
+  - name: MysqlDistributedTransaction
+    conf:
+      addressing: localhost:8092
+      lock_retry_interval: 50ms
+      lock_retry_times: 30
+
+distributed_transaction:
+  port: 8092
+  addressing: localhost:8092
+  retry_dead_threshold: 130000
+  max_rollback_retry_timeout: -1
+  max_commit_retry_timeout: -1
+  rollback_retry_timeout_unlock_enable: true
+  async_committing_retry_period: 1s
+  committing_retry_period: 5s
+  rolling_back_retry_period: 1s
+  timeout_retry_period: 1s
+  enforcement_policy:
+    min_time: 5m
+    permit_without_stream: true
+  server_parameters:
+    max_connection_idle: 15s
+    max_connection_age: 30s
+    max_connection_age_grace: 5s
+    time: 5s
+    timeout: 20s
+  client_parameters:
+    time: 10s
+    timeout: 20s
+    permit_without_stream: true
+  storage:
+    mysql:
+      dsn: "root:123456@tcp(dbpack-mysql:3306)/meta?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
+      global_table: global_table
+      branch_table: branch_table
+      lock_table: lock_table
+      query_limit: 100
+      max_open_connections: 100
+      max_idle_connections: 20
+      max_lifetime: 4h

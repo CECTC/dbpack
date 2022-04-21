@@ -8,6 +8,10 @@ build:
 docker-build: build
 	docker build -f docker/Dockerfile -t dbpack:latest .
 
+integration-test: build docker-build
+	sh test/cmd/test_single_db.sh
+	sh test/cmd/test_read_write_splitting.sh
+
 clean:
 	@rm -rf coverage.txt
 	@rm -rf dist

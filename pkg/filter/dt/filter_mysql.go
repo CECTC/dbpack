@@ -130,7 +130,7 @@ func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn
 		case *ast.UpdateStmt:
 			return f.processAfterUpdate(ctx, bc, result, stmt, stmtNode)
 		case *ast.SelectStmt:
-			if stmtNode.LockInfo.LockType == ast.SelectLockForUpdate {
+			if stmtNode.LockInfo != nil && stmtNode.LockInfo.LockType == ast.SelectLockForUpdate {
 				return f.processSelectForUpdate(ctx, bc, result, stmt, stmtNode)
 			}
 		default:

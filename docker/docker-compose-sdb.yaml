@@ -1,0 +1,31 @@
+version: "2.3"
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: dbpack-mysql
+    networks:
+      - local
+    ports:
+    - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+    volumes:
+    - ./data:/var/lib/mysql:z
+    - ./mysqld/:/var/run/mysqld:z
+    - ./scripts/:/docker-entrypoint-initdb.d/:rw
+    command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
+  dbpack:
+    image: dbpack:latest
+    container_name: dbpack
+    command: sh -c "sleep 60 && ./dbpack start -c config.yaml"
+    networks:
+      - local
+    ports:
+    - "13306:13306"
+    volumes:
+    - ./conf/config_sdb.yaml:/app/config.yaml
+    depends_on:
+      - mysql
+networks:
+  local:
+    name: dbpack
