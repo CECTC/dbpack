@@ -31,4 +31,4 @@
 + ConnectionFilter: process the intercepted SQL on the connection.
 
 ## License
-DBPck is licensed under the [Apache License, Version 2.0](LICENSE).
+DBPack is licensed under the [Apache License, Version 2.0](LICENSE).
