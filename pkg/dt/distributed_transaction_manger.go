@@ -636,8 +636,8 @@ func (manager *DistributedTransactionManager) branchRollback(bs *api.BranchSessi
 		status, lockKeys, err := manager._branchRollback(request)
 		if len(lockKeys) > 0 {
 			if err := manager.storageDriver.ReleaseLockAndRemoveBranchSession(bs.XID, bs.ResourceID, lockKeys); err != nil {
-				log.Errorf("release lock and remove branch session failed, xid = %s, resource_id = %s, lockKeys = %s",
-					bs.XID, bs.ResourceID, lockKeys)
+				log.Errorf("release lock and remove branch session failed, xid = %s, resource_id = %s, lockKeys = %s, error: %s",
+					bs.XID, bs.ResourceID, lockKeys, err)
 			}
 		}
 		return status, err
