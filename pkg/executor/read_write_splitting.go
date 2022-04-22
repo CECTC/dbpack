@@ -212,7 +212,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 			return tx.Query(ctx, sql)
 		}
 		db = executor.masters.Next(proto.WithMaster(ctx)).(*DataSourceBrief)
-		return tx.Query(proto.WithMaster(ctx), sql)
+		return db.DB.Query(proto.WithMaster(ctx), sql)
 	default:
 		txi, ok := executor.localTransactionMap.Load(connectionID)
 		if ok {
