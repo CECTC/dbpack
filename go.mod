@@ -9,7 +9,6 @@ require (
 	github.com/cznic/sortutil v0.0.0-20181122101858-f5f958428db8
 	github.com/cznic/strutil v0.0.0-20181122101858-275e90344537
 	github.com/cznic/y v0.0.0-20181122101901-b05e8c2e8d7b
-	github.com/go-errors/errors v1.0.1
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/go-xorm/xorm v0.7.9
 	github.com/gogo/protobuf v1.3.2
@@ -17,7 +16,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.6
 	github.com/natefinch/lumberjack v2.0.0+incompatible
-	github.com/opentrx/seata-golang/v2 v2.0.6
+	github.com/opentrx/seata-golang/v2 v2.0.7-rc3
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pingcap/check v0.0.0-20211026125417-57bd13f7b5f0
 	github.com/pingcap/errors v0.11.5-0.20211009033009-93128226aaa3
@@ -27,11 +26,11 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/stretchr/testify v1.7.0
 	github.com/uber-go/atomic v1.4.0
-	github.com/valyala/fasthttp v1.6.0
+	github.com/valyala/fasthttp v1.34.0
 	go.uber.org/atomic v1.9.0
 	go.uber.org/goleak v1.1.11
 	go.uber.org/zap v1.21.0
-	golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420
+	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/text v0.3.7
 	google.golang.org/grpc v1.40.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
@@ -45,6 +44,7 @@ require (
 	github.com/BurntSushi/toml v1.1.0 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/VividCortex/ewma v1.1.1 // indirect
+	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/aws/aws-sdk-go v1.35.3 // indirect
 	github.com/benbjohnson/clock v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -89,7 +89,7 @@ require (
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/jstemmer/go-junit-report v0.9.1 // indirect
 	github.com/juju/ratelimit v1.0.1 // indirect
-	github.com/klauspost/compress v1.11.7 // indirect
+	github.com/klauspost/compress v1.15.0 // indirect
 	github.com/klauspost/cpuid v1.2.1 // indirect
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
@@ -144,12 +144,12 @@ require (
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200824191128-ae9734ed278b // indirect
 	go.opencensus.io v0.22.5 // indirect
 	go.uber.org/multierr v1.7.0 // indirect
-	golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0 // indirect
+	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
+	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
 	golang.org/x/tools v0.1.5 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
