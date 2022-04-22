@@ -21,7 +21,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/go-errors/errors"
+	"github.com/pkg/errors"
 
 	"github.com/cectc/dbpack/pkg/lb"
 	"github.com/cectc/dbpack/pkg/proto"
