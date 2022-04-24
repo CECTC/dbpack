@@ -2,8 +2,16 @@ PKG := "github.com/cectc/dbpack"
 PKG_LIST := $(shell go list ${PKG}/... | grep /pkg/)
 GO_FILES := $(shell find . -name '*.go' | grep /pkg/ | grep -v _test.go)
 
+# Environment variables set when running the Go compiler.
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
+GO_BUILD_ENVVARS = \
+	GOOS=$(GOOS) \
+	GOARCH=$(GOARCH) \
+	CGO_ENABLED=0 \
+
 .DEFAULT_GOAL := build
-.PHONY: all test lint fmt fmtcheck cmt errcheck license
+.PHONY: all default test lint fmt fmtcheck cmt errcheck race license help msan dep build docker-build clean
 
 all: fmt errcheck lint build
 default: fmt errcheck
@@ -58,7 +66,7 @@ unit-test: ## run unit test
 ########################################################
 build:  ## build dbpack cli, and put in dist dir
 	@mkdir -p dist
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ./dist/dbpack ./cmd
+	${GO_BUILD_ENVVARS} go build -o ./dist/dbpack ./cmd
 
 ########################################################
 docker-build: build ## build docker image
