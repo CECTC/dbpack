@@ -27,8 +27,6 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "123456"
     volumes:
-    - ./data1:/var/lib/mysql:z
-    - ./mysqld1/:/var/run/mysqld:z
     - ./scripts/:/docker-entrypoint-initdb.d/:rw
     command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
   mysql2:
@@ -41,8 +39,6 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "123456"
     volumes:
-      - ./data2:/var/lib/mysql:z
-      - ./mysqld2/:/var/run/mysqld:z
       - ./scripts/:/docker-entrypoint-initdb.d/:rw
     command: [ 'mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci' ]
   dbpack:
