@@ -56,7 +56,10 @@ jobs:
       - name: Post Coverage
         run: bash <(curl -s https://codecov.io/bash)
 
-      - name: Integretion test
-        run: |
-          make integration-test
+      - name: Shutdown Ubuntu MySQL (SUDOx)
+        run: sudo service mysql stop
+
+      - name: Integration Tests
+        shell: bash
+        run: make integration-test
 
