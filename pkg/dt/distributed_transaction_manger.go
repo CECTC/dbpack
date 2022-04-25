@@ -145,7 +145,7 @@ func (manager *DistributedTransactionManager) branchCommit(bs *api.BranchSession
 		return 0, fmt.Errorf("DB resource is not exist, db name: %s", bs.ResourceID)
 	}
 
-	if err := GetUndoLogManager().DeleteUndoLogByXID(db, fmt.Sprintf("%d", bs.XID)); err != nil {
+	if err := GetUndoLogManager().DeleteUndoLogByXID(db, bs.XID); err != nil {
 		return api.PhaseTwoCommitting, err
 	}
 	if err := manager.storageDriver.DeleteBranchSession(context.Background(), bs.BranchID); err != nil {
