@@ -3,14 +3,12 @@ module github.com/cectc/dbpack
 go 1.18
 
 require (
-	github.com/cockroachdb/errors v1.8.1
 	github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548
 	github.com/cznic/parser v0.0.0-20181122101858-d773202d5b1f
 	github.com/cznic/sortutil v0.0.0-20181122101858-f5f958428db8
 	github.com/cznic/strutil v0.0.0-20181122101858-275e90344537
 	github.com/cznic/y v0.0.0-20181122101901-b05e8c2e8d7b
 	github.com/go-sql-driver/mysql v1.6.0
-	github.com/go-xorm/xorm v0.7.9
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2
@@ -38,7 +36,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/client-go v0.23.5
 	vimagination.zapto.org/byteio v1.0.1
-	xorm.io/builder v0.3.9
 )
 
 require (
