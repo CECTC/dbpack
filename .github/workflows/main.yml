@@ -56,3 +56,7 @@ jobs:
       - name: Post Coverage
         run: bash <(curl -s https://codecov.io/bash)
 
+      - name: Integretion test
+        run: |
+          make integration-test
+

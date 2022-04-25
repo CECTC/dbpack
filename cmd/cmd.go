@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -27,21 +26,16 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/keepalive"
 
 	"github.com/cectc/dbpack/pkg/config"
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/driver"
 	"github.com/cectc/dbpack/pkg/dt"
-	"github.com/cectc/dbpack/pkg/dt/api"
-	"github.com/cectc/dbpack/pkg/dt/storage/factory"
-	_ "github.com/cectc/dbpack/pkg/dt/storage/mysql"
+	"github.com/cectc/dbpack/pkg/dt/storage/etcd"
 	"github.com/cectc/dbpack/pkg/executor"
 	"github.com/cectc/dbpack/pkg/filter"
 	_ "github.com/cectc/dbpack/pkg/filter/dt"
 	"github.com/cectc/dbpack/pkg/listener"
-	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/pkg/server"
@@ -112,39 +106,8 @@ var (
 			}
 
 			if conf.DistributedTransaction != nil {
-				driver, err := factory.Create(conf.DistributedTransaction.Storage.Type(),
-					conf.DistributedTransaction.Storage.Parameters())
-				if err != nil {
-					panic(errors.Errorf("failed to construct %s driver: %v", conf.DistributedTransaction.Storage.Type(), err))
-				}
-
+				driver := etcd.NewEtcdStore(conf.DistributedTransaction.EtcdConfig)
 				dt.InitDistributedTransactionManager(conf.DistributedTransaction, driver)
-
-				s := grpc.NewServer(grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
-					MinTime:             conf.DistributedTransaction.EnforcementPolicy.MinTime,
-					PermitWithoutStream: conf.DistributedTransaction.EnforcementPolicy.PermitWithoutStream,
-				}), grpc.KeepaliveParams(keepalive.ServerParameters{
-					MaxConnectionIdle:     conf.DistributedTransaction.ServerParameters.MaxConnectionIdle,
-					MaxConnectionAge:      conf.DistributedTransaction.ServerParameters.MaxConnectionAge,
-					MaxConnectionAgeGrace: conf.DistributedTransaction.ServerParameters.MaxConnectionAgeGrace,
-					Time:                  conf.DistributedTransaction.ServerParameters.Time,
-					Timeout:               conf.DistributedTransaction.ServerParameters.Timeout,
-				}))
-				api.RegisterTransactionManagerServiceServer(s, dt.GetDistributedTransactionManager())
-				api.RegisterResourceManagerServiceServer(s, dt.GetDistributedTransactionManager())
-
-				address := fmt.Sprintf(":%v", conf.DistributedTransaction.Port)
-				lis, err := net.Listen("tcp", address)
-				if err != nil {
-					panic(errors.Errorf("failed to listen: %v", err))
-				}
-				log.Infof("start distributed transaction grpc listener %s", address)
-
-				go func() {
-					if err := s.Serve(lis); err != nil {
-						panic(errors.Errorf("failed to serve: %v", err))
-					}
-				}()
 			}
 
 			dbpack := server.NewServer()

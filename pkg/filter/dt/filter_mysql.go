@@ -63,7 +63,7 @@ func (factory *mysqlFactory) NewFilter(config map[string]interface{}) (proto.Fil
 	}
 
 	v := &struct {
-		Addressing           string        `yaml:"addressing" json:"addressing"`
+		ApplicationID        string        `yaml:"appid" json:"appid"`
 		LockRetryInterval    time.Duration `yaml:"lock_retry_interval" json:"-"`
 		LockRetryIntervalStr string        `yaml:"-" json:"lock_retry_interval"`
 		LockRetryTimes       int           `yaml:"lock_retry_times" json:"lock_retry_times"`
@@ -78,14 +78,14 @@ func (factory *mysqlFactory) NewFilter(config map[string]interface{}) (proto.Fil
 	}
 
 	return &_mysqlFilter{
-		addressing:        v.Addressing,
+		applicationID:     v.ApplicationID,
 		lockRetryInterval: v.LockRetryInterval,
 		lockRetryTimes:    v.LockRetryTimes,
 	}, nil
 }
 
 type _mysqlFilter struct {
-	addressing        string
+	applicationID     string
 	lockRetryInterval time.Duration
 	lockRetryTimes    int
 }
@@ -204,7 +204,7 @@ func (f *_mysqlFilter) processAfterDelete(ctx context.Context, conn *driver.Back
 	log.Debugf("delete, lockKey: %s", lockKeys)
 	undoLog := buildUndoItem(constant.SQLType_DELETE, schemaName, executor.GetTableName(), lockKeys, biValue, nil)
 
-	branchID, err := f.registerBranchTransaction(xid, conn.DataSourceName(), lockKeys)
+	branchID, err := f.registerBranchTransaction(ctx, xid, conn.DataSourceName(), lockKeys)
 	if err != nil {
 		return err
 	}
@@ -237,7 +237,7 @@ func (f *_mysqlFilter) processAfterInsert(ctx context.Context, conn *driver.Back
 	log.Debugf("insert, lockKey: %s", lockKeys)
 	undoLog := buildUndoItem(constant.SQLType_INSERT, schemaName, executor.GetTableName(), lockKeys, nil, afterImage)
 
-	branchID, err := f.registerBranchTransaction(xid, conn.DataSourceName(), lockKeys)
+	branchID, err := f.registerBranchTransaction(ctx, xid, conn.DataSourceName(), lockKeys)
 	if err != nil {
 		return err
 	}
@@ -275,7 +275,7 @@ func (f *_mysqlFilter) processAfterUpdate(ctx context.Context, conn *driver.Back
 	log.Debugf("update, lockKey: %s", lockKeys)
 	undoLog := buildUndoItem(constant.SQLType_UPDATE, schemaName, executor.GetTableName(), lockKeys, biValue, afterImage)
 
-	branchID, err := f.registerBranchTransaction(xid, conn.DataSourceName(), lockKeys)
+	branchID, err := f.registerBranchTransaction(ctx, xid, conn.DataSourceName(), lockKeys)
 	if err != nil {
 		return err
 	}
@@ -285,12 +285,11 @@ func (f *_mysqlFilter) processAfterUpdate(ctx context.Context, conn *driver.Back
 
 func (f *_mysqlFilter) processSelectForUpdate(ctx context.Context, conn *driver.BackendConnection,
 	result proto.Result, stmt *proto.Stmt, selectStmt *ast.SelectStmt) error {
-	has, xid := hasXIDHint(selectStmt.TableHints)
+	has, _ := hasXIDHint(selectStmt.TableHints)
 	if !has {
 		return nil
 	}
 	executor := &selectForUpdateExecutor{
-		xid:               xid,
 		conn:              conn,
 		stmt:              selectStmt,
 		args:              stmt.BindVars,
@@ -301,19 +300,20 @@ func (f *_mysqlFilter) processSelectForUpdate(ctx context.Context, conn *driver.
 	return err
 }
 
-func (f *_mysqlFilter) registerBranchTransaction(xid, resourceID, lockKey string) (int64, error) {
-	var branchID int64
-	var err error
+func (f *_mysqlFilter) registerBranchTransaction(ctx context.Context, xid, resourceID, lockKey string) (int64, error) {
+	var (
+		branchID int64
+		err      error
+	)
+	br := &api.BranchRegisterRequest{
+		XID:             xid,
+		ResourceID:      resourceID,
+		LockKey:         lockKey,
+		BranchType:      api.AT,
+		ApplicationData: nil,
+	}
 	for retryCount := 0; retryCount < f.lockRetryTimes; retryCount++ {
-		branchID, err = dt.GetDistributedTransactionManager().BranchRegisterLocal(context.Background(), &api.BranchRegisterRequest{
-			Addressing:      f.addressing,
-			XID:             xid,
-			ResourceID:      resourceID,
-			LockKey:         lockKey,
-			BranchType:      api.AT,
-			ApplicationData: nil,
-			Async:           true,
-		})
+		_, branchID, err = dt.GetDistributedTransactionManager().BranchRegister(context.Background(), br)
 		if err == nil {
 			break
 		}

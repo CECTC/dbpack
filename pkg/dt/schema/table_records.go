@@ -76,47 +76,6 @@ func BuildLockKey(lockKeyRecords *TableRecords) string {
 	return sb.String()
 }
 
-func CollectRowLocks(lockKey, resourceID, xid string, branchID int64) []*RowLock {
-	var locks = make([]*RowLock, 0)
-	tableGroupedLockKeys := strings.Split(lockKey, ";")
-	for _, tableGroupedLockKey := range tableGroupedLockKeys {
-		if tableGroupedLockKey != "" {
-			idx := strings.Index(tableGroupedLockKey, ":")
-			if idx < 0 {
-				return nil
-			}
-
-			tableName := tableGroupedLockKey[0:idx]
-			mergedPKs := tableGroupedLockKey[idx+1:]
-
-			if mergedPKs == "" {
-				return nil
-			}
-
-			pks := strings.Split(mergedPKs, ",")
-			if len(pks) == 0 {
-				return nil
-			}
-
-			for _, pk := range pks {
-				if pk != "" {
-					rowLock := &RowLock{
-						XID:      xid,
-						BranchID: branchID,
-						RowKey:   GetRowKey(resourceID, tableName, pk),
-					}
-					locks = append(locks, rowLock)
-				}
-			}
-		}
-	}
-	return locks
-}
-
-func GetRowKey(resourceID string, tableName string, pk string) string {
-	return fmt.Sprintf("%s^^^%s^^^%s", resourceID, tableName, pk)
-}
-
 func BuildRecords(meta TableMeta, result *mysql.Result) *TableRecords {
 	records := NewTableRecords(meta)
 	rs := make([]*Row, 0)
