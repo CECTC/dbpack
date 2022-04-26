@@ -62,4 +62,3 @@ jobs:
       - name: Integration Tests
         shell: bash
         run: make integration-test
-

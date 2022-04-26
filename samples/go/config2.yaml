@@ -1,0 +1,43 @@
+listeners:
+  - protocol_type: mysql
+    socket_address:
+      address: 0.0.0.0
+      port: 13307
+    config:
+      users:
+        dksl: "123456"
+      server_version: "8.0.27"
+    executor: redirect
+
+executors:
+  - name: redirect
+    mode: sdb
+    config:
+      data_source_ref: seata_product
+
+filters:
+  - name: MysqlDistributedTransaction
+    conf:
+      appid: productSvc
+      lock_retry_interval: 100ms
+      lock_retry_times: 15
+
+data_source_cluster:
+  - name: seata_product
+    capacity: 30
+    max_capacity: 100
+    idle_timeout: 60s
+    dsn: root:123456@tcp(127.0.0.1:3306)/product?timeout=60s&readTimeout=60s&writeTimeout=60s&parseTime=true&loc=Local&charset=utf8mb4,utf8
+    ping_interval: 20s
+    ping_times_for_change_status: 3
+    filters:
+      - MysqlDistributedTransaction
+
+
+distributed_transaction:
+  appid: productSvc
+  retry_dead_threshold: 130000
+  rollback_retry_timeout_unlock_enable: true
+  etcd_config:
+    endpoints:
+      - localhost:2379
