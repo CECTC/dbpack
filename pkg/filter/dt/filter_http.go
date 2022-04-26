@@ -83,8 +83,8 @@ type TCCResource struct {
 
 // HttpFilterConfig http filter config
 type HttpFilterConfig struct {
-	Addressing  string `yaml:"addressing" json:"addressing"`
-	BackendHost string `yaml:"backend_host" json:"backend_host"`
+	ApplicationID string `yaml:"appid" json:"appid"`
+	BackendHost   string `yaml:"backend_host" json:"backend_host"`
 
 	TransactionInfos []*TransactionInfo `yaml:"transaction_infos" json:"transaction_infos"`
 	TCCResources     []*TCCResource     `yaml:"tcc_resources" json:"tcc_resources"`

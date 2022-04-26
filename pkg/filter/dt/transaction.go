@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
@@ -39,11 +38,7 @@ const (
 func (f *_httpFilter) handleHttp1GlobalBegin(ctx *fasthttp.RequestCtx, transactionInfo *TransactionInfo) (bool, error) {
 	// todo support transaction isolation level
 	transactionManager := dt.GetDistributedTransactionManager()
-	xid, err := transactionManager.BeginLocal(ctx, &api.GlobalBeginRequest{
-		Addressing:      f.conf.Addressing,
-		Timeout:         transactionInfo.Timeout,
-		TransactionName: transactionInfo.RequestPath,
-	})
+	xid, err := transactionManager.Begin(ctx, transactionInfo.RequestPath, transactionInfo.Timeout)
 	if err != nil {
 		ctx.Error(fmt.Sprintf(`{"error":"failed to begin global transaction, %v"}`, err), http.StatusInternalServerError)
 		return false, errors.Errorf("failed to begin global transaction, transaction info: %v, err: %v",
@@ -102,40 +97,29 @@ func (f *_httpFilter) handleHttp1BranchRegister(ctx *fasthttp.RequestCtx, tccRes
 	}
 
 	transactionManager := dt.GetDistributedTransactionManager()
-	branchID, err := transactionManager.BranchRegisterLocal(ctx, &api.BranchRegisterRequest{
-		Addressing:      f.conf.Addressing,
+	branchID, _, err := transactionManager.BranchRegister(ctx, &api.BranchRegisterRequest{
 		XID:             string(xid),
 		ResourceID:      tccResource.PrepareRequestPath,
 		LockKey:         "",
 		BranchType:      api.TCC,
 		ApplicationData: data,
-		Async:           false,
 	})
 	if err != nil {
 		ctx.Error(fmt.Sprintf(`{"error":"branch transaction register failed, %v"}`, err), http.StatusInternalServerError)
 		return false, errors.Errorf("branch transaction register failed, XID: %s, err: %v", xid, err)
 	}
 	ctx.SetUserValue(XID, string(xid))
-	ctx.SetUserValue(BranchID, strconv.FormatInt(branchID, 10))
+	ctx.SetUserValue(BranchID, branchID)
 	return true, nil
 }
 
 func (f *_httpFilter) handleHttp1BranchEnd(ctx *fasthttp.RequestCtx) error {
-	xidParam := ctx.UserValue(XID)
-	xid := xidParam.(string)
 	branchIDParam := ctx.UserValue(BranchID)
-	branchID, err := strconv.ParseInt(branchIDParam.(string), 10, 64)
-	if err != nil {
-		return errors.WithStack(err)
-	}
+	branchID := branchIDParam.(string)
+
 	if ctx.Response.StatusCode() != http.StatusOK {
 		transactionManager := dt.GetDistributedTransactionManager()
-		err := transactionManager.BranchReportLocal(ctx, &api.BranchReportRequest{
-			XID:          xid,
-			BranchID:     branchID,
-			BranchType:   api.TCC,
-			BranchStatus: api.PhaseOneFailed,
-		})
+		err := transactionManager.BranchReport(ctx, branchID, api.PhaseOneFailed)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -150,9 +134,7 @@ func (f *_httpFilter) globalCommit(ctx context.Context, xid string) error {
 	)
 
 	transactionManager := dt.GetDistributedTransactionManager()
-	status, err = transactionManager.CommitLocal(ctx, &api.GlobalCommitRequest{
-		XID: xid,
-	})
+	status, err = transactionManager.Commit(ctx, xid)
 
 	log.Infof("[%s] commit status: %s", xid, status.String())
 	return err
@@ -165,9 +147,7 @@ func (f *_httpFilter) globalRollback(ctx context.Context, xid string) error {
 	)
 
 	transactionManager := dt.GetDistributedTransactionManager()
-	status, err = transactionManager.RollbackLocal(ctx, &api.GlobalRollbackRequest{
-		XID: xid,
-	})
+	status, err = transactionManager.Rollback(ctx, xid)
 
 	log.Infof("[%s] rollback status: %s", xid, status.String())
 	return err

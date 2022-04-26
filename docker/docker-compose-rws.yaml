@@ -1,5 +1,22 @@
 version: "2.3"
 services:
+  etcd:
+    image: docker.io/bitnami/etcd:3
+    container_name: etcd
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_NAME=etcd
+      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd:2380
+      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+      - ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster
+      - ETCD_INITIAL_CLUSTER=etcd=http://etcd:2380
+      - ETCD_INITIAL_CLUSTER_STATE=new
+    networks:
+      - local
+    ports:
+      - "2379:2379"
   mysql1:
     image: mysql:8.0
     container_name: dbpack-mysql1
@@ -10,8 +27,6 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "123456"
     volumes:
-    - ./data1:/var/lib/mysql:z
-    - ./mysqld1/:/var/run/mysqld:z
     - ./scripts/:/docker-entrypoint-initdb.d/:rw
     command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
   mysql2:
@@ -24,8 +39,6 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "123456"
     volumes:
-      - ./data2:/var/lib/mysql:z
-      - ./mysqld2/:/var/run/mysqld:z
       - ./scripts/:/docker-entrypoint-initdb.d/:rw
     command: [ 'mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci' ]
   dbpack:
@@ -39,6 +52,7 @@ services:
     volumes:
     - ./conf/config_rws.yaml:/app/config.yaml
     depends_on:
+      - etcd
       - mysql1
       - mysql2
 networks:

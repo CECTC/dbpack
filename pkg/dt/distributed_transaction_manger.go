@@ -19,25 +19,20 @@ package dt
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
-	"github.com/opentrx/seata-golang/v2/pkg/util/common"
 	timeUtils "github.com/opentrx/seata-golang/v2/pkg/util/time"
 	"github.com/opentrx/seata-golang/v2/pkg/util/uuid"
-	"github.com/uber-go/atomic"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/keepalive"
+	"k8s.io/client-go/util/workqueue"
 
 	"github.com/cectc/dbpack/pkg/config"
 	"github.com/cectc/dbpack/pkg/dt/api"
 	"github.com/cectc/dbpack/pkg/dt/storage"
-	"github.com/cectc/dbpack/pkg/errors"
 	"github.com/cectc/dbpack/pkg/log"
+	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/resource"
 )
 
-const AlwaysRetryBoundary = 0
 const DefaultRetryDeadThreshold = 130 * 1000
 
 var manager *DistributedTransactionManager
@@ -47,36 +42,23 @@ func InitDistributedTransactionManager(conf *config.DistributedTransaction, stor
 		conf.RetryDeadThreshold = DefaultRetryDeadThreshold
 	}
 	manager = &DistributedTransactionManager{
-		addressing:    conf.Addressing,
-		storageDriver: storageDriver,
-		keepaliveClientParameters: keepalive.ClientParameters{
-			Time:                conf.ClientParameters.Time,
-			Timeout:             conf.ClientParameters.Timeout,
-			PermitWithoutStream: conf.ClientParameters.PermitWithoutStream,
-		},
-		tcServiceClients: make(map[string]api.ResourceManagerServiceClient),
-
+		applicationID:                    conf.ApplicationID,
+		storageDriver:                    storageDriver,
 		retryDeadThreshold:               conf.RetryDeadThreshold,
-		maxCommitRetryTimeout:            conf.MaxCommitRetryTimeout,
-		maxRollbackRetryTimeout:          conf.MaxRollbackRetryTimeout,
 		rollbackRetryTimeoutUnlockEnable: conf.RollbackRetryTimeoutUnlockEnable,
 
-		asyncCommittingRetryPeriod: conf.AsyncCommittingRetryPeriod,
-		committingRetryPeriod:      conf.CommittingRetryPeriod,
-		rollingBackRetryPeriod:     conf.RollingBackRetryPeriod,
-		timeoutRetryPeriod:         conf.TimeoutRetryPeriod,
+		globalSessionQueue: workqueue.NewDelayingQueue(),
+		branchSessionQueue: workqueue.New(),
 	}
-
-	globalTransactionCount, err := storageDriver.CountGlobalSessions(conf.Addressing)
-	if err != nil {
+	if err := manager.processGlobalSessions(); err != nil {
 		panic(err)
 	}
-	manager.globalTransactionCount = atomic.NewUint64(uint64(globalTransactionCount))
-
-	go manager.timeoutCheck()
-	go manager.processAsyncCommitting()
-	go manager.processRetryCommitting()
-	go manager.processRetryRollingBack()
+	if err := manager.processBranchSessions(); err != nil {
+		panic(err)
+	}
+	go manager.processGlobalSessionQueue()
+	go manager.processBranchSessionQueue()
+	go manager.watchBranchSession()
 }
 
 func GetDistributedTransactionManager() *DistributedTransactionManager {
@@ -84,797 +66,282 @@ func GetDistributedTransactionManager() *DistributedTransactionManager {
 }
 
 type DistributedTransactionManager struct {
-	sync.Mutex
-	addressing                string
-	storageDriver             storage.Driver
-	keepaliveClientParameters keepalive.ClientParameters
-	tcServiceClients          map[string]api.ResourceManagerServiceClient
-	globalTransactionCount    *atomic.Uint64
-
+	applicationID                    string
+	storageDriver                    storage.Driver
 	retryDeadThreshold               int64
-	maxCommitRetryTimeout            int64
-	maxRollbackRetryTimeout          int64
 	rollbackRetryTimeoutUnlockEnable bool
 
-	asyncCommittingRetryPeriod time.Duration
-	committingRetryPeriod      time.Duration
-	rollingBackRetryPeriod     time.Duration
-	timeoutRetryPeriod         time.Duration
+	globalSessionQueue workqueue.DelayingInterface
+	branchSessionQueue workqueue.Interface
 }
 
-// Begin return xid
-func (manager *DistributedTransactionManager) Begin(ctx context.Context, in *api.GlobalBeginRequest) (*api.GlobalBeginResponse, error) {
-	xid, err := manager.BeginLocal(ctx, in)
-	if err != nil {
-		return &api.GlobalBeginResponse{
-			ResultCode: api.ResultCodeFailed,
-			Message:    err.Error(),
-		}, nil
-	}
-	return &api.GlobalBeginResponse{
-		ResultCode: api.ResultCodeSuccess,
-		XID:        xid,
-	}, nil
-}
-
-func (manager *DistributedTransactionManager) Commit(ctx context.Context, in *api.GlobalCommitRequest) (*api.GlobalCommitResponse, error) {
-	status, err := manager.CommitLocal(ctx, in)
-	if err != nil {
-		return &api.GlobalCommitResponse{
-			ResultCode:   api.ResultCodeFailed,
-			Message:      err.Error(),
-			GlobalStatus: status,
-		}, nil
-	}
-	return &api.GlobalCommitResponse{
-		ResultCode:   api.ResultCodeSuccess,
-		GlobalStatus: status,
-	}, nil
-}
-
-func (manager *DistributedTransactionManager) Rollback(ctx context.Context, in *api.GlobalRollbackRequest) (*api.GlobalRollbackResponse, error) {
-	status, err := manager.RollbackLocal(ctx, in)
-	if err != nil {
-		return &api.GlobalRollbackResponse{
-			ResultCode:   api.ResultCodeFailed,
-			Message:      err.Error(),
-			GlobalStatus: status,
-		}, nil
-	}
-	return &api.GlobalRollbackResponse{
-		ResultCode:   api.ResultCodeSuccess,
-		GlobalStatus: status,
-	}, nil
-}
-
-// BranchRegister return branchID
-func (manager *DistributedTransactionManager) BranchRegister(ctx context.Context, in *api.BranchRegisterRequest) (*api.BranchRegisterResponse, error) {
-	branchID, err := manager.BranchRegisterLocal(ctx, in)
-	if err != nil {
-		return &api.BranchRegisterResponse{
-			ResultCode: api.ResultCodeFailed,
-			Message:    err.Error(),
-		}, nil
-	}
-	return &api.BranchRegisterResponse{
-		ResultCode: api.ResultCodeSuccess,
-		BranchID:   branchID,
-	}, nil
-}
-
-func (manager *DistributedTransactionManager) BranchReport(ctx context.Context, in *api.BranchReportRequest) (*api.BranchReportResponse, error) {
-	err := manager.BranchReportLocal(ctx, in)
-	if err != nil {
-		return &api.BranchReportResponse{
-			ResultCode: api.ResultCodeFailed,
-			Message:    err.Error(),
-		}, nil
-	}
-
-	return &api.BranchReportResponse{
-		ResultCode: api.ResultCodeSuccess,
-	}, nil
-}
-
-func (manager *DistributedTransactionManager) BranchCommit(ctx context.Context, in *api.BranchCommitRequest) (*api.BranchCommitResponse, error) {
-	status, err := manager._branchCommit(in)
-	if err != nil {
-		return &api.BranchCommitResponse{
-			ResultCode:   api.ResultCodeFailed,
-			Message:      err.Error(),
-			XID:          in.XID,
-			BranchID:     in.BranchID,
-			BranchStatus: status,
-		}, nil
-	}
-	return &api.BranchCommitResponse{
-		ResultCode:   api.ResultCodeSuccess,
-		XID:          in.XID,
-		BranchID:     in.BranchID,
-		BranchStatus: status,
-	}, nil
-}
-
-func (manager *DistributedTransactionManager) BranchRollback(ctx context.Context, in *api.BranchRollbackRequest) (*api.BranchRollbackResponse, error) {
-	status, lockKeys, err := manager._branchRollback(in)
-	if err != nil {
-		return &api.BranchRollbackResponse{
-			ResultCode:   api.ResultCodeFailed,
-			Message:      err.Error(),
-			XID:          in.XID,
-			BranchID:     in.BranchID,
-			BranchStatus: status,
-			LockKeys:     lockKeys,
-		}, nil
-	}
-	return &api.BranchRollbackResponse{
-		ResultCode:   api.ResultCodeSuccess,
-		XID:          in.XID,
-		BranchID:     in.BranchID,
-		BranchStatus: status,
-		LockKeys:     lockKeys,
-	}, nil
-}
-
-func (manager *DistributedTransactionManager) BeginLocal(ctx context.Context, request *api.GlobalBeginRequest) (string, error) {
+func (manager *DistributedTransactionManager) Begin(ctx context.Context, transactionName string, timeout int32) (string, error) {
 	transactionID := uuid.NextID()
-	xid := common.GenerateXID(request.Addressing, transactionID)
+	xid := fmt.Sprintf("gs/%s/%d", manager.applicationID, transactionID)
 	gt := &api.GlobalSession{
-		Addressing:      request.Addressing,
 		XID:             xid,
+		ApplicationID:   manager.applicationID,
 		TransactionID:   transactionID,
-		TransactionName: request.TransactionName,
-		Timeout:         request.Timeout,
+		TransactionName: transactionName,
+		Timeout:         timeout,
 		BeginTime:       int64(timeUtils.CurrentTimeMillis()),
 		Status:          api.Begin,
-		Active:          true,
 	}
-	err := manager.storageDriver.AddGlobalSession(gt)
-	if err != nil {
+	if err := manager.storageDriver.AddGlobalSession(ctx, gt); err != nil {
 		return "", err
 	}
-	log.Infof("successfully BeginLocal global transaction xid = {}", gt.XID)
-	manager.globalTransactionCount.Inc()
+	manager.globalSessionQueue.AddAfter(gt, time.Duration(timeout)*time.Millisecond)
+	log.Infof("successfully begin global transaction xid = {}", gt.XID)
 	return xid, nil
 }
 
-func (manager *DistributedTransactionManager) CommitLocal(ctx context.Context, request *api.GlobalCommitRequest) (api.GlobalSession_GlobalStatus, error) {
-	gs := manager.storageDriver.FindGlobalSession(request.XID)
-	if gs == nil {
-		return api.Finished, nil
-	}
-	shouldCommit, err := func(gs *api.GlobalSession) (bool, error) {
-		if gs.Active {
-			// Active need persistence
-			// Highlight: Firstly, close the session, then no more branch can be registered.
-			if err := manager.storageDriver.InactiveGlobalSession(gs); err != nil {
-				return false, err
-			}
-		}
-		if err := manager.storageDriver.ReleaseGlobalSessionLock(gs); err != nil {
-			return false, err
-		}
-		if gs.Status == api.Begin {
-			if err := manager.storageDriver.UpdateGlobalSessionStatus(gs, api.Committing); err != nil {
-				return false, err
-			}
-			return true, nil
-		}
-		return false, nil
-	}(gs)
-
-	if err != nil {
-		return gs.Status, err
-	}
-
-	if !shouldCommit {
-		if gs.Status == api.AsyncCommitting {
-			return api.Committed, nil
-		}
-		return gs.Status, fmt.Errorf("can not CommitLocal global transaction, xid = %s, status = %s", gs.XID, gs.Status)
-	}
-
-	if manager.storageDriver.CanBeAsyncCommitOrRollback(gs) {
-		if err = manager.storageDriver.UpdateGlobalSessionStatus(gs, api.AsyncCommitting); err != nil {
-			return gs.Status, err
-		}
-		return api.Committed, nil
-	}
-
-	_, err = manager.doGlobalCommit(gs, false)
-	if err != nil {
-		return gs.Status, err
-	}
-	return api.Committed, nil
+func (manager *DistributedTransactionManager) Commit(ctx context.Context, xid string) (api.GlobalSession_GlobalStatus, error) {
+	return manager.storageDriver.GlobalCommit(ctx, xid)
 }
 
-func (manager *DistributedTransactionManager) RollbackLocal(ctx context.Context, request *api.GlobalRollbackRequest) (api.GlobalSession_GlobalStatus, error) {
-	gs := manager.storageDriver.FindGlobalSession(request.XID)
-	if gs == nil {
-		return api.Finished, nil
-	}
-	shouldRollBack, err := func(gt *api.GlobalSession) (bool, error) {
-		if gt.Active {
-			// Active need persistence
-			// Highlight: Firstly, close the session, then no more branch can be registered.
-			if err := manager.storageDriver.InactiveGlobalSession(gs); err != nil {
-				return false, err
-			}
-		}
-		if gt.Status == api.Begin {
-			if err := manager.storageDriver.UpdateGlobalSessionStatus(gs, api.RollingBack); err != nil {
-				return false, err
-			}
-			return true, nil
-		}
-		return false, nil
-	}(gs)
-
-	if err != nil {
-		return gs.Status, err
-	}
-
-	if !shouldRollBack {
-		return gs.Status, fmt.Errorf("can not RollbackLocal global transaction, xid = %s, status = %s", gs.XID, gs.Status)
-	}
-
-	_, err = manager.doGlobalRollback(gs, false)
-	if err != nil {
-		return gs.Status, err
-	}
-	return gs.Status, nil
+func (manager *DistributedTransactionManager) Rollback(ctx context.Context, xid string) (api.GlobalSession_GlobalStatus, error) {
+	return manager.storageDriver.GlobalRollback(ctx, xid)
 }
 
-func (manager *DistributedTransactionManager) BranchRegisterLocal(ctx context.Context, request *api.BranchRegisterRequest) (int64, error) {
-	gs := manager.storageDriver.FindGlobalSession(request.XID)
-	if gs == nil {
-		log.Errorf("could not found global transaction xid = %s", request.XID)
-		return 0, errors.CouldNotFoundGlobalTransaction
-	}
-
-	if !gs.Active {
-		log.Errorf("could not register branch into global session xid = %s status = %d", gs.XID, gs.Status)
-		return 0, errors.GlobalTransactionNotActive
-	}
-	if gs.Status != api.Begin {
-		return 0, fmt.Errorf("could not register branch into global session xid = %s status = %d while expecting %d",
-			gs.XID, gs.Status, api.Begin)
-	}
-
+func (manager *DistributedTransactionManager) BranchRegister(ctx context.Context, in *api.BranchRegisterRequest) (string, int64, error) {
+	branchSessionID := uuid.NextID()
+	branchID := fmt.Sprintf("bs/%s/%d", manager.applicationID, branchSessionID)
+	transactionID := misc.GetTransactionID(in.XID)
 	bs := &api.BranchSession{
-		Addressing:      request.Addressing,
-		XID:             request.XID,
-		BranchID:        uuid.NextID(),
-		TransactionID:   gs.TransactionID,
-		ResourceID:      request.ResourceID,
-		LockKey:         request.LockKey,
-		Type:            request.BranchType,
+		BranchID:        branchID,
+		ApplicationID:   manager.applicationID,
+		BranchSessionID: branchSessionID,
+		XID:             in.XID,
+		TransactionID:   transactionID,
+		ResourceID:      in.ResourceID,
+		LockKey:         in.LockKey,
+		Type:            in.BranchType,
 		Status:          api.Registered,
-		ApplicationData: request.ApplicationData,
-		Async:           request.Async,
+		ApplicationData: in.ApplicationData,
+		BeginTime:       int64(timeUtils.CurrentTimeMillis()),
 	}
 
-	if bs.Type == api.AT {
-		result := manager.storageDriver.IsLockable(bs.XID, bs.ResourceID, bs.LockKey)
-		if !result {
-			log.Errorf("branch lock acquire failed xid = %s resourceId = %s, lockKey = %s",
-				request.XID, request.ResourceID, request.LockKey)
-			return 0, errors.BranchLockAcquireFailed
-		}
-		bs.Async = true
+	if err := manager.storageDriver.AddBranchSession(ctx, bs); err != nil {
+		return "", 0, err
 	}
-
-	err := manager.storageDriver.AddBranchSession(gs, bs)
-	if err != nil {
-		log.Error(err)
-		return 0, fmt.Errorf("branch register failed, xid = %s, branchid = %d, err: %s", gs.XID, bs.BranchID, err.Error())
-	}
-
-	return bs.BranchID, nil
+	return branchID, branchSessionID, nil
 }
 
-func (manager *DistributedTransactionManager) BranchReportLocal(ctx context.Context, in *api.BranchReportRequest) error {
-	gs := manager.storageDriver.FindGlobalSession(in.XID)
-	if gs == nil {
-		log.Errorf("could not found global transaction xid = %s", in.XID)
-		return errors.CouldNotFoundGlobalTransaction
-	}
-	bs := manager.storageDriver.FindBranchSessionByBranchID(in.BranchID)
-	if bs == nil {
-		return errors.CouldNotFoundBranchTransaction
-	}
-	return manager.storageDriver.UpdateBranchSessionStatus(bs, in.BranchStatus)
+func (manager *DistributedTransactionManager) BranchReport(ctx context.Context, branchID string, status api.BranchSession_BranchStatus) error {
+	return manager.storageDriver.BranchReport(ctx, branchID, status)
 }
 
-// LockQuery return lockable
-func (manager *DistributedTransactionManager) LockQuery(ctx context.Context, request *api.GlobalLockQueryRequest) (bool, error) {
-	result := manager.storageDriver.IsLockable(request.XID, request.ResourceID, request.LockKey)
-	return result, nil
+func (manager *DistributedTransactionManager) ReleaseLockKeys(ctx context.Context, resourceID string, lockKeys []string) (bool, error) {
+	return manager.storageDriver.ReleaseLockKeys(ctx, resourceID, lockKeys)
 }
 
-func (manager *DistributedTransactionManager) doGlobalCommit(gs *api.GlobalSession, retrying bool) (bool, error) {
-	branchSessions := manager.storageDriver.FindBranchSessions(gs.XID)
-	branchSessionsFiltered := filterBranchSessions(branchSessions)
-	for i := 0; i < len(branchSessionsFiltered); i++ {
-		bs := branchSessionsFiltered[i]
-		branchStatus, err := manager.branchCommit(bs)
-		if err != nil {
-			log.Errorf("exception committing branch xid=%d branchID=%d, err: %v", bs.GetXID(), bs.BranchID, err)
-			if !retrying {
-				gs.Status = api.CommitRetrying
-				if err := manager.storageDriver.UpdateGlobalSessionStatus(gs, api.CommitRetrying); err != nil {
-					return false, err
-				}
-			}
-			return false, err
-		}
-		switch branchStatus {
-		case api.PhaseTwoCommitted:
-			err := manager.storageDriver.RemoveBranchSession(gs, bs)
-			if err != nil {
-				return false, err
-			}
-			continue
-		case api.PhaseTwoCommitFailedCanNotRetry:
-			{
-				if manager.storageDriver.CanBeAsyncCommitOrRollback(gs) {
-					log.Errorf("by [%s], failed to CommitLocal branch %v", bs.Status.String(), bs)
-					continue
-				} else {
-					// change status first, if need retention global session data,
-					// might not remove global session, then, the status is very important.
-					gs.Status = api.CommitFailed
-					if err = manager.storageDriver.UpdateGlobalSessionStatus(gs, api.CommitFailed); err != nil {
-						return false, err
-					}
-					if err := manager.storageDriver.RemoveGlobalSession(gs); err != nil {
-						return false, err
-					}
-					log.Errorf("finally, failed to CommitLocal global[%d] since branch[%d] CommitLocal failed", gs.XID, bs.BranchID)
-					return false, nil
-				}
-			}
-		default:
-			{
-				if !retrying {
-					gs.Status = api.CommitRetrying
-					if err := manager.storageDriver.UpdateGlobalSessionStatus(gs, api.CommitRetrying); err != nil {
-						return false, err
-					}
-					return false, nil
-				}
-				if manager.storageDriver.CanBeAsyncCommitOrRollback(gs) {
-					log.Errorf("by [%s], failed to CommitLocal branch %v", bs.Status.String(), bs)
-					continue
-				} else {
-					log.Errorf("failed to CommitLocal global[%d] since branch[%d] CommitLocal failed, will retry later.", gs.XID, bs.BranchID)
-					return false, nil
-				}
-			}
-		}
-	}
-	branchSessions = manager.storageDriver.FindBranchSessions(gs.XID)
-	if len(branchSessions) > 0 {
-		log.Infof("global[%d] committing is NOT done.", gs.XID)
-		return false, nil
-	}
-
-	// change status first, if need retention global session data,
-	// might not remove global session, then, the status is very important.
-	gs.Status = api.Committed
-	if err := manager.storageDriver.UpdateGlobalSessionStatus(gs, api.Committed); err != nil {
-		return false, err
-	}
-	if err := manager.storageDriver.RemoveGlobalSession(gs); err != nil {
-		return false, err
-	}
-	log.Infof("global[%d] committing is successfully done.", gs.XID)
-	manager.globalTransactionCount.Dec()
-	return true, nil
+func (manager *DistributedTransactionManager) IsLockable(ctx context.Context, resourceID, lockKey string) (bool, error) {
+	return manager.storageDriver.IsLockable(ctx, resourceID, lockKey)
 }
 
 func (manager *DistributedTransactionManager) branchCommit(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
-	request := &api.BranchCommitRequest{
-		XID:             bs.XID,
-		BranchID:        bs.BranchID,
-		ResourceID:      bs.ResourceID,
-		LockKey:         bs.LockKey,
-		BranchType:      bs.Type,
-		ApplicationData: bs.ApplicationData,
-	}
-
-	if bs.Type == api.AT && bs.Addressing == manager.addressing {
-		return manager._branchCommit(request)
-	}
-
-	client, err := manager.getTransactionCoordinatorServiceClient(bs.Addressing)
-	if err != nil {
-		return bs.Status, err
-	}
-
-	response, err := client.BranchCommit(context.Background(), request)
-
-	if err != nil {
-		return bs.Status, err
-	}
-
-	if response.ResultCode == api.ResultCodeSuccess {
-		return response.BranchStatus, nil
-	} else {
-		return bs.Status, fmt.Errorf(response.Message)
-	}
-}
-
-func (manager *DistributedTransactionManager) _branchCommit(in *api.BranchCommitRequest) (api.BranchSession_BranchStatus, error) {
-	db := resource.GetDBManager().GetDB(in.ResourceID)
+	db := resource.GetDBManager().GetDB(bs.ResourceID)
 	if db == nil {
-		return 0, fmt.Errorf("DB resource is not exist, db name: %s", in.ResourceID)
+		return 0, fmt.Errorf("DB resource is not exist, db name: %s", bs.ResourceID)
 	}
 
-	if err := GetUndoLogManager().DeleteUndoLogByXID(db, in.XID); err != nil {
-		return api.PhaseTwoCommitFailedRetryable, err
+	if err := GetUndoLogManager().DeleteUndoLogByXID(db, bs.XID); err != nil {
+		return api.PhaseTwoCommitting, err
 	}
-	return api.PhaseTwoCommitted, nil
-}
-
-func (manager *DistributedTransactionManager) doGlobalRollback(gs *api.GlobalSession, retrying bool) (bool, error) {
-	branchSessions := manager.storageDriver.FindBranchSessions(gs.XID)
-	branchSessionsFiltered := filterBranchSessions(branchSessions)
-	for i := 0; i < len(branchSessionsFiltered); i++ {
-		bs := branchSessionsFiltered[i]
-		branchStatus, err := manager.branchRollback(bs)
-		if err != nil {
-			log.Errorf("exception rolling back branch xid=%d branchID=%d, err: %v", gs.XID, bs.BranchID, err)
-			if !retrying {
-				if isTimeoutGlobalStatus(gs) {
-					gs.Status = api.TimeoutRollbackRetrying
-					if err := manager.storageDriver.UpdateGlobalSessionStatus(gs, api.TimeoutRollbackRetrying); err != nil {
-						return false, err
-					}
-				} else {
-					gs.Status = api.RollbackRetrying
-					if err := manager.storageDriver.UpdateGlobalSessionStatus(gs, api.RollbackRetrying); err != nil {
-						return false, err
-					}
-				}
-			}
-			return false, err
-		}
-		switch branchStatus {
-		case api.PhaseTwoRolledBack:
-			if bs.Type == api.TCC {
-				if err := manager.storageDriver.RemoveBranchSession(gs, bs); err != nil {
-					return false, err
-				}
-				log.Infof("successfully RollbackLocal branch xid=%d branchID=%d", gs, bs.BranchID)
-			}
-			continue
-		case api.PhaseTwoRollbackFailedCanNotRetry:
-			if isTimeoutGlobalStatus(gs) {
-				gs.Status = api.TimeoutRollbackFailed
-				if err := manager.storageDriver.UpdateGlobalSessionStatus(gs, api.TimeoutRollbackFailed); err != nil {
-					return false, err
-				}
-			} else {
-				gs.Status = api.RollbackFailed
-				if err := manager.storageDriver.UpdateGlobalSessionStatus(gs, api.RollbackFailed); err != nil {
-					return false, err
-				}
-			}
-			if err := manager.storageDriver.ReleaseGlobalSessionLock(gs); err != nil {
-				return false, err
-			}
-			if err := manager.storageDriver.RemoveGlobalSession(gs); err != nil {
-				return false, err
-			}
-			log.Infof("failed to RollbackLocal branch and stop retry xid=%d branchID=%d", gs.XID, bs.BranchID)
-			return false, nil
-		default:
-			log.Infof("failed to RollbackLocal branch xid=%d branchID=%d", gs.XID, bs.BranchID)
-			if !retrying {
-				if isTimeoutGlobalStatus(gs) {
-					gs.Status = api.TimeoutRollbackRetrying
-					if err := manager.storageDriver.UpdateGlobalSessionStatus(gs, api.TimeoutRollbackRetrying); err != nil {
-						return false, err
-					}
-				} else {
-					gs.Status = api.RollbackRetrying
-					if err := manager.storageDriver.UpdateGlobalSessionStatus(gs, api.RollbackRetrying); err != nil {
-						return false, err
-					}
-				}
-			}
-			return false, nil
-		}
+	if err := manager.storageDriver.DeleteBranchSession(context.Background(), bs.BranchID); err != nil {
+		log.Error(err)
 	}
-
-	// In db mode, there is a problem of inconsistent data in multiple copies, resulting in new branch
-	// transaction registration when rolling back.
-	// 1. New branch transaction and RollbackLocal branch transaction have no data association
-	// 2. New branch transaction has data association with RollbackLocal branch transaction
-	// The second query can solve the first problem, and if it is the second problem, it may cause a RollbackLocal
-	// failure due to data changes.
-	branchSessions = manager.storageDriver.FindBranchSessions(gs.XID)
-	if len(branchSessions) > 0 {
-		log.Infof("Global[%d] rolling back is NOT done.", gs.XID)
-		return false, nil
-	}
-
-	if isTimeoutGlobalStatus(gs) {
-		gs.Status = api.TimeoutRolledBack
-		if err := manager.storageDriver.UpdateGlobalSessionStatus(gs, api.TimeoutRolledBack); err != nil {
-			return false, err
-		}
-	} else {
-		gs.Status = api.RolledBack
-		if err := manager.storageDriver.UpdateGlobalSessionStatus(gs, api.RolledBack); err != nil {
-			return false, err
-		}
-	}
-	if err := manager.storageDriver.ReleaseGlobalSessionLock(gs); err != nil {
-		return false, err
-	}
-	if err := manager.storageDriver.RemoveGlobalSession(gs); err != nil {
-		return false, err
-	}
-	log.Infof("successfully RollbackLocal global, xid = %d", gs.XID)
-	manager.globalTransactionCount.Dec()
-	return true, nil
+	log.Debugf("branch session committed, branch id: %s, lock key: %s", bs.BranchID, bs.LockKey)
+	return api.Complete, nil
 }
 
 func (manager *DistributedTransactionManager) branchRollback(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
-	request := &api.BranchRollbackRequest{
-		XID:             bs.XID,
-		BranchID:        bs.BranchID,
-		ResourceID:      bs.ResourceID,
-		LockKey:         bs.LockKey,
-		BranchType:      bs.Type,
-		ApplicationData: bs.ApplicationData,
-	}
-
-	if bs.Type == api.AT && bs.Addressing == manager.addressing {
-		status, lockKeys, err := manager._branchRollback(request)
-		if len(lockKeys) > 0 {
-			if err := manager.storageDriver.ReleaseLockAndRemoveBranchSession(bs.XID, bs.ResourceID, lockKeys); err != nil {
-				log.Errorf("release lock and remove branch session failed, xid = %s, resource_id = %s, lockKeys = %s, error: %s",
-					bs.XID, bs.ResourceID, lockKeys, err)
-			}
-		}
-		return status, err
-	}
-
-	client, err := manager.getTransactionCoordinatorServiceClient(bs.Addressing)
-	if err != nil {
-		return bs.Status, err
-	}
-
-	response, err := client.BranchRollback(context.Background(), request)
-
-	if response != nil && len(response.LockKeys) > 0 {
-		if err := manager.storageDriver.ReleaseLockAndRemoveBranchSession(bs.XID, bs.ResourceID, response.LockKeys); err != nil {
+	status, lockKeys, err := manager._branchRollback(bs)
+	if len(lockKeys) > 0 {
+		if _, err := manager.storageDriver.ReleaseLockKeys(context.Background(), bs.ResourceID, lockKeys); err != nil {
 			log.Errorf("release lock and remove branch session failed, xid = %s, resource_id = %s, lockKeys = %s",
-				bs.XID, bs.ResourceID, response.LockKeys)
+				bs.XID, bs.ResourceID, lockKeys)
 		}
 	}
-
-	if err != nil {
-		return bs.Status, err
+	if status == api.Complete {
+		if err := manager.storageDriver.DeleteBranchSession(context.Background(), bs.BranchID); err != nil {
+			log.Error(err)
+		}
 	}
-
-	if response.ResultCode == api.ResultCodeSuccess {
-		return response.BranchStatus, nil
-	} else {
-		return bs.Status, fmt.Errorf(response.Message)
-	}
+	return status, err
 }
 
-func (manager *DistributedTransactionManager) _branchRollback(in *api.BranchRollbackRequest) (api.BranchSession_BranchStatus, []string, error) {
-	db := resource.GetDBManager().GetDB(in.ResourceID)
+func (manager *DistributedTransactionManager) _branchRollback(bs *api.BranchSession) (api.BranchSession_BranchStatus, []string, error) {
+	db := resource.GetDBManager().GetDB(bs.ResourceID)
 	if db == nil {
-		return 0, nil, fmt.Errorf("DB resource is not exist, db name: %s", in.ResourceID)
+		return 0, nil, fmt.Errorf("DB resource is not exist, db name: %s", bs.ResourceID)
 	}
 
-	lockKeys, err := GetUndoLogManager().Undo(db, in.XID)
-
+	lockKeys, err := GetUndoLogManager().Undo(db, bs.XID)
 	if err != nil {
-		log.Errorf("[stacktrace]branchRollback failed. xid:[%s], branchID:[%d], resourceID:[%s], branchType:[%d], applicationData:[%v], error: %v",
-			in.XID, in.BranchID, in.ResourceID, in.BranchType, in.ApplicationData, err)
-		return api.PhaseTwoRollbackFailedRetryable, lockKeys, err
+		log.Errorf("[stacktrace]branchRollback failed. xid:[%s], branchID:[%d], resourceID:[%s], branchType:[%d], applicationData:[%s], error: %v",
+			bs.XID, bs.BranchID, bs.ResourceID, bs.Type, bs.ApplicationData, err)
+		return bs.Status, lockKeys, err
 	}
-
-	return api.PhaseTwoRolledBack, lockKeys, nil
-}
-
-func filterBranchSessions(sessions []*api.BranchSession) []*api.BranchSession {
-	length := len(sessions)
-	if length == 1 {
-		return sessions
-	}
-	var result []*api.BranchSession
-	var branchIdentifierMap = make(map[string]bool)
-	for i := 0; i < length; i++ {
-		if sessions[i].Status == api.PhaseOneFailed {
-			continue
-		}
-		_, ok := branchIdentifierMap[sessions[i].ResourceID]
-		if !ok {
-			result = append(result, sessions[i])
-			branchIdentifierMap[sessions[i].ResourceID] = true
+	// branch session phase one rollbacked
+	if len(lockKeys) == 0 {
+		if _, err := manager.storageDriver.ReleaseLockKeys(context.Background(), bs.ResourceID, []string{bs.LockKey}); err != nil {
+			return bs.Status, nil, err
 		}
 	}
-	return result
+	log.Debugf("branch session rollbacked, branch id: %s, lock key: %s", bs.BranchID, bs.LockKey)
+	return api.Complete, lockKeys, nil
 }
 
-func (manager *DistributedTransactionManager) getTransactionCoordinatorServiceClient(addressing string) (api.ResourceManagerServiceClient, error) {
-	client1, ok1 := manager.tcServiceClients[addressing]
-	if ok1 {
-		return client1, nil
-	}
-
-	manager.Mutex.Lock()
-	defer manager.Mutex.Unlock()
-	client2, ok2 := manager.tcServiceClients[addressing]
-	if ok2 {
-		return client2, nil
-	}
-
-	conn, err := grpc.Dial(addressing, grpc.WithInsecure(), grpc.WithKeepaliveParams(manager.keepaliveClientParameters))
+func (manager *DistributedTransactionManager) processGlobalSessions() error {
+	globalSessions, err := manager.storageDriver.ListGlobalSession(context.Background(), manager.applicationID)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	client := api.NewResourceManagerServiceClient(conn)
-	manager.tcServiceClients[addressing] = client
-	return client, nil
-}
-
-func isTimeoutGlobalStatus(gs *api.GlobalSession) bool {
-	return gs.Status == api.TimeoutRolledBack ||
-		gs.Status == api.TimeoutRollbackFailed ||
-		gs.Status == api.TimeoutRollingBack ||
-		gs.Status == api.TimeoutRollbackRetrying
-}
-
-func (manager *DistributedTransactionManager) processTimeoutCheck() {
-	for {
-		timer := time.NewTimer(manager.timeoutRetryPeriod)
-
-		<-timer.C
-		manager.timeoutCheck()
-
-		timer.Stop()
-	}
-}
-
-func (manager *DistributedTransactionManager) processRetryRollingBack() {
-	for {
-		timer := time.NewTimer(manager.rollingBackRetryPeriod)
-
-		<-timer.C
-		manager.handleRetryRollingBack()
-
-		timer.Stop()
-	}
-}
-
-func (manager *DistributedTransactionManager) processRetryCommitting() {
-	for {
-		timer := time.NewTimer(manager.committingRetryPeriod)
-
-		<-timer.C
-		manager.handleRetryCommitting()
-
-		timer.Stop()
-	}
-}
-
-func (manager *DistributedTransactionManager) processAsyncCommitting() {
-	for {
-		timer := time.NewTimer(manager.asyncCommittingRetryPeriod)
-
-		<-timer.C
-		manager.handleAsyncCommitting()
-
-		timer.Stop()
-	}
-}
-
-func (manager *DistributedTransactionManager) timeoutCheck() {
-	if manager.globalTransactionCount.Load() == 0 {
-		return
-	}
-	sessions := manager.storageDriver.FindGlobalSessions(
-		[]api.GlobalSession_GlobalStatus{api.Begin}, manager.addressing)
-	for _, globalSession := range sessions {
-		if isGlobalSessionTimeout(globalSession) {
-			if globalSession.Active {
-				// Active need persistence
-				// Highlight: Firstly, close the session, then no more branch can be registered.
-				if err := manager.storageDriver.InactiveGlobalSession(globalSession); err != nil {
-					return
+	for _, gs := range globalSessions {
+		if gs.Status == api.Begin {
+			if isGlobalSessionTimeout(gs) {
+				if _, err := manager.Rollback(context.Background(), gs.XID); err != nil {
+					return err
 				}
 			}
-
-			if err := manager.storageDriver.UpdateGlobalSessionStatus(globalSession, api.TimeoutRollingBack); err != nil {
-				return
+			manager.globalSessionQueue.AddAfter(gs, time.Duration(timeUtils.CurrentTimeMillis()-uint64(gs.BeginTime))*time.Millisecond)
+		}
+		if gs.Status == api.Committing || gs.Status == api.Rollbacking {
+			bsKeys, err := manager.storageDriver.GetBranchSessionKeys(context.Background(), gs.XID)
+			if err != nil {
+				return err
+			}
+			if len(bsKeys) == 0 {
+				if err := manager.storageDriver.DeleteGlobalSession(context.Background(), gs.XID); err != nil {
+					return err
+				}
+				log.Debugf("global session finished, key: %s", gs.XID)
 			}
 		}
 	}
+	return nil
 }
 
-func (manager *DistributedTransactionManager) handleRetryRollingBack() {
-	if manager.globalTransactionCount.Load() == 0 {
-		return
+func (manager *DistributedTransactionManager) processGlobalSessionQueue() {
+	for manager.processNextGlobalSession(context.Background()) {
 	}
-	sessions := manager.storageDriver.FindGlobalSessions([]api.GlobalSession_GlobalStatus{
-		api.RollingBack, api.RollbackRetrying, api.TimeoutRollingBack, api.TimeoutRollbackRetrying,
-	}, manager.addressing)
-	now := timeUtils.CurrentTimeMillis()
-	for _, session := range sessions {
-		if session.Status == api.RollingBack && !manager.IsRollingBackDead(session) {
-			continue
+}
+
+func (manager *DistributedTransactionManager) processNextGlobalSession(ctx context.Context) bool {
+	obj, shutdown := manager.globalSessionQueue.Get()
+	if shutdown {
+		// Stop working
+		return false
+	}
+
+	// We call Done here so the workqueue knows we have finished
+	// processing this item. We also must remember to call Forget if we
+	// do not want this work item being re-queued. For example, we do
+	// not call Forget if a transient error occurs, instead the item is
+	// put back on the workqueue and attempted again after a back-off
+	// period.
+	defer manager.globalSessionQueue.Done(obj)
+
+	gs := obj.(*api.GlobalSession)
+	if gs.Status == api.Begin {
+		if isGlobalSessionTimeout(gs) {
+			_, err := manager.Rollback(context.Background(), gs.XID)
+			if err != nil {
+				log.Error(err)
+			}
 		}
-		if isRetryTimeout(int64(now), manager.maxRollbackRetryTimeout, session.BeginTime) {
+	}
+	if gs.Status == api.Committing || gs.Status == api.Rollbacking {
+		bsKeys, err := manager.storageDriver.GetBranchSessionKeys(context.Background(), gs.XID)
+		if err != nil {
+			log.Error(err)
+		}
+		if len(bsKeys) == 0 {
+			if err := manager.storageDriver.DeleteGlobalSession(context.Background(), gs.XID); err != nil {
+				log.Error(err)
+			}
+			log.Debugf("global session finished, key: %s", gs.XID)
+		}
+	}
+	return true
+}
+
+func (manager *DistributedTransactionManager) processBranchSessions() error {
+	branchSessions, err := manager.storageDriver.ListBranchSession(context.Background(), manager.applicationID)
+	if err != nil {
+		return err
+	}
+	for _, bs := range branchSessions {
+		if bs.Status == api.PhaseTwoRollbacking && manager.IsRollingBackDead(bs) {
 			if manager.rollbackRetryTimeoutUnlockEnable {
-				if err := manager.storageDriver.ReleaseGlobalSessionLock(session); err != nil {
+				if _, err := manager.storageDriver.ReleaseLockKeys(context.Background(), bs.ResourceID, []string{bs.LockKey}); err != nil {
+					return err
+				}
+			}
+			log.Debugf("branch session rollback dead, branch id: %s, lock key: %s", bs.BranchID, bs.LockKey)
+		}
+	}
+	return nil
+}
+
+func (manager *DistributedTransactionManager) processBranchSessionQueue() {
+	for manager.processNextBranchSession(context.Background()) {
+	}
+}
+
+func (manager *DistributedTransactionManager) processNextBranchSession(ctx context.Context) bool {
+	obj, shutdown := manager.branchSessionQueue.Get()
+	if shutdown {
+		// Stop working
+		return false
+	}
+
+	// We call Done here so the workqueue knows we have finished
+	// processing this item. We also must remember to call Forget if we
+	// do not want this work item being re-queued. For example, we do
+	// not call Forget if a transient error occurs, instead the item is
+	// put back on the workqueue and attempted again after a back-off
+	// period.
+	defer manager.branchSessionQueue.Done(obj)
+
+	bs := obj.(*api.BranchSession)
+	if bs.Status == api.PhaseTwoCommitting {
+		status, err := manager.branchCommit(bs)
+		if err != nil {
+			log.Error(err)
+			manager.branchSessionQueue.Add(obj)
+		}
+		if status != api.Complete {
+			manager.branchSessionQueue.Add(obj)
+		}
+	}
+	if bs.Status == api.PhaseTwoRollbacking {
+		if manager.IsRollingBackDead(bs) {
+			if manager.rollbackRetryTimeoutUnlockEnable {
+				if _, err := manager.storageDriver.ReleaseLockKeys(context.Background(), bs.ResourceID, []string{bs.LockKey}); err != nil {
 					log.Error(err)
 				}
 			}
-			if err := manager.storageDriver.RemoveGlobalSession(session); err != nil {
+		} else {
+			status, err := manager.branchRollback(bs)
+			if err != nil {
 				log.Error(err)
+				manager.branchSessionQueue.Add(obj)
 			}
-			log.Errorf("GlobalSession RollbackLocal retry timeout and removed [%s]", session.XID)
-			continue
-		}
-		_, err := manager.doGlobalRollback(session, true)
-		if err != nil {
-			log.Errorf("failed to retry RollbackLocal [%s]", session.XID)
-		}
-	}
-}
-
-func isRetryTimeout(now int64, timeout int64, beginTime int64) bool {
-	if timeout >= AlwaysRetryBoundary && now-beginTime > timeout {
-		return true
-	}
-	return false
-}
-
-func (manager *DistributedTransactionManager) handleRetryCommitting() {
-	if manager.globalTransactionCount.Load() == 0 {
-		return
-	}
-	sessions := manager.storageDriver.FindGlobalSessions(
-		[]api.GlobalSession_GlobalStatus{api.CommitRetrying}, manager.addressing)
-	if len(sessions) == 0 {
-		return
-	}
-	now := timeUtils.CurrentTimeMillis()
-	for _, session := range sessions {
-		if isRetryTimeout(int64(now), manager.maxCommitRetryTimeout, session.BeginTime) {
-			if err := manager.storageDriver.RemoveGlobalSession(session); err != nil {
-				log.Error(err)
+			if status != api.Complete {
+				manager.branchSessionQueue.Add(obj)
 			}
-			log.Errorf("GlobalSession CommitLocal retry timeout and removed [%s]", session.XID)
-			continue
-		}
-		_, err := manager.doGlobalCommit(session, true)
-		if err != nil {
-			log.Errorf("failed to retry committing [%s]", session.XID)
 		}
 	}
+	return true
 }
 
-func (manager *DistributedTransactionManager) handleAsyncCommitting() {
-	if manager.globalTransactionCount.Load() == 0 {
-		return
-	}
-	sessions := manager.storageDriver.FindGlobalSessions(
-		[]api.GlobalSession_GlobalStatus{api.AsyncCommitting}, manager.addressing)
-	for _, session := range sessions {
-		_, err := manager.doGlobalCommit(session, true)
-		if err != nil {
-			log.Errorf("failed to async committing [%s]", session.XID)
-		}
+func (manager *DistributedTransactionManager) watchBranchSession() {
+	watcher := manager.storageDriver.WatchBranchSessions(context.Background(), manager.applicationID)
+	for {
+		bs := <-watcher.ResultChan()
+		manager.branchSessionQueue.Add(bs)
 	}
 }
 
@@ -882,6 +349,6 @@ func isGlobalSessionTimeout(gs *api.GlobalSession) bool {
 	return (timeUtils.CurrentTimeMillis() - uint64(gs.BeginTime)) > uint64(gs.Timeout)
 }
 
-func (manager *DistributedTransactionManager) IsRollingBackDead(gs *api.GlobalSession) bool {
-	return (timeUtils.CurrentTimeMillis() - uint64(gs.BeginTime)) > uint64(manager.retryDeadThreshold)
+func (manager *DistributedTransactionManager) IsRollingBackDead(bs *api.BranchSession) bool {
+	return (timeUtils.CurrentTimeMillis() - uint64(bs.BeginTime)) > uint64(manager.retryDeadThreshold)
 }

@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"gopkg.in/yaml.v3"
 
 	"github.com/cectc/dbpack/pkg/log"
@@ -81,22 +82,11 @@ type (
 	Storage map[string]Parameters
 
 	DistributedTransaction struct {
-		Port                             int    `yaml:"port" json:"port"`
-		Addressing                       string `yaml:"addressing" json:"addressing"`
+		ApplicationID                    string `yaml:"appid" json:"appid"`
 		RetryDeadThreshold               int64  `yaml:"retry_dead_threshold" json:"retry_dead_threshold"`
-		MaxCommitRetryTimeout            int64  `yaml:"max_commit_retry_timeout" json:"max_commit_retry_timeout"`
-		MaxRollbackRetryTimeout          int64  `yaml:"max_rollback_retry_timeout" json:"max_rollback_retry_timeout"`
 		RollbackRetryTimeoutUnlockEnable bool   `yaml:"rollback_retry_timeout_unlock_enable" json:"rollback_retry_timeout_unlock_enable"`
 
-		AsyncCommittingRetryPeriod time.Duration `yaml:"async_committing_retry_period" json:"async_committing_retry_period"`
-		CommittingRetryPeriod      time.Duration `yaml:"committing_retry_period" json:"committing_retry_period"`
-		RollingBackRetryPeriod     time.Duration `yaml:"rolling_back_retry_period" json:"rolling_back_retry_period"`
-		TimeoutRetryPeriod         time.Duration `yaml:"timeout_retry_period" json:"timeout_retry_period"`
-
-		EnforcementPolicy EnforcementPolicy `yaml:"enforcement_policy" json:"enforcement_policy"`
-		ServerParameters  ServerParameters  `yaml:"server_parameters" json:"server_parameters"`
-		ClientParameters  ClientParameters  `yaml:"client_parameters" json:"client_parameters"`
-		Storage           Storage           `yaml:"storage" json:"storage"`
+		EtcdConfig clientv3.Config `yaml:"etcd_config" json:"etcd_config"`
 	}
 
 	EnforcementPolicy struct {

@@ -21,8 +21,6 @@ type TransactionManagerServiceClient interface {
 	Begin(ctx context.Context, in *GlobalBeginRequest, opts ...grpc.CallOption) (*GlobalBeginResponse, error)
 	Commit(ctx context.Context, in *GlobalCommitRequest, opts ...grpc.CallOption) (*GlobalCommitResponse, error)
 	Rollback(ctx context.Context, in *GlobalRollbackRequest, opts ...grpc.CallOption) (*GlobalRollbackResponse, error)
-	BranchRegister(ctx context.Context, in *BranchRegisterRequest, opts ...grpc.CallOption) (*BranchRegisterResponse, error)
-	BranchReport(ctx context.Context, in *BranchReportRequest, opts ...grpc.CallOption) (*BranchReportResponse, error)
 }
 
 type transactionManagerServiceClient struct {
@@ -60,24 +58,6 @@ func (c *transactionManagerServiceClient) Rollback(ctx context.Context, in *Glob
 	return out, nil
 }
 
-func (c *transactionManagerServiceClient) BranchRegister(ctx context.Context, in *BranchRegisterRequest, opts ...grpc.CallOption) (*BranchRegisterResponse, error) {
-	out := new(BranchRegisterResponse)
-	err := c.cc.Invoke(ctx, "/api.TransactionManagerService/BranchRegister", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *transactionManagerServiceClient) BranchReport(ctx context.Context, in *BranchReportRequest, opts ...grpc.CallOption) (*BranchReportResponse, error) {
-	out := new(BranchReportResponse)
-	err := c.cc.Invoke(ctx, "/api.TransactionManagerService/BranchReport", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // TransactionManagerServiceServer is the server API for TransactionManagerService service.
 // All implementations should embed UnimplementedTransactionManagerServiceServer
 // for forward compatibility
@@ -85,8 +65,6 @@ type TransactionManagerServiceServer interface {
 	Begin(context.Context, *GlobalBeginRequest) (*GlobalBeginResponse, error)
 	Commit(context.Context, *GlobalCommitRequest) (*GlobalCommitResponse, error)
 	Rollback(context.Context, *GlobalRollbackRequest) (*GlobalRollbackResponse, error)
-	BranchRegister(context.Context, *BranchRegisterRequest) (*BranchRegisterResponse, error)
-	BranchReport(context.Context, *BranchReportRequest) (*BranchReportResponse, error)
 }
 
 // UnimplementedTransactionManagerServiceServer should be embedded to have forward compatible implementations.
@@ -101,12 +79,6 @@ func (UnimplementedTransactionManagerServiceServer) Commit(context.Context, *Glo
 }
 func (UnimplementedTransactionManagerServiceServer) Rollback(context.Context, *GlobalRollbackRequest) (*GlobalRollbackResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Rollback not implemented")
-}
-func (UnimplementedTransactionManagerServiceServer) BranchRegister(context.Context, *BranchRegisterRequest) (*BranchRegisterResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BranchRegister not implemented")
-}
-func (UnimplementedTransactionManagerServiceServer) BranchReport(context.Context, *BranchReportRequest) (*BranchReportResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BranchReport not implemented")
 }
 
 // UnsafeTransactionManagerServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -174,42 +146,6 @@ func _TransactionManagerService_Rollback_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
-func _TransactionManagerService_BranchRegister_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BranchRegisterRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TransactionManagerServiceServer).BranchRegister(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/api.TransactionManagerService/BranchRegister",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactionManagerServiceServer).BranchRegister(ctx, req.(*BranchRegisterRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _TransactionManagerService_BranchReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BranchReportRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TransactionManagerServiceServer).BranchReport(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/api.TransactionManagerService/BranchReport",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TransactionManagerServiceServer).BranchReport(ctx, req.(*BranchReportRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // TransactionManagerService_ServiceDesc is the grpc.ServiceDesc for TransactionManagerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -228,134 +164,6 @@ var TransactionManagerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Rollback",
 			Handler:    _TransactionManagerService_Rollback_Handler,
-		},
-		{
-			MethodName: "BranchRegister",
-			Handler:    _TransactionManagerService_BranchRegister_Handler,
-		},
-		{
-			MethodName: "BranchReport",
-			Handler:    _TransactionManagerService_BranchReport_Handler,
-		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "api.proto",
-}
-
-// ResourceManagerServiceClient is the client API for ResourceManagerService service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type ResourceManagerServiceClient interface {
-	BranchCommit(ctx context.Context, in *BranchCommitRequest, opts ...grpc.CallOption) (*BranchCommitResponse, error)
-	BranchRollback(ctx context.Context, in *BranchRollbackRequest, opts ...grpc.CallOption) (*BranchRollbackResponse, error)
-}
-
-type resourceManagerServiceClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewResourceManagerServiceClient(cc grpc.ClientConnInterface) ResourceManagerServiceClient {
-	return &resourceManagerServiceClient{cc}
-}
-
-func (c *resourceManagerServiceClient) BranchCommit(ctx context.Context, in *BranchCommitRequest, opts ...grpc.CallOption) (*BranchCommitResponse, error) {
-	out := new(BranchCommitResponse)
-	err := c.cc.Invoke(ctx, "/api.ResourceManagerService/BranchCommit", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *resourceManagerServiceClient) BranchRollback(ctx context.Context, in *BranchRollbackRequest, opts ...grpc.CallOption) (*BranchRollbackResponse, error) {
-	out := new(BranchRollbackResponse)
-	err := c.cc.Invoke(ctx, "/api.ResourceManagerService/BranchRollback", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// ResourceManagerServiceServer is the server API for ResourceManagerService service.
-// All implementations should embed UnimplementedResourceManagerServiceServer
-// for forward compatibility
-type ResourceManagerServiceServer interface {
-	BranchCommit(context.Context, *BranchCommitRequest) (*BranchCommitResponse, error)
-	BranchRollback(context.Context, *BranchRollbackRequest) (*BranchRollbackResponse, error)
-}
-
-// UnimplementedResourceManagerServiceServer should be embedded to have forward compatible implementations.
-type UnimplementedResourceManagerServiceServer struct {
-}
-
-func (UnimplementedResourceManagerServiceServer) BranchCommit(context.Context, *BranchCommitRequest) (*BranchCommitResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BranchCommit not implemented")
-}
-func (UnimplementedResourceManagerServiceServer) BranchRollback(context.Context, *BranchRollbackRequest) (*BranchRollbackResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BranchRollback not implemented")
-}
-
-// UnsafeResourceManagerServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to ResourceManagerServiceServer will
-// result in compilation errors.
-type UnsafeResourceManagerServiceServer interface {
-	mustEmbedUnimplementedResourceManagerServiceServer()
-}
-
-func RegisterResourceManagerServiceServer(s grpc.ServiceRegistrar, srv ResourceManagerServiceServer) {
-	s.RegisterService(&ResourceManagerService_ServiceDesc, srv)
-}
-
-func _ResourceManagerService_BranchCommit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BranchCommitRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ResourceManagerServiceServer).BranchCommit(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/api.ResourceManagerService/BranchCommit",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ResourceManagerServiceServer).BranchCommit(ctx, req.(*BranchCommitRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ResourceManagerService_BranchRollback_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BranchRollbackRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ResourceManagerServiceServer).BranchRollback(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/api.ResourceManagerService/BranchRollback",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ResourceManagerServiceServer).BranchRollback(ctx, req.(*BranchRollbackRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-// ResourceManagerService_ServiceDesc is the grpc.ServiceDesc for ResourceManagerService service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var ResourceManagerService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "api.ResourceManagerService",
-	HandlerType: (*ResourceManagerServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "BranchCommit",
-			Handler:    _ResourceManagerService_BranchCommit_Handler,
-		},
-		{
-			MethodName: "BranchRollback",
-			Handler:    _ResourceManagerService_BranchRollback_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

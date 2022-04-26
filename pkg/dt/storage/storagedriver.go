@@ -17,41 +17,43 @@
 package storage
 
 import (
+	"context"
+
 	"github.com/cectc/dbpack/pkg/dt/api"
 )
 
 type Driver interface {
-	AddGlobalSession(session *api.GlobalSession) error
+	AddGlobalSession(ctx context.Context, globalSession *api.GlobalSession) error
+	AddBranchSession(ctx context.Context, branchSession *api.BranchSession) error
+	GlobalCommit(ctx context.Context, xid string) (api.GlobalSession_GlobalStatus, error)
+	GlobalRollback(ctx context.Context, xid string) (api.GlobalSession_GlobalStatus, error)
+	GetGlobalSession(ctx context.Context, xid string) (*api.GlobalSession, error)
+	ListGlobalSession(ctx context.Context, applicationID string) ([]*api.GlobalSession, error)
+	DeleteGlobalSession(ctx context.Context, xid string) error
+	GetBranchSession(ctx context.Context, branchID string) (*api.BranchSession, error)
+	ListBranchSession(ctx context.Context, applicationID string) ([]*api.BranchSession, error)
+	DeleteBranchSession(ctx context.Context, branchID string) error
+	GetBranchSessionKeys(ctx context.Context, xid string) ([]string, error)
+	BranchReport(ctx context.Context, branchID string, status api.BranchSession_BranchStatus) error
+	IsLockable(ctx context.Context, resourceID string, lockKey string) (bool, error)
+	ReleaseLockKeys(ctx context.Context, resourceID string, lockKeys []string) (bool, error)
+	WatchGlobalSessions(ctx context.Context, applicationID string) Watcher
+	WatchBranchSessions(ctx context.Context, applicationID string) Watcher
+}
 
-	FindGlobalSession(xid string) *api.GlobalSession
+// Watcher can be implemented by anything that knows how to watch and report changes.
+type Watcher interface {
+	// Stop watching. Will close the channel returned by ResultChan(). Releases
+	// any resources used by the watch.
+	Stop()
 
-	FindGlobalSessions(statuses []api.GlobalSession_GlobalStatus, addressing string) []*api.GlobalSession
+	// ResultChan return a chan which will receive all the TransactionSessions. If an error occurs
+	// or Stop() is called, the implementation will close this channel and
+	// release any resources used by the watch.
+	ResultChan() <-chan TransactionSession
+}
 
-	CountGlobalSessions(addressing string) (int, error)
-
-	UpdateGlobalSessionStatus(session *api.GlobalSession, status api.GlobalSession_GlobalStatus) error
-
-	InactiveGlobalSession(session *api.GlobalSession) error
-
-	CanBeAsyncCommitOrRollback(session *api.GlobalSession) bool
-
-	ReleaseGlobalSessionLock(session *api.GlobalSession) error
-
-	RemoveGlobalSession(session *api.GlobalSession) error
-
-	AddBranchSession(globalSession *api.GlobalSession, session *api.BranchSession) error
-
-	FindBranchSessions(xid string) []*api.BranchSession
-
-	FindBranchSessionByBranchID(branchID int64) *api.BranchSession
-
-	ReleaseBranchSessionLock(session *api.BranchSession) error
-
-	ReleaseLockAndRemoveBranchSession(xid string, resourceID string, lockKeys []string) error
-
-	UpdateBranchSessionStatus(session *api.BranchSession, status api.BranchSession_BranchStatus) error
-
-	RemoveBranchSession(globalSession *api.GlobalSession, session *api.BranchSession) error
-
-	IsLockable(xid string, resourceID string, lockKey string) bool
+type TransactionSession interface {
+	Marshal() (data []byte, err error)
+	Unmarshal(data []byte) error
 }

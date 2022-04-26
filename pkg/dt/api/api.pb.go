@@ -6,7 +6,6 @@ package api
 import (
 	bytes "bytes"
 	fmt "fmt"
-	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
 	io "io"
 	math "math"
@@ -51,76 +50,24 @@ func (ResultCode) EnumDescriptor() ([]byte, []int) {
 type GlobalSession_GlobalStatus int32
 
 const (
-	// Un known global status.
-	UnknownGlobalStatus GlobalSession_GlobalStatus = 0
-	// PHASE 1: can accept new branch registering.
-	Begin GlobalSession_GlobalStatus = 1
-	// PHASE 2: Running Status: may be changed any time.
-	Committing GlobalSession_GlobalStatus = 2
-	// Retrying commit after a recoverable failure.
-	CommitRetrying GlobalSession_GlobalStatus = 3
-	// Rolling back global status.
-	RollingBack GlobalSession_GlobalStatus = 4
-	// Retrying rollback after a recoverable failure.
-	RollbackRetrying GlobalSession_GlobalStatus = 5
-	// Rolling back since timeout
-	TimeoutRollingBack GlobalSession_GlobalStatus = 6
-	// Retrying rollback (since timeout) after a recoverable failure.
-	TimeoutRollbackRetrying GlobalSession_GlobalStatus = 7
-	// All branches can be async committed. The committing is NOT done yet, but it can be seen as committed for TM/RM rpc_client.
-	AsyncCommitting GlobalSession_GlobalStatus = 8
-	// Finally: global transaction is successfully committed.
-	Committed GlobalSession_GlobalStatus = 9
-	// Finally: failed to commit
-	CommitFailed GlobalSession_GlobalStatus = 10
-	// Finally: global transaction is successfully rollback.
-	RolledBack GlobalSession_GlobalStatus = 11
-	// Finally: failed to rollback
-	RollbackFailed GlobalSession_GlobalStatus = 12
-	// Finally: global transaction is successfully rollback since timeout.
-	TimeoutRolledBack GlobalSession_GlobalStatus = 13
-	// Finally: global transaction rollback failed since timeout.
-	TimeoutRollbackFailed GlobalSession_GlobalStatus = 14
-	// The Finished.
-	Finished GlobalSession_GlobalStatus = 15
+	Begin       GlobalSession_GlobalStatus = 0
+	Committing  GlobalSession_GlobalStatus = 1
+	Rollbacking GlobalSession_GlobalStatus = 2
+	Finished    GlobalSession_GlobalStatus = 3
 )
 
 var GlobalSession_GlobalStatus_name = map[int32]string{
-	0:  "UnknownGlobalStatus",
-	1:  "Begin",
-	2:  "Committing",
-	3:  "CommitRetrying",
-	4:  "RollingBack",
-	5:  "RollbackRetrying",
-	6:  "TimeoutRollingBack",
-	7:  "TimeoutRollbackRetrying",
-	8:  "AsyncCommitting",
-	9:  "Committed",
-	10: "CommitFailed",
-	11: "RolledBack",
-	12: "RollbackFailed",
-	13: "TimeoutRolledBack",
-	14: "TimeoutRollbackFailed",
-	15: "Finished",
+	0: "Begin",
+	1: "Committing",
+	2: "Rollbacking",
+	3: "Finished",
 }
 
 var GlobalSession_GlobalStatus_value = map[string]int32{
-	"UnknownGlobalStatus":     0,
-	"Begin":                   1,
-	"Committing":              2,
-	"CommitRetrying":          3,
-	"RollingBack":             4,
-	"RollbackRetrying":        5,
-	"TimeoutRollingBack":      6,
-	"TimeoutRollbackRetrying": 7,
-	"AsyncCommitting":         8,
-	"Committed":               9,
-	"CommitFailed":            10,
-	"RolledBack":              11,
-	"RollbackFailed":          12,
-	"TimeoutRolledBack":       13,
-	"TimeoutRollbackFailed":   14,
-	"Finished":                15,
+	"Begin":       0,
+	"Committing":  1,
+	"Rollbacking": 2,
+	"Finished":    3,
 }
 
 func (GlobalSession_GlobalStatus) EnumDescriptor() ([]byte, []int) {
@@ -157,56 +104,27 @@ func (BranchSession_BranchType) EnumDescriptor() ([]byte, []int) {
 type BranchSession_BranchStatus int32
 
 const (
-	// description:BranchStatus_Unknown branch status.
-	UnknownBranchStatus BranchSession_BranchStatus = 0
-	// description:BranchStatus_Registered to TC.
-	Registered BranchSession_BranchStatus = 1
-	// The Phase one done.
-	PhaseOneDone BranchSession_BranchStatus = 2
-	// The Phase one failed.
-	PhaseOneFailed BranchSession_BranchStatus = 3
-	// The Phase one timeout.
-	PhaseOneTimeout BranchSession_BranchStatus = 4
-	// The Phase two committed.
-	PhaseTwoCommitted BranchSession_BranchStatus = 5
-	// The Phase two commit failed retryable.
-	PhaseTwoCommitFailedRetryable BranchSession_BranchStatus = 6
-	// The Phase two commit failed and can not retry.
-	PhaseTwoCommitFailedCanNotRetry BranchSession_BranchStatus = 7
-	// The Phase two rollback completed.
-	PhaseTwoRolledBack BranchSession_BranchStatus = 8
-	// The Phase two rollback failed retryable.
-	PhaseTwoRollbackFailedRetryable BranchSession_BranchStatus = 9
-	// The Phase two rollback failed and can not retry.
-	PhaseTwoRollbackFailedCanNotRetry BranchSession_BranchStatus = 10
+	Registered          BranchSession_BranchStatus = 0
+	PhaseOneFailed      BranchSession_BranchStatus = 1
+	PhaseTwoCommitting  BranchSession_BranchStatus = 2
+	PhaseTwoRollbacking BranchSession_BranchStatus = 3
+	Complete            BranchSession_BranchStatus = 4
 )
 
 var BranchSession_BranchStatus_name = map[int32]string{
-	0:  "UnknownBranchStatus",
-	1:  "Registered",
-	2:  "PhaseOneDone",
-	3:  "PhaseOneFailed",
-	4:  "PhaseOneTimeout",
-	5:  "PhaseTwoCommitted",
-	6:  "PhaseTwoCommitFailedRetryable",
-	7:  "PhaseTwoCommitFailedCanNotRetry",
-	8:  "PhaseTwoRolledBack",
-	9:  "PhaseTwoRollbackFailedRetryable",
-	10: "PhaseTwoRollbackFailedCanNotRetry",
+	0: "Registered",
+	1: "PhaseOneFailed",
+	2: "PhaseTwoCommitting",
+	3: "PhaseTwoRollbacking",
+	4: "Complete",
 }
 
 var BranchSession_BranchStatus_value = map[string]int32{
-	"UnknownBranchStatus":               0,
-	"Registered":                        1,
-	"PhaseOneDone":                      2,
-	"PhaseOneFailed":                    3,
-	"PhaseOneTimeout":                   4,
-	"PhaseTwoCommitted":                 5,
-	"PhaseTwoCommitFailedRetryable":     6,
-	"PhaseTwoCommitFailedCanNotRetry":   7,
-	"PhaseTwoRolledBack":                8,
-	"PhaseTwoRollbackFailedRetryable":   9,
-	"PhaseTwoRollbackFailedCanNotRetry": 10,
+	"Registered":          0,
+	"PhaseOneFailed":      1,
+	"PhaseTwoCommitting":  2,
+	"PhaseTwoRollbacking": 3,
+	"Complete":            4,
 }
 
 func (BranchSession_BranchStatus) EnumDescriptor() ([]byte, []int) {
@@ -214,14 +132,13 @@ func (BranchSession_BranchStatus) EnumDescriptor() ([]byte, []int) {
 }
 
 type GlobalSession struct {
-	Addressing      string                     `protobuf:"bytes,1,opt,name=Addressing,proto3" json:"Addressing,omitempty" xorm:"addressing"`
-	XID             string                     `protobuf:"bytes,2,opt,name=XID,proto3" json:"XID,omitempty" xorm:"xid"`
-	TransactionID   int64                      `protobuf:"varint,3,opt,name=TransactionID,proto3" json:"TransactionID,omitempty" xorm:"transaction_id"`
-	TransactionName string                     `protobuf:"bytes,4,opt,name=TransactionName,proto3" json:"TransactionName,omitempty" xorm:"transaction_name"`
-	Timeout         int32                      `protobuf:"varint,5,opt,name=Timeout,proto3" json:"Timeout,omitempty" xorm:"timeout"`
-	BeginTime       int64                      `protobuf:"varint,6,opt,name=BeginTime,proto3" json:"BeginTime,omitempty" xorm:"begin_time"`
-	Status          GlobalSession_GlobalStatus `protobuf:"varint,7,opt,name=Status,proto3,enum=api.GlobalSession_GlobalStatus" json:"Status,omitempty" xorm:"status"`
-	Active          bool                       `protobuf:"varint,8,opt,name=Active,proto3" json:"Active,omitempty" xorm:"active"`
+	XID             string                     `protobuf:"bytes,1,opt,name=XID,proto3" json:"XID,omitempty"`
+	ApplicationID   string                     `protobuf:"bytes,2,opt,name=ApplicationID,proto3" json:"ApplicationID,omitempty"`
+	TransactionID   int64                      `protobuf:"varint,3,opt,name=TransactionID,proto3" json:"TransactionID,omitempty"`
+	TransactionName string                     `protobuf:"bytes,4,opt,name=TransactionName,proto3" json:"TransactionName,omitempty"`
+	Timeout         int32                      `protobuf:"varint,5,opt,name=Timeout,proto3" json:"Timeout,omitempty"`
+	BeginTime       int64                      `protobuf:"varint,6,opt,name=BeginTime,proto3" json:"BeginTime,omitempty"`
+	Status          GlobalSession_GlobalStatus `protobuf:"varint,7,opt,name=Status,proto3,enum=api.GlobalSession_GlobalStatus" json:"Status,omitempty"`
 }
 
 func (m *GlobalSession) Reset()      { *m = GlobalSession{} }
@@ -256,16 +173,16 @@ func (m *GlobalSession) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GlobalSession proto.InternalMessageInfo
 
-func (m *GlobalSession) GetAddressing() string {
+func (m *GlobalSession) GetXID() string {
 	if m != nil {
-		return m.Addressing
+		return m.XID
 	}
 	return ""
 }
 
-func (m *GlobalSession) GetXID() string {
+func (m *GlobalSession) GetApplicationID() string {
 	if m != nil {
-		return m.XID
+		return m.ApplicationID
 	}
 	return ""
 }
@@ -302,30 +219,21 @@ func (m *GlobalSession) GetStatus() GlobalSession_GlobalStatus {
 	if m != nil {
 		return m.Status
 	}
-	return UnknownGlobalStatus
-}
-
-func (m *GlobalSession) GetActive() bool {
-	if m != nil {
-		return m.Active
-	}
-	return false
+	return Begin
 }
 
 type BranchSession struct {
-	Addressing      string                     `protobuf:"bytes,1,opt,name=Addressing,proto3" json:"Addressing,omitempty" xorm:"addressing"`
-	XID             string                     `protobuf:"bytes,2,opt,name=XID,proto3" json:"XID,omitempty" xorm:"xid"`
-	BranchID        int64                      `protobuf:"varint,3,opt,name=BranchID,proto3" json:"BranchID,omitempty" xorm:"branch_id"`
-	TransactionID   int64                      `protobuf:"varint,4,opt,name=TransactionID,proto3" json:"TransactionID,omitempty" xorm:"transaction_id"`
-	ResourceID      string                     `protobuf:"bytes,5,opt,name=ResourceID,proto3" json:"ResourceID,omitempty" xorm:"resource_id"`
-	LockKey         string                     `protobuf:"bytes,6,opt,name=LockKey,proto3" json:"LockKey,omitempty" xorm:"lock_key"`
-	Type            BranchSession_BranchType   `protobuf:"varint,7,opt,name=Type,proto3,enum=api.BranchSession_BranchType" json:"Type,omitempty" xorm:"branch_type"`
-	Status          BranchSession_BranchStatus `protobuf:"varint,8,opt,name=Status,proto3,enum=api.BranchSession_BranchStatus" json:"Status,omitempty" xorm:"status"`
-	ApplicationData []byte                     `protobuf:"bytes,9,opt,name=ApplicationData,proto3" json:"ApplicationData,omitempty" xorm:"application_data"`
-	// if BranchType is AT, this field default is true
-	Async bool `protobuf:"varint,10,opt,name=Async,proto3" json:"Async,omitempty" xorm:"async"`
-	// if BranchType is AT, this field must assign a value
-	SkipCheckLock bool `protobuf:"varint,11,opt,name=SkipCheckLock,proto3" json:"SkipCheckLock,omitempty"`
+	BranchID        string                     `protobuf:"bytes,1,opt,name=BranchID,proto3" json:"BranchID,omitempty"`
+	ApplicationID   string                     `protobuf:"bytes,2,opt,name=ApplicationID,proto3" json:"ApplicationID,omitempty"`
+	BranchSessionID int64                      `protobuf:"varint,3,opt,name=BranchSessionID,proto3" json:"BranchSessionID,omitempty"`
+	XID             string                     `protobuf:"bytes,4,opt,name=XID,proto3" json:"XID,omitempty"`
+	TransactionID   int64                      `protobuf:"varint,5,opt,name=TransactionID,proto3" json:"TransactionID,omitempty"`
+	ResourceID      string                     `protobuf:"bytes,6,opt,name=ResourceID,proto3" json:"ResourceID,omitempty"`
+	LockKey         string                     `protobuf:"bytes,7,opt,name=LockKey,proto3" json:"LockKey,omitempty"`
+	Type            BranchSession_BranchType   `protobuf:"varint,8,opt,name=Type,proto3,enum=api.BranchSession_BranchType" json:"Type,omitempty"`
+	Status          BranchSession_BranchStatus `protobuf:"varint,9,opt,name=Status,proto3,enum=api.BranchSession_BranchStatus" json:"Status,omitempty"`
+	ApplicationData []byte                     `protobuf:"bytes,10,opt,name=ApplicationData,proto3" json:"ApplicationData,omitempty"`
+	BeginTime       int64                      `protobuf:"varint,11,opt,name=BeginTime,proto3" json:"BeginTime,omitempty"`
 }
 
 func (m *BranchSession) Reset()      { *m = BranchSession{} }
@@ -360,11 +268,25 @@ func (m *BranchSession) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_BranchSession proto.InternalMessageInfo
 
-func (m *BranchSession) GetAddressing() string {
+func (m *BranchSession) GetBranchID() string {
 	if m != nil {
-		return m.Addressing
+		return m.BranchID
 	}
 	return ""
+}
+
+func (m *BranchSession) GetApplicationID() string {
+	if m != nil {
+		return m.ApplicationID
+	}
+	return ""
+}
+
+func (m *BranchSession) GetBranchSessionID() int64 {
+	if m != nil {
+		return m.BranchSessionID
+	}
+	return 0
 }
 
 func (m *BranchSession) GetXID() string {
@@ -372,13 +294,6 @@ func (m *BranchSession) GetXID() string {
 		return m.XID
 	}
 	return ""
-}
-
-func (m *BranchSession) GetBranchID() int64 {
-	if m != nil {
-		return m.BranchID
-	}
-	return 0
 }
 
 func (m *BranchSession) GetTransactionID() int64 {
@@ -413,7 +328,7 @@ func (m *BranchSession) GetStatus() BranchSession_BranchStatus {
 	if m != nil {
 		return m.Status
 	}
-	return UnknownBranchStatus
+	return Registered
 }
 
 func (m *BranchSession) GetApplicationData() []byte {
@@ -423,23 +338,16 @@ func (m *BranchSession) GetApplicationData() []byte {
 	return nil
 }
 
-func (m *BranchSession) GetAsync() bool {
+func (m *BranchSession) GetBeginTime() int64 {
 	if m != nil {
-		return m.Async
+		return m.BeginTime
 	}
-	return false
-}
-
-func (m *BranchSession) GetSkipCheckLock() bool {
-	if m != nil {
-		return m.SkipCheckLock
-	}
-	return false
+	return 0
 }
 
 // GlobalBeginRequest represents a global transaction begin
 type GlobalBeginRequest struct {
-	Addressing      string `protobuf:"bytes,1,opt,name=Addressing,proto3" json:"Addressing,omitempty"`
+	ApplicationID   string `protobuf:"bytes,1,opt,name=ApplicationID,proto3" json:"ApplicationID,omitempty"`
 	Timeout         int32  `protobuf:"varint,2,opt,name=Timeout,proto3" json:"Timeout,omitempty"`
 	TransactionName string `protobuf:"bytes,3,opt,name=TransactionName,proto3" json:"TransactionName,omitempty"`
 }
@@ -476,9 +384,9 @@ func (m *GlobalBeginRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GlobalBeginRequest proto.InternalMessageInfo
 
-func (m *GlobalBeginRequest) GetAddressing() string {
+func (m *GlobalBeginRequest) GetApplicationID() string {
 	if m != nil {
-		return m.Addressing
+		return m.ApplicationID
 	}
 	return ""
 }
@@ -501,7 +409,7 @@ func (m *GlobalBeginRequest) GetTransactionName() string {
 type GlobalBeginResponse struct {
 	ResultCode ResultCode `protobuf:"varint,1,opt,name=ResultCode,proto3,enum=api.ResultCode" json:"ResultCode,omitempty"`
 	Message    string     `protobuf:"bytes,2,opt,name=Message,proto3" json:"Message,omitempty"`
-	XID        string     `protobuf:"bytes,3,opt,name=XID,proto3" json:"XID,omitempty"`
+	XID        string     `protobuf:"bytes,4,opt,name=XID,proto3" json:"XID,omitempty"`
 }
 
 func (m *GlobalBeginResponse) Reset()      { *m = GlobalBeginResponse{} }
@@ -559,13 +467,11 @@ func (m *GlobalBeginResponse) GetXID() string {
 
 // BranchRegisterRequest represents a branch transaction join in the global transaction
 type BranchRegisterRequest struct {
-	Addressing      string                   `protobuf:"bytes,1,opt,name=Addressing,proto3" json:"Addressing,omitempty"`
-	XID             string                   `protobuf:"bytes,2,opt,name=XID,proto3" json:"XID,omitempty"`
-	ResourceID      string                   `protobuf:"bytes,3,opt,name=ResourceID,proto3" json:"ResourceID,omitempty"`
-	LockKey         string                   `protobuf:"bytes,4,opt,name=LockKey,proto3" json:"LockKey,omitempty"`
-	BranchType      BranchSession_BranchType `protobuf:"varint,5,opt,name=BranchType,proto3,enum=api.BranchSession_BranchType" json:"BranchType,omitempty"`
-	ApplicationData []byte                   `protobuf:"bytes,6,opt,name=ApplicationData,proto3" json:"ApplicationData,omitempty"`
-	Async           bool                     `protobuf:"varint,7,opt,name=Async,proto3" json:"Async,omitempty"`
+	XID             string                   `protobuf:"bytes,1,opt,name=XID,proto3" json:"XID,omitempty"`
+	ResourceID      string                   `protobuf:"bytes,2,opt,name=ResourceID,proto3" json:"ResourceID,omitempty"`
+	LockKey         string                   `protobuf:"bytes,3,opt,name=LockKey,proto3" json:"LockKey,omitempty"`
+	BranchType      BranchSession_BranchType `protobuf:"varint,4,opt,name=BranchType,proto3,enum=api.BranchSession_BranchType" json:"BranchType,omitempty"`
+	ApplicationData []byte                   `protobuf:"bytes,5,opt,name=ApplicationData,proto3" json:"ApplicationData,omitempty"`
 }
 
 func (m *BranchRegisterRequest) Reset()      { *m = BranchRegisterRequest{} }
@@ -599,13 +505,6 @@ func (m *BranchRegisterRequest) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_BranchRegisterRequest proto.InternalMessageInfo
-
-func (m *BranchRegisterRequest) GetAddressing() string {
-	if m != nil {
-		return m.Addressing
-	}
-	return ""
-}
 
 func (m *BranchRegisterRequest) GetXID() string {
 	if m != nil {
@@ -642,18 +541,12 @@ func (m *BranchRegisterRequest) GetApplicationData() []byte {
 	return nil
 }
 
-func (m *BranchRegisterRequest) GetAsync() bool {
-	if m != nil {
-		return m.Async
-	}
-	return false
-}
-
 // BranchRegisterResponse represents a response to BranchRegisterRequest
 type BranchRegisterResponse struct {
-	ResultCode ResultCode `protobuf:"varint,1,opt,name=ResultCode,proto3,enum=api.ResultCode" json:"ResultCode,omitempty"`
-	Message    string     `protobuf:"bytes,2,opt,name=Message,proto3" json:"Message,omitempty"`
-	BranchID   int64      `protobuf:"varint,3,opt,name=BranchID,proto3" json:"BranchID,omitempty"`
+	ResultCode      ResultCode `protobuf:"varint,1,opt,name=ResultCode,proto3,enum=api.ResultCode" json:"ResultCode,omitempty"`
+	Message         string     `protobuf:"bytes,2,opt,name=Message,proto3" json:"Message,omitempty"`
+	BranchID        string     `protobuf:"bytes,3,opt,name=BranchID,proto3" json:"BranchID,omitempty"`
+	BranchSessionID int64      `protobuf:"varint,4,opt,name=BranchSessionID,proto3" json:"BranchSessionID,omitempty"`
 }
 
 func (m *BranchRegisterResponse) Reset()      { *m = BranchRegisterResponse{} }
@@ -702,21 +595,24 @@ func (m *BranchRegisterResponse) GetMessage() string {
 	return ""
 }
 
-func (m *BranchRegisterResponse) GetBranchID() int64 {
+func (m *BranchRegisterResponse) GetBranchID() string {
 	if m != nil {
 		return m.BranchID
+	}
+	return ""
+}
+
+func (m *BranchRegisterResponse) GetBranchSessionID() int64 {
+	if m != nil {
+		return m.BranchSessionID
 	}
 	return 0
 }
 
 // BranchReportRequest represents a request to report branch transaction execution status
 type BranchReportRequest struct {
-	XID             string                     `protobuf:"bytes,1,opt,name=XID,proto3" json:"XID,omitempty"`
-	BranchID        int64                      `protobuf:"varint,2,opt,name=BranchID,proto3" json:"BranchID,omitempty"`
-	ResourceID      string                     `protobuf:"bytes,3,opt,name=ResourceID,proto3" json:"ResourceID,omitempty"`
-	BranchType      BranchSession_BranchType   `protobuf:"varint,4,opt,name=BranchType,proto3,enum=api.BranchSession_BranchType" json:"BranchType,omitempty"`
-	BranchStatus    BranchSession_BranchStatus `protobuf:"varint,5,opt,name=BranchStatus,proto3,enum=api.BranchSession_BranchStatus" json:"BranchStatus,omitempty"`
-	ApplicationData []byte                     `protobuf:"bytes,6,opt,name=ApplicationData,proto3" json:"ApplicationData,omitempty"`
+	BranchID     string                     `protobuf:"bytes,1,opt,name=BranchID,proto3" json:"BranchID,omitempty"`
+	BranchStatus BranchSession_BranchStatus `protobuf:"varint,2,opt,name=BranchStatus,proto3,enum=api.BranchSession_BranchStatus" json:"BranchStatus,omitempty"`
 }
 
 func (m *BranchReportRequest) Reset()      { *m = BranchReportRequest{} }
@@ -751,46 +647,18 @@ func (m *BranchReportRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_BranchReportRequest proto.InternalMessageInfo
 
-func (m *BranchReportRequest) GetXID() string {
-	if m != nil {
-		return m.XID
-	}
-	return ""
-}
-
-func (m *BranchReportRequest) GetBranchID() int64 {
+func (m *BranchReportRequest) GetBranchID() string {
 	if m != nil {
 		return m.BranchID
 	}
-	return 0
-}
-
-func (m *BranchReportRequest) GetResourceID() string {
-	if m != nil {
-		return m.ResourceID
-	}
 	return ""
-}
-
-func (m *BranchReportRequest) GetBranchType() BranchSession_BranchType {
-	if m != nil {
-		return m.BranchType
-	}
-	return AT
 }
 
 func (m *BranchReportRequest) GetBranchStatus() BranchSession_BranchStatus {
 	if m != nil {
 		return m.BranchStatus
 	}
-	return UnknownBranchStatus
-}
-
-func (m *BranchReportRequest) GetApplicationData() []byte {
-	if m != nil {
-		return m.ApplicationData
-	}
-	return nil
+	return Registered
 }
 
 // BranchReportResponse represents a response to BranchReportRequest
@@ -847,10 +715,8 @@ func (m *BranchReportResponse) GetMessage() string {
 
 // GlobalLockQueryRequest represents a request to query the global lock
 type GlobalLockQueryRequest struct {
-	XID        string                   `protobuf:"bytes,1,opt,name=XID,proto3" json:"XID,omitempty"`
-	ResourceID string                   `protobuf:"bytes,2,opt,name=ResourceID,proto3" json:"ResourceID,omitempty"`
-	LockKey    string                   `protobuf:"bytes,3,opt,name=LockKey,proto3" json:"LockKey,omitempty"`
-	BranchType BranchSession_BranchType `protobuf:"varint,4,opt,name=BranchType,proto3,enum=api.BranchSession_BranchType" json:"BranchType,omitempty"`
+	ResourceID string `protobuf:"bytes,1,opt,name=ResourceID,proto3" json:"ResourceID,omitempty"`
+	LockKey    string `protobuf:"bytes,2,opt,name=LockKey,proto3" json:"LockKey,omitempty"`
 }
 
 func (m *GlobalLockQueryRequest) Reset()      { *m = GlobalLockQueryRequest{} }
@@ -885,13 +751,6 @@ func (m *GlobalLockQueryRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GlobalLockQueryRequest proto.InternalMessageInfo
 
-func (m *GlobalLockQueryRequest) GetXID() string {
-	if m != nil {
-		return m.XID
-	}
-	return ""
-}
-
 func (m *GlobalLockQueryRequest) GetResourceID() string {
 	if m != nil {
 		return m.ResourceID
@@ -904,13 +763,6 @@ func (m *GlobalLockQueryRequest) GetLockKey() string {
 		return m.LockKey
 	}
 	return ""
-}
-
-func (m *GlobalLockQueryRequest) GetBranchType() BranchSession_BranchType {
-	if m != nil {
-		return m.BranchType
-	}
-	return AT
 }
 
 // GlobalLockQueryResponse represents a response to GlobalLockQueryRequest
@@ -1074,7 +926,7 @@ func (m *GlobalStatusResponse) GetGlobalStatus() GlobalSession_GlobalStatus {
 	if m != nil {
 		return m.GlobalStatus
 	}
-	return UnknownGlobalStatus
+	return Begin
 }
 
 // GlobalCommitRequest represents a request to commit global transaction
@@ -1178,7 +1030,7 @@ func (m *GlobalCommitResponse) GetGlobalStatus() GlobalSession_GlobalStatus {
 	if m != nil {
 		return m.GlobalStatus
 	}
-	return UnknownGlobalStatus
+	return Begin
 }
 
 // GlobalRollbackRequest represents a request to rollback global transaction
@@ -1282,7 +1134,7 @@ func (m *GlobalRollbackResponse) GetGlobalStatus() GlobalSession_GlobalStatus {
 	if m != nil {
 		return m.GlobalStatus
 	}
-	return UnknownGlobalStatus
+	return Begin
 }
 
 // GlobalReportRequest represents a request to report global transaction execution status
@@ -1334,7 +1186,7 @@ func (m *GlobalReportRequest) GetGlobalStatus() GlobalSession_GlobalStatus {
 	if m != nil {
 		return m.GlobalStatus
 	}
-	return UnknownGlobalStatus
+	return Begin
 }
 
 // GlobalReportResponse represents a response to GlobalReportRequest
@@ -1394,335 +1246,7 @@ func (m *GlobalReportResponse) GetGlobalStatus() GlobalSession_GlobalStatus {
 	if m != nil {
 		return m.GlobalStatus
 	}
-	return UnknownGlobalStatus
-}
-
-// BranchCommitRequest represents a request to commit branch transaction
-type BranchCommitRequest struct {
-	XID             string                   `protobuf:"bytes,1,opt,name=XID,proto3" json:"XID,omitempty"`
-	BranchID        int64                    `protobuf:"varint,2,opt,name=BranchID,proto3" json:"BranchID,omitempty"`
-	ResourceID      string                   `protobuf:"bytes,3,opt,name=ResourceID,proto3" json:"ResourceID,omitempty"`
-	LockKey         string                   `protobuf:"bytes,4,opt,name=LockKey,proto3" json:"LockKey,omitempty"`
-	BranchType      BranchSession_BranchType `protobuf:"varint,5,opt,name=BranchType,proto3,enum=api.BranchSession_BranchType" json:"BranchType,omitempty"`
-	ApplicationData []byte                   `protobuf:"bytes,6,opt,name=ApplicationData,proto3" json:"ApplicationData,omitempty"`
-}
-
-func (m *BranchCommitRequest) Reset()      { *m = BranchCommitRequest{} }
-func (*BranchCommitRequest) ProtoMessage() {}
-func (*BranchCommitRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_00212fb1f9d3bf1c, []int{18}
-}
-func (m *BranchCommitRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *BranchCommitRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_BranchCommitRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *BranchCommitRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_BranchCommitRequest.Merge(m, src)
-}
-func (m *BranchCommitRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *BranchCommitRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_BranchCommitRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_BranchCommitRequest proto.InternalMessageInfo
-
-func (m *BranchCommitRequest) GetXID() string {
-	if m != nil {
-		return m.XID
-	}
-	return ""
-}
-
-func (m *BranchCommitRequest) GetBranchID() int64 {
-	if m != nil {
-		return m.BranchID
-	}
-	return 0
-}
-
-func (m *BranchCommitRequest) GetResourceID() string {
-	if m != nil {
-		return m.ResourceID
-	}
-	return ""
-}
-
-func (m *BranchCommitRequest) GetLockKey() string {
-	if m != nil {
-		return m.LockKey
-	}
-	return ""
-}
-
-func (m *BranchCommitRequest) GetBranchType() BranchSession_BranchType {
-	if m != nil {
-		return m.BranchType
-	}
-	return AT
-}
-
-func (m *BranchCommitRequest) GetApplicationData() []byte {
-	if m != nil {
-		return m.ApplicationData
-	}
-	return nil
-}
-
-// BranchCommitResponse represents a response to BranchCommitRequest
-type BranchCommitResponse struct {
-	ResultCode   ResultCode                 `protobuf:"varint,1,opt,name=ResultCode,proto3,enum=api.ResultCode" json:"ResultCode,omitempty"`
-	Message      string                     `protobuf:"bytes,2,opt,name=Message,proto3" json:"Message,omitempty"`
-	XID          string                     `protobuf:"bytes,3,opt,name=XID,proto3" json:"XID,omitempty"`
-	BranchID     int64                      `protobuf:"varint,4,opt,name=BranchID,proto3" json:"BranchID,omitempty"`
-	BranchStatus BranchSession_BranchStatus `protobuf:"varint,5,opt,name=BranchStatus,proto3,enum=api.BranchSession_BranchStatus" json:"BranchStatus,omitempty"`
-}
-
-func (m *BranchCommitResponse) Reset()      { *m = BranchCommitResponse{} }
-func (*BranchCommitResponse) ProtoMessage() {}
-func (*BranchCommitResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_00212fb1f9d3bf1c, []int{19}
-}
-func (m *BranchCommitResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *BranchCommitResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_BranchCommitResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *BranchCommitResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_BranchCommitResponse.Merge(m, src)
-}
-func (m *BranchCommitResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *BranchCommitResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_BranchCommitResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_BranchCommitResponse proto.InternalMessageInfo
-
-func (m *BranchCommitResponse) GetResultCode() ResultCode {
-	if m != nil {
-		return m.ResultCode
-	}
-	return ResultCodeFailed
-}
-
-func (m *BranchCommitResponse) GetMessage() string {
-	if m != nil {
-		return m.Message
-	}
-	return ""
-}
-
-func (m *BranchCommitResponse) GetXID() string {
-	if m != nil {
-		return m.XID
-	}
-	return ""
-}
-
-func (m *BranchCommitResponse) GetBranchID() int64 {
-	if m != nil {
-		return m.BranchID
-	}
-	return 0
-}
-
-func (m *BranchCommitResponse) GetBranchStatus() BranchSession_BranchStatus {
-	if m != nil {
-		return m.BranchStatus
-	}
-	return UnknownBranchStatus
-}
-
-// BranchCommitRequest represents a request to rollback branch transaction
-type BranchRollbackRequest struct {
-	XID             string                   `protobuf:"bytes,1,opt,name=XID,proto3" json:"XID,omitempty"`
-	BranchID        int64                    `protobuf:"varint,2,opt,name=BranchID,proto3" json:"BranchID,omitempty"`
-	ResourceID      string                   `protobuf:"bytes,3,opt,name=ResourceID,proto3" json:"ResourceID,omitempty"`
-	LockKey         string                   `protobuf:"bytes,4,opt,name=LockKey,proto3" json:"LockKey,omitempty"`
-	BranchType      BranchSession_BranchType `protobuf:"varint,5,opt,name=BranchType,proto3,enum=api.BranchSession_BranchType" json:"BranchType,omitempty"`
-	ApplicationData []byte                   `protobuf:"bytes,6,opt,name=ApplicationData,proto3" json:"ApplicationData,omitempty"`
-}
-
-func (m *BranchRollbackRequest) Reset()      { *m = BranchRollbackRequest{} }
-func (*BranchRollbackRequest) ProtoMessage() {}
-func (*BranchRollbackRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_00212fb1f9d3bf1c, []int{20}
-}
-func (m *BranchRollbackRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *BranchRollbackRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_BranchRollbackRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *BranchRollbackRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_BranchRollbackRequest.Merge(m, src)
-}
-func (m *BranchRollbackRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *BranchRollbackRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_BranchRollbackRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_BranchRollbackRequest proto.InternalMessageInfo
-
-func (m *BranchRollbackRequest) GetXID() string {
-	if m != nil {
-		return m.XID
-	}
-	return ""
-}
-
-func (m *BranchRollbackRequest) GetBranchID() int64 {
-	if m != nil {
-		return m.BranchID
-	}
-	return 0
-}
-
-func (m *BranchRollbackRequest) GetResourceID() string {
-	if m != nil {
-		return m.ResourceID
-	}
-	return ""
-}
-
-func (m *BranchRollbackRequest) GetLockKey() string {
-	if m != nil {
-		return m.LockKey
-	}
-	return ""
-}
-
-func (m *BranchRollbackRequest) GetBranchType() BranchSession_BranchType {
-	if m != nil {
-		return m.BranchType
-	}
-	return AT
-}
-
-func (m *BranchRollbackRequest) GetApplicationData() []byte {
-	if m != nil {
-		return m.ApplicationData
-	}
-	return nil
-}
-
-// BranchRollbackResponse represents a response to BranchRollbackRequest
-type BranchRollbackResponse struct {
-	ResultCode   ResultCode                 `protobuf:"varint,1,opt,name=ResultCode,proto3,enum=api.ResultCode" json:"ResultCode,omitempty"`
-	Message      string                     `protobuf:"bytes,2,opt,name=Message,proto3" json:"Message,omitempty"`
-	XID          string                     `protobuf:"bytes,3,opt,name=XID,proto3" json:"XID,omitempty"`
-	BranchID     int64                      `protobuf:"varint,4,opt,name=BranchID,proto3" json:"BranchID,omitempty"`
-	BranchStatus BranchSession_BranchStatus `protobuf:"varint,5,opt,name=BranchStatus,proto3,enum=api.BranchSession_BranchStatus" json:"BranchStatus,omitempty"`
-	LockKeys     []string                   `protobuf:"bytes,6,rep,name=LockKeys,proto3" json:"LockKeys,omitempty"`
-}
-
-func (m *BranchRollbackResponse) Reset()      { *m = BranchRollbackResponse{} }
-func (*BranchRollbackResponse) ProtoMessage() {}
-func (*BranchRollbackResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_00212fb1f9d3bf1c, []int{21}
-}
-func (m *BranchRollbackResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *BranchRollbackResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_BranchRollbackResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *BranchRollbackResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_BranchRollbackResponse.Merge(m, src)
-}
-func (m *BranchRollbackResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *BranchRollbackResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_BranchRollbackResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_BranchRollbackResponse proto.InternalMessageInfo
-
-func (m *BranchRollbackResponse) GetResultCode() ResultCode {
-	if m != nil {
-		return m.ResultCode
-	}
-	return ResultCodeFailed
-}
-
-func (m *BranchRollbackResponse) GetMessage() string {
-	if m != nil {
-		return m.Message
-	}
-	return ""
-}
-
-func (m *BranchRollbackResponse) GetXID() string {
-	if m != nil {
-		return m.XID
-	}
-	return ""
-}
-
-func (m *BranchRollbackResponse) GetBranchID() int64 {
-	if m != nil {
-		return m.BranchID
-	}
-	return 0
-}
-
-func (m *BranchRollbackResponse) GetBranchStatus() BranchSession_BranchStatus {
-	if m != nil {
-		return m.BranchStatus
-	}
-	return UnknownBranchStatus
-}
-
-func (m *BranchRollbackResponse) GetLockKeys() []string {
-	if m != nil {
-		return m.LockKeys
-	}
-	return nil
+	return Begin
 }
 
 func init() {
@@ -1748,109 +1272,71 @@ func init() {
 	proto.RegisterType((*GlobalRollbackResponse)(nil), "api.GlobalRollbackResponse")
 	proto.RegisterType((*GlobalReportRequest)(nil), "api.GlobalReportRequest")
 	proto.RegisterType((*GlobalReportResponse)(nil), "api.GlobalReportResponse")
-	proto.RegisterType((*BranchCommitRequest)(nil), "api.BranchCommitRequest")
-	proto.RegisterType((*BranchCommitResponse)(nil), "api.BranchCommitResponse")
-	proto.RegisterType((*BranchRollbackRequest)(nil), "api.BranchRollbackRequest")
-	proto.RegisterType((*BranchRollbackResponse)(nil), "api.BranchRollbackResponse")
 }
 
 func init() { proto.RegisterFile("api.proto", fileDescriptor_00212fb1f9d3bf1c) }
 
 var fileDescriptor_00212fb1f9d3bf1c = []byte{
-	// 1478 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xd4, 0x58, 0x4f, 0x6f, 0x1b, 0xc5,
-	0x1b, 0xf6, 0xfa, 0xbf, 0xdf, 0x3a, 0xce, 0x76, 0xf2, 0x6f, 0x93, 0xaa, 0x6b, 0x77, 0x7e, 0x7f,
-	0x70, 0x11, 0xb4, 0x28, 0x15, 0x48, 0xb4, 0xaa, 0x90, 0xed, 0xb4, 0x55, 0x28, 0x2d, 0xb0, 0x09,
-	0x52, 0xc5, 0x25, 0x9a, 0xac, 0x47, 0xce, 0xca, 0xce, 0xae, 0xd9, 0x5d, 0xb7, 0xf5, 0x89, 0x8a,
-	0x4f, 0x00, 0x47, 0xce, 0x48, 0xa8, 0x5f, 0x80, 0xef, 0xc0, 0x81, 0x43, 0x0f, 0x48, 0xf4, 0x64,
-	0x51, 0x57, 0x42, 0x95, 0xb8, 0x54, 0xfe, 0x04, 0x68, 0x66, 0x67, 0xbd, 0xb3, 0xb6, 0x53, 0xb7,
-	0x90, 0x40, 0xb9, 0x79, 0xde, 0x79, 0xde, 0x77, 0x66, 0x9e, 0x99, 0xe7, 0x99, 0x59, 0x43, 0x81,
-	0x74, 0xad, 0x0b, 0x5d, 0xd7, 0xf1, 0x1d, 0x94, 0x22, 0x5d, 0x6b, 0x03, 0x5a, 0x4e, 0xcb, 0x09,
-	0x02, 0xf8, 0xdb, 0x2c, 0x2c, 0xdc, 0xe8, 0x38, 0xfb, 0xa4, 0xb3, 0x43, 0x3d, 0xcf, 0x72, 0x6c,
-	0xf4, 0x2e, 0x40, 0xad, 0xd9, 0x74, 0x59, 0xcb, 0x6e, 0x69, 0x4a, 0x45, 0xa9, 0x16, 0xea, 0x2b,
-	0xa3, 0x41, 0xf9, 0xf4, 0x7d, 0xc7, 0x3d, 0xbc, 0x8c, 0xc9, 0xb8, 0x0f, 0x1b, 0x12, 0x10, 0x55,
-	0x20, 0x75, 0x67, 0x7b, 0x4b, 0x4b, 0x72, 0x7c, 0x69, 0x34, 0x28, 0x43, 0x80, 0xbf, 0x6f, 0x35,
-	0xb1, 0xc1, 0xba, 0xd0, 0x07, 0xb0, 0xb0, 0xeb, 0x12, 0xdb, 0x23, 0xa6, 0x6f, 0x39, 0xf6, 0xf6,
-	0x96, 0x96, 0xaa, 0x28, 0xd5, 0x54, 0x7d, 0x7d, 0x34, 0x28, 0xaf, 0x04, 0x58, 0x3f, 0xea, 0xde,
-	0x63, 0x69, 0x71, 0x3c, 0xba, 0x06, 0x8b, 0x52, 0xe0, 0x36, 0x39, 0xa4, 0x5a, 0x9a, 0x0f, 0x77,
-	0x66, 0x34, 0x28, 0xaf, 0x4d, 0x97, 0xb0, 0xc9, 0x21, 0xc5, 0xc6, 0x64, 0x0e, 0x7a, 0x0b, 0x72,
-	0xbb, 0xd6, 0x21, 0x75, 0x7a, 0xbe, 0x96, 0xa9, 0x28, 0xd5, 0x4c, 0x1d, 0x8d, 0x06, 0xe5, 0x92,
-	0x48, 0x0f, 0x3a, 0xb0, 0x11, 0x42, 0xd0, 0x25, 0x28, 0xd4, 0x69, 0xcb, 0xb2, 0x59, 0x5b, 0xcb,
-	0xf2, 0x19, 0x4b, 0x6c, 0xec, 0xb3, 0xae, 0x3d, 0x96, 0x85, 0x8d, 0x08, 0x87, 0x3e, 0x84, 0xec,
-	0x8e, 0x4f, 0xfc, 0x9e, 0xa7, 0xe5, 0x2a, 0x4a, 0xb5, 0xb4, 0x59, 0xbe, 0xc0, 0xb6, 0x20, 0xc6,
-	0x73, 0xd8, 0xe2, 0xb0, 0xfa, 0xe9, 0xd1, 0xa0, 0xbc, 0x10, 0x94, 0xf4, 0x78, 0x04, 0x1b, 0xa2,
-	0x02, 0x3a, 0x0f, 0xd9, 0x9a, 0xe9, 0x5b, 0x77, 0xa9, 0x96, 0xaf, 0x28, 0xd5, 0xbc, 0x0c, 0x25,
-	0x3c, 0x8e, 0x0d, 0x01, 0xc0, 0x3f, 0x25, 0xa1, 0x28, 0x97, 0x45, 0x6b, 0xb0, 0xf4, 0x99, 0xdd,
-	0xb6, 0x9d, 0x7b, 0xb6, 0x1c, 0x56, 0x13, 0xa8, 0x00, 0x19, 0x3e, 0x5b, 0x55, 0x41, 0x25, 0x80,
-	0x86, 0x73, 0x78, 0x68, 0xf9, 0xbe, 0x65, 0xb7, 0xd4, 0x24, 0x42, 0x50, 0x0a, 0xda, 0x06, 0xf5,
-	0xdd, 0x3e, 0x8b, 0xa5, 0xd0, 0x22, 0x9c, 0x32, 0x9c, 0x4e, 0xc7, 0xb2, 0x5b, 0x75, 0x62, 0xb6,
-	0xd5, 0x34, 0x5a, 0x06, 0x95, 0x05, 0xf6, 0x89, 0xd9, 0x1e, 0xc3, 0x32, 0x68, 0x15, 0x90, 0xa0,
-	0x4d, 0x46, 0x67, 0xd1, 0x19, 0x58, 0x93, 0xe2, 0xb1, 0xa4, 0x1c, 0x5a, 0x82, 0xc5, 0x9a, 0xd7,
-	0xb7, 0x4d, 0x69, 0x12, 0x79, 0xb4, 0x00, 0x05, 0xd1, 0xa6, 0x4d, 0xb5, 0x80, 0x54, 0x28, 0x06,
-	0xcd, 0xeb, 0xc4, 0xea, 0xd0, 0xa6, 0x0a, 0x6c, 0xd6, 0xac, 0x16, 0x6d, 0xf2, 0x21, 0x4e, 0xb1,
-	0x59, 0x87, 0xb5, 0x05, 0xa6, 0x88, 0x56, 0xe0, 0xb4, 0x34, 0xac, 0x80, 0x2e, 0xa0, 0x75, 0x58,
-	0x99, 0x98, 0x8d, 0xc8, 0x28, 0xa1, 0x22, 0xe4, 0xaf, 0x5b, 0xb6, 0xe5, 0x1d, 0xd0, 0xa6, 0xba,
-	0x88, 0x7f, 0xc9, 0xc1, 0x42, 0xdd, 0x25, 0xb6, 0x79, 0x70, 0xe2, 0xda, 0x78, 0x07, 0xf2, 0xc1,
-	0x48, 0x63, 0x59, 0x2c, 0x8f, 0x06, 0x65, 0x55, 0x1c, 0x32, 0xde, 0xc3, 0x15, 0x31, 0x46, 0x4d,
-	0xab, 0x29, 0xfd, 0x8a, 0x6a, 0x7a, 0x0f, 0xc0, 0xa0, 0x9e, 0xd3, 0x73, 0x4d, 0xba, 0xbd, 0xc5,
-	0x95, 0x50, 0xa8, 0xaf, 0x8e, 0x06, 0x65, 0x14, 0x64, 0xbb, 0xa2, 0x8f, 0xa7, 0x4a, 0x48, 0xf4,
-	0x36, 0xe4, 0x3e, 0x72, 0xcc, 0xf6, 0x4d, 0xda, 0xe7, 0x72, 0x28, 0xd4, 0x97, 0x46, 0x83, 0xf2,
-	0x62, 0x90, 0xd4, 0x71, 0xcc, 0xf6, 0x5e, 0x9b, 0xf6, 0xb1, 0x11, 0x62, 0xd0, 0x36, 0xa4, 0x77,
-	0xfb, 0x5d, 0x2a, 0x84, 0x70, 0x96, 0x0b, 0x21, 0x46, 0xaa, 0x68, 0x31, 0x90, 0x3c, 0xbe, 0x58,
-	0xb4, 0xdf, 0xef, 0x52, 0x6c, 0xf0, 0x12, 0x92, 0xaa, 0xf2, 0x92, 0xaa, 0x66, 0x15, 0x9b, 0xaf,
-	0xaa, 0x6b, 0xb0, 0x58, 0xeb, 0x76, 0x3b, 0x96, 0x49, 0x18, 0x1d, 0x5b, 0xc4, 0x27, 0x5a, 0xa1,
-	0xa2, 0x54, 0x8b, 0xb2, 0x97, 0x90, 0x08, 0xb0, 0xd7, 0x24, 0x3e, 0xc1, 0xc6, 0x64, 0x0e, 0xfa,
-	0x3f, 0x64, 0xf8, 0xe1, 0xd5, 0x80, 0x6b, 0x53, 0x1d, 0x0d, 0xca, 0x45, 0x91, 0xcc, 0xc2, 0xd8,
-	0x08, 0xba, 0xd1, 0x7f, 0x61, 0x61, 0xa7, 0x6d, 0x75, 0x1b, 0x07, 0xd4, 0x6c, 0x33, 0x66, 0xb4,
-	0x53, 0x0c, 0x6f, 0xc4, 0x83, 0xf8, 0x22, 0x40, 0x44, 0x06, 0xca, 0x42, 0xb2, 0xb6, 0xab, 0x26,
-	0x50, 0x0e, 0x52, 0xbb, 0x8d, 0x86, 0xaa, 0xa0, 0x3c, 0xa4, 0x77, 0x6a, 0x37, 0x6a, 0x6a, 0x92,
-	0x75, 0xdd, 0xa9, 0xa9, 0x29, 0xfc, 0x43, 0x12, 0x8a, 0xf2, 0x8a, 0x25, 0xc1, 0xcb, 0x61, 0x35,
-	0xc1, 0xf5, 0x42, 0x5b, 0x96, 0xe7, 0x53, 0x97, 0x36, 0x55, 0x85, 0x29, 0xea, 0x93, 0x03, 0xe2,
-	0xd1, 0x8f, 0x6d, 0xba, 0xe5, 0xd8, 0x34, 0xd0, 0x7d, 0x18, 0x11, 0x7a, 0x48, 0x31, 0x6d, 0x86,
-	0x31, 0x21, 0x19, 0x35, 0xcd, 0x64, 0xc5, 0x83, 0xbb, 0xf7, 0x9c, 0x48, 0xa3, 0x19, 0x74, 0x0e,
-	0xce, 0xc6, 0xc3, 0x41, 0x15, 0xae, 0x74, 0xb2, 0xdf, 0xa1, 0x6a, 0x16, 0xfd, 0x07, 0xca, 0xb3,
-	0x20, 0x0d, 0x62, 0xdf, 0x76, 0x02, 0xbb, 0x51, 0x73, 0xcc, 0x44, 0x42, 0x90, 0x24, 0xdb, 0xbc,
-	0x9c, 0x1c, 0xd7, 0x6d, 0x34, 0x42, 0x01, 0xfd, 0x0f, 0xce, 0xcd, 0x06, 0xc9, 0x63, 0x00, 0xbe,
-	0x0f, 0x28, 0x30, 0x44, 0x6e, 0x82, 0x06, 0xfd, 0xa2, 0x47, 0x3d, 0x1f, 0xe9, 0xd3, 0xea, 0x8e,
-	0xc9, 0x58, 0x8b, 0x2e, 0x0e, 0x26, 0xe5, 0x4c, 0x74, 0x49, 0x54, 0xa7, 0x6f, 0xa6, 0x14, 0x4f,
-	0x9f, 0x0c, 0x63, 0x17, 0x96, 0x62, 0x23, 0x7b, 0x5d, 0xc7, 0xf6, 0x28, 0xba, 0xc8, 0xc5, 0xd8,
-	0xeb, 0xf8, 0x0d, 0xa7, 0x49, 0xf9, 0xd0, 0xa5, 0xcd, 0x45, 0x7e, 0xbc, 0xa3, 0xb0, 0x21, 0x41,
-	0xd8, 0x5c, 0x6e, 0x51, 0xcf, 0x23, 0x2d, 0x1a, 0xd8, 0x8a, 0x11, 0x36, 0x91, 0x1a, 0x98, 0x4d,
-	0x30, 0x3e, 0xfb, 0x89, 0xbf, 0x4a, 0xc2, 0x4a, 0x70, 0x1c, 0xc2, 0x23, 0xf0, 0xb2, 0x2b, 0x56,
-	0x25, 0xe3, 0x0a, 0x8c, 0x4a, 0x8f, 0xb9, 0x46, 0x30, 0x88, 0xec, 0x0e, 0x5a, 0xe4, 0x0e, 0xe9,
-	0x60, 0x5e, 0xa1, 0x11, 0x5c, 0x95, 0x0f, 0x37, 0xf7, 0x9b, 0x79, 0x76, 0x60, 0xc8, 0x6a, 0xa8,
-	0x4e, 0x0b, 0x96, 0xd9, 0x4f, 0x71, 0x5a, 0x93, 0xcb, 0xa1, 0x26, 0x73, 0x5c, 0x63, 0x41, 0x03,
-	0x7f, 0x09, 0xab, 0x93, 0x1c, 0x1c, 0x3f, 0xf7, 0x1b, 0x93, 0x36, 0x1e, 0x19, 0x36, 0xfe, 0x26,
-	0x09, 0x4b, 0xe1, 0x0c, 0xba, 0x8e, 0xeb, 0x87, 0x7b, 0x20, 0x38, 0x56, 0x22, 0x8e, 0xe5, 0x2a,
-	0xc9, 0x78, 0x95, 0xb9, 0xfc, 0xc7, 0x59, 0x4e, 0xbf, 0x2a, 0xcb, 0x8d, 0xb8, 0x9f, 0x88, 0x6d,
-	0x9a, 0x67, 0xb4, 0x46, 0xdc, 0x84, 0x5e, 0x7a, 0xab, 0x30, 0x81, 0xe5, 0x38, 0x25, 0xc7, 0xbe,
-	0x25, 0xf8, 0x3b, 0x05, 0x56, 0x03, 0xc5, 0xb1, 0x83, 0xf8, 0x69, 0x8f, 0xba, 0xfd, 0xa3, 0x99,
-	0x8f, 0xb3, 0x9b, 0x7c, 0xd1, 0xe9, 0x4e, 0xbd, 0xe8, 0x74, 0xbf, 0x2a, 0xef, 0xf8, 0x81, 0x02,
-	0x6b, 0x53, 0xb3, 0x3c, 0x91, 0xf3, 0xc9, 0xea, 0x33, 0xb3, 0xe4, 0x0b, 0xc8, 0x1b, 0xe3, 0x36,
-	0x7e, 0x23, 0x74, 0x26, 0xb1, 0xa7, 0x47, 0x91, 0x84, 0xbf, 0x57, 0x60, 0x39, 0x8e, 0x3c, 0xfe,
-	0x89, 0x36, 0xe2, 0x0f, 0x59, 0x3e, 0xd9, 0xf9, 0xcf, 0x68, 0x23, 0x96, 0x14, 0xad, 0x28, 0x7c,
-	0xcf, 0xce, 0x5f, 0x51, 0x88, 0x7c, 0x4d, 0x57, 0x74, 0x1e, 0x56, 0x82, 0x76, 0xf4, 0x8e, 0x3e,
-	0x6a, 0x4d, 0x0f, 0xc7, 0xe7, 0x3e, 0xc2, 0xbe, 0xa6, 0xab, 0xea, 0x84, 0xfb, 0x34, 0xcf, 0x18,
-	0x27, 0x47, 0x4b, 0xfe, 0x99, 0xd1, 0xa2, 0xcd, 0x3e, 0x31, 0xd3, 0x39, 0x1e, 0x5a, 0x7e, 0x53,
-	0xc2, 0x0b, 0x63, 0xce, 0xf9, 0xfd, 0x4b, 0x17, 0xc6, 0x3f, 0x7f, 0x61, 0xe3, 0x9f, 0x95, 0xf0,
-	0x1a, 0x38, 0x39, 0xf9, 0x4d, 0xbd, 0x8a, 0x62, 0xa4, 0xa5, 0x27, 0x48, 0x3b, 0x8e, 0x6b, 0x10,
-	0x3f, 0x53, 0xc6, 0xcf, 0xae, 0x79, 0x6a, 0xfd, 0xb7, 0xef, 0xe0, 0x48, 0x19, 0xbf, 0xae, 0x4e,
-	0xd0, 0x6c, 0xfe, 0xfe, 0x3d, 0x0c, 0x2f, 0xcc, 0x9b, 0xb4, 0xef, 0x69, 0xd9, 0x4a, 0xaa, 0x5a,
-	0x30, 0xc6, 0xed, 0x37, 0xdf, 0x97, 0x57, 0xc6, 0xff, 0x11, 0x19, 0xb7, 0xc4, 0x07, 0x54, 0x82,
-	0x7d, 0x2b, 0x45, 0xd1, 0x9d, 0x9e, 0x69, 0x52, 0xcf, 0x53, 0x95, 0xcd, 0xdf, 0x93, 0xb0, 0x2e,
-	0x7d, 0x19, 0xdc, 0x22, 0x36, 0x69, 0x51, 0x77, 0x87, 0xba, 0x77, 0x2d, 0x93, 0xa2, 0xcb, 0xe2,
-	0xcf, 0x19, 0xb4, 0x26, 0x19, 0x86, 0xfc, 0xa5, 0xb2, 0xa1, 0x4d, 0x77, 0x08, 0xba, 0xaf, 0x42,
-	0x36, 0x10, 0x11, 0x92, 0x31, 0x31, 0x03, 0xd9, 0x58, 0x9f, 0xd1, 0x23, 0xd2, 0x1b, 0x90, 0x0f,
-	0x77, 0x10, 0x6d, 0x48, 0xb0, 0x89, 0x13, 0xbc, 0x71, 0x66, 0x66, 0x9f, 0x28, 0xb2, 0x0d, 0xa5,
-	0xf8, 0x53, 0x5b, 0x94, 0x9a, 0xf9, 0x0d, 0x22, 0x4a, 0x1d, 0xf1, 0x36, 0x1f, 0x6f, 0x62, 0xe0,
-	0xd5, 0x62, 0x51, 0x33, 0x9e, 0xd1, 0x62, 0x51, 0xb3, 0x5e, 0x93, 0x9b, 0xec, 0x2a, 0x0c, 0xf5,
-	0x32, 0x41, 0xf5, 0xb8, 0x7e, 0x8c, 0xb4, 0x19, 0xae, 0x1b, 0xab, 0x3f, 0x41, 0x5a, 0xb4, 0xde,
-	0x38, 0x75, 0x33, 0xc5, 0x1f, 0x5f, 0xef, 0x04, 0x75, 0xf5, 0x2b, 0x8f, 0x9e, 0xe8, 0x89, 0xc7,
-	0x4f, 0xf4, 0xc4, 0xf3, 0x27, 0xba, 0xf2, 0x60, 0xa8, 0x2b, 0x0f, 0x87, 0xba, 0xf2, 0xe3, 0x50,
-	0x57, 0x1e, 0x0d, 0x75, 0xe5, 0xd7, 0xa1, 0xae, 0x3c, 0x1b, 0xea, 0x89, 0xe7, 0x43, 0x5d, 0xf9,
-	0xfa, 0xa9, 0x9e, 0x78, 0xf4, 0x54, 0x4f, 0x3c, 0x7e, 0xaa, 0x27, 0x3e, 0xcf, 0x5c, 0xb8, 0x42,
-	0xba, 0xd6, 0x7e, 0x96, 0xff, 0xa5, 0x7b, 0xe9, 0x8f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x64,
-	0x68, 0x32, 0xf0, 0x15, 0x00, 0x00,
+	// 938 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xcc, 0x57, 0xcd, 0x6e, 0xdb, 0x46,
+	0x10, 0xe6, 0x92, 0x92, 0x2c, 0x4d, 0xfc, 0xc3, 0xae, 0xff, 0x18, 0xb5, 0x65, 0x05, 0xa2, 0x40,
+	0xd5, 0x1e, 0x1c, 0xd4, 0x3d, 0x14, 0x6d, 0x90, 0x83, 0x4c, 0x23, 0xa9, 0xd1, 0xa6, 0x3f, 0x94,
+	0x0e, 0x41, 0x6f, 0x6b, 0x7a, 0x21, 0x13, 0xa1, 0x48, 0x86, 0xa4, 0x52, 0xf8, 0x52, 0xe4, 0x11,
+	0xfa, 0x14, 0x45, 0xfa, 0x20, 0x05, 0x7a, 0xe8, 0xc1, 0xe8, 0x29, 0x40, 0x2f, 0xb5, 0x7c, 0xe9,
+	0x31, 0x8f, 0x50, 0x70, 0xc9, 0x15, 0x77, 0x29, 0xc6, 0x15, 0x02, 0x05, 0xc8, 0x4d, 0xf3, 0xed,
+	0x70, 0x67, 0xe6, 0x9b, 0x6f, 0x86, 0x14, 0x74, 0x48, 0xe4, 0x1d, 0x44, 0x71, 0x98, 0x86, 0x58,
+	0x23, 0x91, 0x67, 0xfd, 0xa5, 0xc2, 0xc6, 0x03, 0x3f, 0x3c, 0x25, 0xfe, 0x90, 0x26, 0x89, 0x17,
+	0x06, 0x58, 0x07, 0xed, 0xd1, 0xc9, 0xb1, 0x81, 0x7a, 0xa8, 0xdf, 0x71, 0xb2, 0x9f, 0xf8, 0x43,
+	0xd8, 0x18, 0x44, 0x91, 0xef, 0xb9, 0x24, 0xf5, 0xc2, 0xe0, 0xe4, 0xd8, 0x50, 0xd9, 0x99, 0x0c,
+	0x66, 0x5e, 0xa3, 0x98, 0x04, 0x09, 0x71, 0x0b, 0x2f, 0xad, 0x87, 0xfa, 0x9a, 0x23, 0x83, 0xb8,
+	0x0f, 0x5b, 0x02, 0xf0, 0x2d, 0x99, 0x50, 0xa3, 0xc1, 0x6e, 0xab, 0xc2, 0xd8, 0x80, 0xb5, 0x91,
+	0x37, 0xa1, 0xe1, 0x34, 0x35, 0x9a, 0x3d, 0xd4, 0x6f, 0x3a, 0xdc, 0xc4, 0xef, 0x41, 0xe7, 0x88,
+	0x8e, 0xbd, 0x20, 0xb3, 0x8d, 0x16, 0x8b, 0x52, 0x02, 0xf8, 0x73, 0x68, 0x0d, 0x53, 0x92, 0x4e,
+	0x13, 0x63, 0xad, 0x87, 0xfa, 0x9b, 0x87, 0x1f, 0x1c, 0x64, 0x25, 0x4b, 0x35, 0x72, 0x8b, 0xb9,
+	0x39, 0x85, 0xbb, 0xf5, 0x15, 0xac, 0x8b, 0x38, 0xee, 0x40, 0x93, 0xdd, 0xaa, 0x2b, 0x78, 0x13,
+	0xc0, 0x0e, 0x27, 0x13, 0x2f, 0x4d, 0xbd, 0x60, 0xac, 0x23, 0xbc, 0x05, 0xb7, 0x9c, 0xd0, 0xf7,
+	0x4f, 0x89, 0xfb, 0x38, 0x03, 0x54, 0xbc, 0x0e, 0xed, 0xfb, 0x5e, 0xe0, 0x25, 0xe7, 0xf4, 0x4c,
+	0xd7, 0xac, 0xdf, 0x1b, 0xb0, 0x71, 0x14, 0x93, 0xc0, 0x3d, 0xe7, 0xa4, 0x76, 0xa1, 0x9d, 0x03,
+	0x73, 0x66, 0xe7, 0xf6, 0x92, 0xf4, 0xf6, 0x61, 0x4b, 0xba, 0x72, 0x4e, 0x70, 0x15, 0xe6, 0x0d,
+	0x6c, 0x48, 0x0d, 0x94, 0x5b, 0xd3, 0xac, 0x6b, 0x8d, 0x09, 0xe0, 0xd0, 0x24, 0x9c, 0xc6, 0x2e,
+	0x3d, 0x39, 0x66, 0xbc, 0x76, 0x1c, 0x01, 0xc9, 0x1a, 0xf2, 0x4d, 0xe8, 0x3e, 0xfe, 0x9a, 0x5e,
+	0x30, 0x66, 0x3b, 0x0e, 0x37, 0xf1, 0xa7, 0xd0, 0x18, 0x5d, 0x44, 0xd4, 0x68, 0x33, 0xc2, 0xdf,
+	0x67, 0x84, 0x4b, 0x59, 0x15, 0x56, 0xe6, 0xe4, 0x30, 0x57, 0xa1, 0x4b, 0x1d, 0xa1, 0x4b, 0x75,
+	0x0f, 0xc9, 0x5d, 0xca, 0x78, 0x10, 0x88, 0x39, 0x26, 0x29, 0x31, 0xa0, 0x87, 0xfa, 0xeb, 0x4e,
+	0x15, 0x96, 0x65, 0x72, 0xab, 0x22, 0x13, 0xeb, 0x0e, 0x40, 0x99, 0x14, 0x6e, 0x81, 0x3a, 0x18,
+	0xe9, 0x0a, 0x5e, 0x03, 0x6d, 0x64, 0xdb, 0x3a, 0xc2, 0x6d, 0x68, 0x0c, 0x07, 0x0f, 0x06, 0xba,
+	0x9a, 0x1d, 0x3d, 0x1a, 0xe8, 0x9a, 0xf5, 0x04, 0xd6, 0xc5, 0x84, 0x32, 0x4d, 0x38, 0x74, 0xec,
+	0x25, 0x29, 0x8d, 0xe9, 0x99, 0xae, 0x60, 0x0c, 0x9b, 0xdf, 0x9f, 0x93, 0x84, 0x7e, 0x17, 0xd0,
+	0xfb, 0xc4, 0xf3, 0xe9, 0x99, 0x8e, 0xf0, 0x1e, 0x60, 0x86, 0x8d, 0x7e, 0x0a, 0x05, 0xfd, 0xa8,
+	0x78, 0x1f, 0xb6, 0x39, 0x2e, 0xea, 0x48, 0xcb, 0x74, 0x64, 0x87, 0x93, 0xc8, 0xa7, 0x29, 0xd5,
+	0x1b, 0xd6, 0xcf, 0x80, 0x73, 0x45, 0xb2, 0xb4, 0x1d, 0xfa, 0x64, 0x4a, 0x93, 0x74, 0x51, 0x2f,
+	0xa8, 0x4e, 0x2f, 0xc2, 0xf8, 0xa8, 0xf2, 0xf8, 0xd4, 0x8c, 0xa0, 0x56, 0x3b, 0x82, 0x56, 0x0c,
+	0xdb, 0x52, 0xfc, 0x24, 0x0a, 0x83, 0x84, 0xe2, 0x3b, 0x4c, 0x28, 0x53, 0x3f, 0xb5, 0xc3, 0x33,
+	0xca, 0xa2, 0x6f, 0x1e, 0x6e, 0xb1, 0xfe, 0x95, 0xb0, 0x23, 0xb8, 0x64, 0xb9, 0x3c, 0xa4, 0x49,
+	0x42, 0xc6, 0xb4, 0xd0, 0x36, 0x37, 0x17, 0xb5, 0x6a, 0xfd, 0x89, 0x60, 0x37, 0xe7, 0x99, 0xb3,
+	0xcb, 0xeb, 0x5e, 0x5c, 0x4c, 0xb2, 0x62, 0xd5, 0x9b, 0x14, 0xab, 0xc9, 0x8a, 0xbd, 0x27, 0x76,
+	0x9f, 0x85, 0xff, 0x5f, 0xdd, 0x8a, 0x72, 0xa9, 0x11, 0x61, 0xb3, 0x56, 0x84, 0xd6, 0x6f, 0x08,
+	0xf6, 0xaa, 0xe5, 0xac, 0x9e, 0x46, 0x71, 0xbd, 0x68, 0x95, 0xf5, 0x52, 0xb3, 0x38, 0x1a, 0xb5,
+	0x8b, 0xc3, 0x7a, 0x0a, 0xdb, 0x3c, 0xd5, 0x28, 0x8c, 0x53, 0xce, 0xfb, 0x4d, 0xbb, 0xcb, 0x96,
+	0x87, 0x82, 0xe5, 0xb5, 0xc4, 0x30, 0x4b, 0x0f, 0x59, 0x04, 0x76, 0xe4, 0xb8, 0x2b, 0x27, 0xc8,
+	0x72, 0x60, 0x2f, 0x57, 0x72, 0x26, 0x80, 0x1f, 0xa6, 0x34, 0xbe, 0xe0, 0xd5, 0xc9, 0x1a, 0x42,
+	0x37, 0x69, 0x48, 0x95, 0x34, 0x64, 0x3d, 0x43, 0xb0, 0xbf, 0x70, 0xe9, 0x1b, 0xe9, 0x6d, 0x76,
+	0x3f, 0x39, 0xf5, 0xf3, 0x39, 0x6d, 0x3b, 0x73, 0xdb, 0xfa, 0x88, 0x0f, 0x68, 0xc1, 0xeb, 0xab,
+	0x26, 0xc5, 0xfa, 0x15, 0xc1, 0x8e, 0xec, 0xb9, 0xfa, 0x44, 0x6d, 0xf9, 0xfd, 0xc9, 0x92, 0x5d,
+	0xe2, 0xf5, 0x2b, 0x3d, 0x54, 0x56, 0x94, 0xef, 0xcb, 0x65, 0x2a, 0xe2, 0x9e, 0x6f, 0x69, 0x45,
+	0x1f, 0xc3, 0x6e, 0x6e, 0xf3, 0x4d, 0xff, 0xea, 0x9a, 0x9e, 0x23, 0x2e, 0xd3, 0xd2, 0xf7, 0x2d,
+	0xad, 0xca, 0xe7, 0x7d, 0x92, 0x77, 0xc5, 0xe2, 0x8e, 0xae, 0x46, 0x53, 0x5f, 0x27, 0x5a, 0xd9,
+	0xec, 0x37, 0xb6, 0x22, 0x56, 0x42, 0xcb, 0x27, 0x5f, 0x88, 0xf9, 0xe0, 0x1d, 0xd0, 0x4b, 0xab,
+	0xf8, 0x28, 0x50, 0xf0, 0x2e, 0xbc, 0x53, 0xa2, 0xc3, 0xa9, 0xeb, 0xd2, 0x24, 0xd1, 0xd1, 0xe1,
+	0xdf, 0x08, 0x6e, 0x0b, 0x2f, 0xe0, 0x87, 0x24, 0x20, 0x63, 0x1a, 0x0f, 0x69, 0xfc, 0xd4, 0x73,
+	0x29, 0xfe, 0xb2, 0xf8, 0x18, 0xc5, 0xfb, 0x42, 0x42, 0xe2, 0x67, 0x41, 0xd7, 0x58, 0x3c, 0x28,
+	0x48, 0xba, 0x07, 0xad, 0x7c, 0x46, 0xb0, 0xe8, 0x23, 0x0d, 0x58, 0xf7, 0x76, 0xcd, 0x49, 0xf1,
+	0xb8, 0x0d, 0x6d, 0x2e, 0x47, 0xdc, 0x15, 0xdc, 0x2a, 0x7a, 0xee, 0xbe, 0x5b, 0x7b, 0x96, 0x5f,
+	0x72, 0x74, 0xf7, 0xf2, 0xca, 0x54, 0x5e, 0x5c, 0x99, 0xca, 0xcb, 0x2b, 0x13, 0x3d, 0x9b, 0x99,
+	0xe8, 0xf9, 0xcc, 0x44, 0x7f, 0xcc, 0x4c, 0x74, 0x39, 0x33, 0xd1, 0x3f, 0x33, 0x13, 0xfd, 0x3b,
+	0x33, 0x95, 0x97, 0x33, 0x13, 0xfd, 0x72, 0x6d, 0x2a, 0x97, 0xd7, 0xa6, 0xf2, 0xe2, 0xda, 0x54,
+	0x7e, 0x6c, 0x1e, 0xdc, 0x25, 0x91, 0x77, 0xda, 0x62, 0x7f, 0x58, 0x3e, 0xfb, 0x2f, 0x00, 0x00,
+	0xff, 0xff, 0x03, 0x2f, 0x7e, 0x29, 0xbd, 0x0c, 0x00, 0x00,
 }
 
 func (x ResultCode) String() string {
@@ -1900,10 +1386,10 @@ func (this *GlobalSession) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.Addressing != that1.Addressing {
+	if this.XID != that1.XID {
 		return false
 	}
-	if this.XID != that1.XID {
+	if this.ApplicationID != that1.ApplicationID {
 		return false
 	}
 	if this.TransactionID != that1.TransactionID {
@@ -1919,9 +1405,6 @@ func (this *GlobalSession) Equal(that interface{}) bool {
 		return false
 	}
 	if this.Status != that1.Status {
-		return false
-	}
-	if this.Active != that1.Active {
 		return false
 	}
 	return true
@@ -1945,13 +1428,16 @@ func (this *BranchSession) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.Addressing != that1.Addressing {
+	if this.BranchID != that1.BranchID {
+		return false
+	}
+	if this.ApplicationID != that1.ApplicationID {
+		return false
+	}
+	if this.BranchSessionID != that1.BranchSessionID {
 		return false
 	}
 	if this.XID != that1.XID {
-		return false
-	}
-	if this.BranchID != that1.BranchID {
 		return false
 	}
 	if this.TransactionID != that1.TransactionID {
@@ -1972,10 +1458,7 @@ func (this *BranchSession) Equal(that interface{}) bool {
 	if !bytes.Equal(this.ApplicationData, that1.ApplicationData) {
 		return false
 	}
-	if this.Async != that1.Async {
-		return false
-	}
-	if this.SkipCheckLock != that1.SkipCheckLock {
+	if this.BeginTime != that1.BeginTime {
 		return false
 	}
 	return true
@@ -1999,7 +1482,7 @@ func (this *GlobalBeginRequest) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.Addressing != that1.Addressing {
+	if this.ApplicationID != that1.ApplicationID {
 		return false
 	}
 	if this.Timeout != that1.Timeout {
@@ -2059,9 +1542,6 @@ func (this *BranchRegisterRequest) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.Addressing != that1.Addressing {
-		return false
-	}
 	if this.XID != that1.XID {
 		return false
 	}
@@ -2075,9 +1555,6 @@ func (this *BranchRegisterRequest) Equal(that interface{}) bool {
 		return false
 	}
 	if !bytes.Equal(this.ApplicationData, that1.ApplicationData) {
-		return false
-	}
-	if this.Async != that1.Async {
 		return false
 	}
 	return true
@@ -2110,6 +1587,9 @@ func (this *BranchRegisterResponse) Equal(that interface{}) bool {
 	if this.BranchID != that1.BranchID {
 		return false
 	}
+	if this.BranchSessionID != that1.BranchSessionID {
+		return false
+	}
 	return true
 }
 func (this *BranchReportRequest) Equal(that interface{}) bool {
@@ -2131,22 +1611,10 @@ func (this *BranchReportRequest) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.XID != that1.XID {
-		return false
-	}
 	if this.BranchID != that1.BranchID {
 		return false
 	}
-	if this.ResourceID != that1.ResourceID {
-		return false
-	}
-	if this.BranchType != that1.BranchType {
-		return false
-	}
 	if this.BranchStatus != that1.BranchStatus {
-		return false
-	}
-	if !bytes.Equal(this.ApplicationData, that1.ApplicationData) {
 		return false
 	}
 	return true
@@ -2197,16 +1665,10 @@ func (this *GlobalLockQueryRequest) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if this.XID != that1.XID {
-		return false
-	}
 	if this.ResourceID != that1.ResourceID {
 		return false
 	}
 	if this.LockKey != that1.LockKey {
-		return false
-	}
-	if this.BranchType != that1.BranchType {
 		return false
 	}
 	return true
@@ -2460,178 +1922,19 @@ func (this *GlobalReportResponse) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *BranchCommitRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*BranchCommitRequest)
-	if !ok {
-		that2, ok := that.(BranchCommitRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.XID != that1.XID {
-		return false
-	}
-	if this.BranchID != that1.BranchID {
-		return false
-	}
-	if this.ResourceID != that1.ResourceID {
-		return false
-	}
-	if this.LockKey != that1.LockKey {
-		return false
-	}
-	if this.BranchType != that1.BranchType {
-		return false
-	}
-	if !bytes.Equal(this.ApplicationData, that1.ApplicationData) {
-		return false
-	}
-	return true
-}
-func (this *BranchCommitResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*BranchCommitResponse)
-	if !ok {
-		that2, ok := that.(BranchCommitResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ResultCode != that1.ResultCode {
-		return false
-	}
-	if this.Message != that1.Message {
-		return false
-	}
-	if this.XID != that1.XID {
-		return false
-	}
-	if this.BranchID != that1.BranchID {
-		return false
-	}
-	if this.BranchStatus != that1.BranchStatus {
-		return false
-	}
-	return true
-}
-func (this *BranchRollbackRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*BranchRollbackRequest)
-	if !ok {
-		that2, ok := that.(BranchRollbackRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.XID != that1.XID {
-		return false
-	}
-	if this.BranchID != that1.BranchID {
-		return false
-	}
-	if this.ResourceID != that1.ResourceID {
-		return false
-	}
-	if this.LockKey != that1.LockKey {
-		return false
-	}
-	if this.BranchType != that1.BranchType {
-		return false
-	}
-	if !bytes.Equal(this.ApplicationData, that1.ApplicationData) {
-		return false
-	}
-	return true
-}
-func (this *BranchRollbackResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*BranchRollbackResponse)
-	if !ok {
-		that2, ok := that.(BranchRollbackResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if this.ResultCode != that1.ResultCode {
-		return false
-	}
-	if this.Message != that1.Message {
-		return false
-	}
-	if this.XID != that1.XID {
-		return false
-	}
-	if this.BranchID != that1.BranchID {
-		return false
-	}
-	if this.BranchStatus != that1.BranchStatus {
-		return false
-	}
-	if len(this.LockKeys) != len(that1.LockKeys) {
-		return false
-	}
-	for i := range this.LockKeys {
-		if this.LockKeys[i] != that1.LockKeys[i] {
-			return false
-		}
-	}
-	return true
-}
 func (this *GlobalSession) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 12)
+	s := make([]string, 0, 11)
 	s = append(s, "&api.GlobalSession{")
-	s = append(s, "Addressing: "+fmt.Sprintf("%#v", this.Addressing)+",\n")
 	s = append(s, "XID: "+fmt.Sprintf("%#v", this.XID)+",\n")
+	s = append(s, "ApplicationID: "+fmt.Sprintf("%#v", this.ApplicationID)+",\n")
 	s = append(s, "TransactionID: "+fmt.Sprintf("%#v", this.TransactionID)+",\n")
 	s = append(s, "TransactionName: "+fmt.Sprintf("%#v", this.TransactionName)+",\n")
 	s = append(s, "Timeout: "+fmt.Sprintf("%#v", this.Timeout)+",\n")
 	s = append(s, "BeginTime: "+fmt.Sprintf("%#v", this.BeginTime)+",\n")
 	s = append(s, "Status: "+fmt.Sprintf("%#v", this.Status)+",\n")
-	s = append(s, "Active: "+fmt.Sprintf("%#v", this.Active)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2641,17 +1944,17 @@ func (this *BranchSession) GoString() string {
 	}
 	s := make([]string, 0, 15)
 	s = append(s, "&api.BranchSession{")
-	s = append(s, "Addressing: "+fmt.Sprintf("%#v", this.Addressing)+",\n")
-	s = append(s, "XID: "+fmt.Sprintf("%#v", this.XID)+",\n")
 	s = append(s, "BranchID: "+fmt.Sprintf("%#v", this.BranchID)+",\n")
+	s = append(s, "ApplicationID: "+fmt.Sprintf("%#v", this.ApplicationID)+",\n")
+	s = append(s, "BranchSessionID: "+fmt.Sprintf("%#v", this.BranchSessionID)+",\n")
+	s = append(s, "XID: "+fmt.Sprintf("%#v", this.XID)+",\n")
 	s = append(s, "TransactionID: "+fmt.Sprintf("%#v", this.TransactionID)+",\n")
 	s = append(s, "ResourceID: "+fmt.Sprintf("%#v", this.ResourceID)+",\n")
 	s = append(s, "LockKey: "+fmt.Sprintf("%#v", this.LockKey)+",\n")
 	s = append(s, "Type: "+fmt.Sprintf("%#v", this.Type)+",\n")
 	s = append(s, "Status: "+fmt.Sprintf("%#v", this.Status)+",\n")
 	s = append(s, "ApplicationData: "+fmt.Sprintf("%#v", this.ApplicationData)+",\n")
-	s = append(s, "Async: "+fmt.Sprintf("%#v", this.Async)+",\n")
-	s = append(s, "SkipCheckLock: "+fmt.Sprintf("%#v", this.SkipCheckLock)+",\n")
+	s = append(s, "BeginTime: "+fmt.Sprintf("%#v", this.BeginTime)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2661,7 +1964,7 @@ func (this *GlobalBeginRequest) GoString() string {
 	}
 	s := make([]string, 0, 7)
 	s = append(s, "&api.GlobalBeginRequest{")
-	s = append(s, "Addressing: "+fmt.Sprintf("%#v", this.Addressing)+",\n")
+	s = append(s, "ApplicationID: "+fmt.Sprintf("%#v", this.ApplicationID)+",\n")
 	s = append(s, "Timeout: "+fmt.Sprintf("%#v", this.Timeout)+",\n")
 	s = append(s, "TransactionName: "+fmt.Sprintf("%#v", this.TransactionName)+",\n")
 	s = append(s, "}")
@@ -2683,15 +1986,13 @@ func (this *BranchRegisterRequest) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 11)
+	s := make([]string, 0, 9)
 	s = append(s, "&api.BranchRegisterRequest{")
-	s = append(s, "Addressing: "+fmt.Sprintf("%#v", this.Addressing)+",\n")
 	s = append(s, "XID: "+fmt.Sprintf("%#v", this.XID)+",\n")
 	s = append(s, "ResourceID: "+fmt.Sprintf("%#v", this.ResourceID)+",\n")
 	s = append(s, "LockKey: "+fmt.Sprintf("%#v", this.LockKey)+",\n")
 	s = append(s, "BranchType: "+fmt.Sprintf("%#v", this.BranchType)+",\n")
 	s = append(s, "ApplicationData: "+fmt.Sprintf("%#v", this.ApplicationData)+",\n")
-	s = append(s, "Async: "+fmt.Sprintf("%#v", this.Async)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2699,11 +2000,12 @@ func (this *BranchRegisterResponse) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 7)
+	s := make([]string, 0, 8)
 	s = append(s, "&api.BranchRegisterResponse{")
 	s = append(s, "ResultCode: "+fmt.Sprintf("%#v", this.ResultCode)+",\n")
 	s = append(s, "Message: "+fmt.Sprintf("%#v", this.Message)+",\n")
 	s = append(s, "BranchID: "+fmt.Sprintf("%#v", this.BranchID)+",\n")
+	s = append(s, "BranchSessionID: "+fmt.Sprintf("%#v", this.BranchSessionID)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2711,14 +2013,10 @@ func (this *BranchReportRequest) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 10)
+	s := make([]string, 0, 6)
 	s = append(s, "&api.BranchReportRequest{")
-	s = append(s, "XID: "+fmt.Sprintf("%#v", this.XID)+",\n")
 	s = append(s, "BranchID: "+fmt.Sprintf("%#v", this.BranchID)+",\n")
-	s = append(s, "ResourceID: "+fmt.Sprintf("%#v", this.ResourceID)+",\n")
-	s = append(s, "BranchType: "+fmt.Sprintf("%#v", this.BranchType)+",\n")
 	s = append(s, "BranchStatus: "+fmt.Sprintf("%#v", this.BranchStatus)+",\n")
-	s = append(s, "ApplicationData: "+fmt.Sprintf("%#v", this.ApplicationData)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2737,12 +2035,10 @@ func (this *GlobalLockQueryRequest) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 8)
+	s := make([]string, 0, 6)
 	s = append(s, "&api.GlobalLockQueryRequest{")
-	s = append(s, "XID: "+fmt.Sprintf("%#v", this.XID)+",\n")
 	s = append(s, "ResourceID: "+fmt.Sprintf("%#v", this.ResourceID)+",\n")
 	s = append(s, "LockKey: "+fmt.Sprintf("%#v", this.LockKey)+",\n")
-	s = append(s, "BranchType: "+fmt.Sprintf("%#v", this.BranchType)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2847,65 +2143,6 @@ func (this *GlobalReportResponse) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *BranchCommitRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&api.BranchCommitRequest{")
-	s = append(s, "XID: "+fmt.Sprintf("%#v", this.XID)+",\n")
-	s = append(s, "BranchID: "+fmt.Sprintf("%#v", this.BranchID)+",\n")
-	s = append(s, "ResourceID: "+fmt.Sprintf("%#v", this.ResourceID)+",\n")
-	s = append(s, "LockKey: "+fmt.Sprintf("%#v", this.LockKey)+",\n")
-	s = append(s, "BranchType: "+fmt.Sprintf("%#v", this.BranchType)+",\n")
-	s = append(s, "ApplicationData: "+fmt.Sprintf("%#v", this.ApplicationData)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *BranchCommitResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 9)
-	s = append(s, "&api.BranchCommitResponse{")
-	s = append(s, "ResultCode: "+fmt.Sprintf("%#v", this.ResultCode)+",\n")
-	s = append(s, "Message: "+fmt.Sprintf("%#v", this.Message)+",\n")
-	s = append(s, "XID: "+fmt.Sprintf("%#v", this.XID)+",\n")
-	s = append(s, "BranchID: "+fmt.Sprintf("%#v", this.BranchID)+",\n")
-	s = append(s, "BranchStatus: "+fmt.Sprintf("%#v", this.BranchStatus)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *BranchRollbackRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&api.BranchRollbackRequest{")
-	s = append(s, "XID: "+fmt.Sprintf("%#v", this.XID)+",\n")
-	s = append(s, "BranchID: "+fmt.Sprintf("%#v", this.BranchID)+",\n")
-	s = append(s, "ResourceID: "+fmt.Sprintf("%#v", this.ResourceID)+",\n")
-	s = append(s, "LockKey: "+fmt.Sprintf("%#v", this.LockKey)+",\n")
-	s = append(s, "BranchType: "+fmt.Sprintf("%#v", this.BranchType)+",\n")
-	s = append(s, "ApplicationData: "+fmt.Sprintf("%#v", this.ApplicationData)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *BranchRollbackResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 10)
-	s = append(s, "&api.BranchRollbackResponse{")
-	s = append(s, "ResultCode: "+fmt.Sprintf("%#v", this.ResultCode)+",\n")
-	s = append(s, "Message: "+fmt.Sprintf("%#v", this.Message)+",\n")
-	s = append(s, "XID: "+fmt.Sprintf("%#v", this.XID)+",\n")
-	s = append(s, "BranchID: "+fmt.Sprintf("%#v", this.BranchID)+",\n")
-	s = append(s, "BranchStatus: "+fmt.Sprintf("%#v", this.BranchStatus)+",\n")
-	s = append(s, "LockKeys: "+fmt.Sprintf("%#v", this.LockKeys)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
 func valueToGoStringApi(v interface{}, typ string) string {
 	rv := reflect.ValueOf(v)
 	if rv.IsNil() {
@@ -2934,16 +2171,6 @@ func (m *GlobalSession) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.Active {
-		i--
-		if m.Active {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x40
-	}
 	if m.Status != 0 {
 		i = encodeVarintApi(dAtA, i, uint64(m.Status))
 		i--
@@ -2971,17 +2198,17 @@ func (m *GlobalSession) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x18
 	}
+	if len(m.ApplicationID) > 0 {
+		i -= len(m.ApplicationID)
+		copy(dAtA[i:], m.ApplicationID)
+		i = encodeVarintApi(dAtA, i, uint64(len(m.ApplicationID)))
+		i--
+		dAtA[i] = 0x12
+	}
 	if len(m.XID) > 0 {
 		i -= len(m.XID)
 		copy(dAtA[i:], m.XID)
 		i = encodeVarintApi(dAtA, i, uint64(len(m.XID)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Addressing) > 0 {
-		i -= len(m.Addressing)
-		copy(dAtA[i:], m.Addressing)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.Addressing)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -3008,78 +2235,70 @@ func (m *BranchSession) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.SkipCheckLock {
-		i--
-		if m.SkipCheckLock {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
+	if m.BeginTime != 0 {
+		i = encodeVarintApi(dAtA, i, uint64(m.BeginTime))
 		i--
 		dAtA[i] = 0x58
-	}
-	if m.Async {
-		i--
-		if m.Async {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x50
 	}
 	if len(m.ApplicationData) > 0 {
 		i -= len(m.ApplicationData)
 		copy(dAtA[i:], m.ApplicationData)
 		i = encodeVarintApi(dAtA, i, uint64(len(m.ApplicationData)))
 		i--
-		dAtA[i] = 0x4a
+		dAtA[i] = 0x52
 	}
 	if m.Status != 0 {
 		i = encodeVarintApi(dAtA, i, uint64(m.Status))
 		i--
-		dAtA[i] = 0x40
+		dAtA[i] = 0x48
 	}
 	if m.Type != 0 {
 		i = encodeVarintApi(dAtA, i, uint64(m.Type))
 		i--
-		dAtA[i] = 0x38
+		dAtA[i] = 0x40
 	}
 	if len(m.LockKey) > 0 {
 		i -= len(m.LockKey)
 		copy(dAtA[i:], m.LockKey)
 		i = encodeVarintApi(dAtA, i, uint64(len(m.LockKey)))
 		i--
-		dAtA[i] = 0x32
+		dAtA[i] = 0x3a
 	}
 	if len(m.ResourceID) > 0 {
 		i -= len(m.ResourceID)
 		copy(dAtA[i:], m.ResourceID)
 		i = encodeVarintApi(dAtA, i, uint64(len(m.ResourceID)))
 		i--
-		dAtA[i] = 0x2a
+		dAtA[i] = 0x32
 	}
 	if m.TransactionID != 0 {
 		i = encodeVarintApi(dAtA, i, uint64(m.TransactionID))
 		i--
-		dAtA[i] = 0x20
-	}
-	if m.BranchID != 0 {
-		i = encodeVarintApi(dAtA, i, uint64(m.BranchID))
-		i--
-		dAtA[i] = 0x18
+		dAtA[i] = 0x28
 	}
 	if len(m.XID) > 0 {
 		i -= len(m.XID)
 		copy(dAtA[i:], m.XID)
 		i = encodeVarintApi(dAtA, i, uint64(len(m.XID)))
 		i--
+		dAtA[i] = 0x22
+	}
+	if m.BranchSessionID != 0 {
+		i = encodeVarintApi(dAtA, i, uint64(m.BranchSessionID))
+		i--
+		dAtA[i] = 0x18
+	}
+	if len(m.ApplicationID) > 0 {
+		i -= len(m.ApplicationID)
+		copy(dAtA[i:], m.ApplicationID)
+		i = encodeVarintApi(dAtA, i, uint64(len(m.ApplicationID)))
+		i--
 		dAtA[i] = 0x12
 	}
-	if len(m.Addressing) > 0 {
-		i -= len(m.Addressing)
-		copy(dAtA[i:], m.Addressing)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.Addressing)))
+	if len(m.BranchID) > 0 {
+		i -= len(m.BranchID)
+		copy(dAtA[i:], m.BranchID)
+		i = encodeVarintApi(dAtA, i, uint64(len(m.BranchID)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -3118,10 +2337,10 @@ func (m *GlobalBeginRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x10
 	}
-	if len(m.Addressing) > 0 {
-		i -= len(m.Addressing)
-		copy(dAtA[i:], m.Addressing)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.Addressing)))
+	if len(m.ApplicationID) > 0 {
+		i -= len(m.ApplicationID)
+		copy(dAtA[i:], m.ApplicationID)
+		i = encodeVarintApi(dAtA, i, uint64(len(m.ApplicationID)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -3153,7 +2372,7 @@ func (m *GlobalBeginResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		copy(dAtA[i:], m.XID)
 		i = encodeVarintApi(dAtA, i, uint64(len(m.XID)))
 		i--
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x22
 	}
 	if len(m.Message) > 0 {
 		i -= len(m.Message)
@@ -3190,53 +2409,36 @@ func (m *BranchRegisterRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if m.Async {
-		i--
-		if m.Async {
-			dAtA[i] = 1
-		} else {
-			dAtA[i] = 0
-		}
-		i--
-		dAtA[i] = 0x38
-	}
 	if len(m.ApplicationData) > 0 {
 		i -= len(m.ApplicationData)
 		copy(dAtA[i:], m.ApplicationData)
 		i = encodeVarintApi(dAtA, i, uint64(len(m.ApplicationData)))
 		i--
-		dAtA[i] = 0x32
+		dAtA[i] = 0x2a
 	}
 	if m.BranchType != 0 {
 		i = encodeVarintApi(dAtA, i, uint64(m.BranchType))
 		i--
-		dAtA[i] = 0x28
+		dAtA[i] = 0x20
 	}
 	if len(m.LockKey) > 0 {
 		i -= len(m.LockKey)
 		copy(dAtA[i:], m.LockKey)
 		i = encodeVarintApi(dAtA, i, uint64(len(m.LockKey)))
 		i--
-		dAtA[i] = 0x22
+		dAtA[i] = 0x1a
 	}
 	if len(m.ResourceID) > 0 {
 		i -= len(m.ResourceID)
 		copy(dAtA[i:], m.ResourceID)
 		i = encodeVarintApi(dAtA, i, uint64(len(m.ResourceID)))
 		i--
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x12
 	}
 	if len(m.XID) > 0 {
 		i -= len(m.XID)
 		copy(dAtA[i:], m.XID)
 		i = encodeVarintApi(dAtA, i, uint64(len(m.XID)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.Addressing) > 0 {
-		i -= len(m.Addressing)
-		copy(dAtA[i:], m.Addressing)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.Addressing)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -3263,10 +2465,17 @@ func (m *BranchRegisterResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) 
 	_ = i
 	var l int
 	_ = l
-	if m.BranchID != 0 {
-		i = encodeVarintApi(dAtA, i, uint64(m.BranchID))
+	if m.BranchSessionID != 0 {
+		i = encodeVarintApi(dAtA, i, uint64(m.BranchSessionID))
 		i--
-		dAtA[i] = 0x18
+		dAtA[i] = 0x20
+	}
+	if len(m.BranchID) > 0 {
+		i -= len(m.BranchID)
+		copy(dAtA[i:], m.BranchID)
+		i = encodeVarintApi(dAtA, i, uint64(len(m.BranchID)))
+		i--
+		dAtA[i] = 0x1a
 	}
 	if len(m.Message) > 0 {
 		i -= len(m.Message)
@@ -3303,39 +2512,15 @@ func (m *BranchReportRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	if len(m.ApplicationData) > 0 {
-		i -= len(m.ApplicationData)
-		copy(dAtA[i:], m.ApplicationData)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.ApplicationData)))
-		i--
-		dAtA[i] = 0x32
-	}
 	if m.BranchStatus != 0 {
 		i = encodeVarintApi(dAtA, i, uint64(m.BranchStatus))
 		i--
-		dAtA[i] = 0x28
-	}
-	if m.BranchType != 0 {
-		i = encodeVarintApi(dAtA, i, uint64(m.BranchType))
-		i--
-		dAtA[i] = 0x20
-	}
-	if len(m.ResourceID) > 0 {
-		i -= len(m.ResourceID)
-		copy(dAtA[i:], m.ResourceID)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.ResourceID)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if m.BranchID != 0 {
-		i = encodeVarintApi(dAtA, i, uint64(m.BranchID))
-		i--
 		dAtA[i] = 0x10
 	}
-	if len(m.XID) > 0 {
-		i -= len(m.XID)
-		copy(dAtA[i:], m.XID)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.XID)))
+	if len(m.BranchID) > 0 {
+		i -= len(m.BranchID)
+		copy(dAtA[i:], m.BranchID)
+		i = encodeVarintApi(dAtA, i, uint64(len(m.BranchID)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -3397,29 +2582,17 @@ func (m *GlobalLockQueryRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) 
 	_ = i
 	var l int
 	_ = l
-	if m.BranchType != 0 {
-		i = encodeVarintApi(dAtA, i, uint64(m.BranchType))
-		i--
-		dAtA[i] = 0x20
-	}
 	if len(m.LockKey) > 0 {
 		i -= len(m.LockKey)
 		copy(dAtA[i:], m.LockKey)
 		i = encodeVarintApi(dAtA, i, uint64(len(m.LockKey)))
 		i--
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x12
 	}
 	if len(m.ResourceID) > 0 {
 		i -= len(m.ResourceID)
 		copy(dAtA[i:], m.ResourceID)
 		i = encodeVarintApi(dAtA, i, uint64(len(m.ResourceID)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if len(m.XID) > 0 {
-		i -= len(m.XID)
-		copy(dAtA[i:], m.XID)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.XID)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -3756,241 +2929,6 @@ func (m *GlobalReportResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *BranchCommitRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *BranchCommitRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *BranchCommitRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.ApplicationData) > 0 {
-		i -= len(m.ApplicationData)
-		copy(dAtA[i:], m.ApplicationData)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.ApplicationData)))
-		i--
-		dAtA[i] = 0x32
-	}
-	if m.BranchType != 0 {
-		i = encodeVarintApi(dAtA, i, uint64(m.BranchType))
-		i--
-		dAtA[i] = 0x28
-	}
-	if len(m.LockKey) > 0 {
-		i -= len(m.LockKey)
-		copy(dAtA[i:], m.LockKey)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.LockKey)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.ResourceID) > 0 {
-		i -= len(m.ResourceID)
-		copy(dAtA[i:], m.ResourceID)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.ResourceID)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if m.BranchID != 0 {
-		i = encodeVarintApi(dAtA, i, uint64(m.BranchID))
-		i--
-		dAtA[i] = 0x10
-	}
-	if len(m.XID) > 0 {
-		i -= len(m.XID)
-		copy(dAtA[i:], m.XID)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.XID)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *BranchCommitResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *BranchCommitResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *BranchCommitResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if m.BranchStatus != 0 {
-		i = encodeVarintApi(dAtA, i, uint64(m.BranchStatus))
-		i--
-		dAtA[i] = 0x28
-	}
-	if m.BranchID != 0 {
-		i = encodeVarintApi(dAtA, i, uint64(m.BranchID))
-		i--
-		dAtA[i] = 0x20
-	}
-	if len(m.XID) > 0 {
-		i -= len(m.XID)
-		copy(dAtA[i:], m.XID)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.XID)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.Message) > 0 {
-		i -= len(m.Message)
-		copy(dAtA[i:], m.Message)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.Message)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if m.ResultCode != 0 {
-		i = encodeVarintApi(dAtA, i, uint64(m.ResultCode))
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *BranchRollbackRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *BranchRollbackRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *BranchRollbackRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.ApplicationData) > 0 {
-		i -= len(m.ApplicationData)
-		copy(dAtA[i:], m.ApplicationData)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.ApplicationData)))
-		i--
-		dAtA[i] = 0x32
-	}
-	if m.BranchType != 0 {
-		i = encodeVarintApi(dAtA, i, uint64(m.BranchType))
-		i--
-		dAtA[i] = 0x28
-	}
-	if len(m.LockKey) > 0 {
-		i -= len(m.LockKey)
-		copy(dAtA[i:], m.LockKey)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.LockKey)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.ResourceID) > 0 {
-		i -= len(m.ResourceID)
-		copy(dAtA[i:], m.ResourceID)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.ResourceID)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if m.BranchID != 0 {
-		i = encodeVarintApi(dAtA, i, uint64(m.BranchID))
-		i--
-		dAtA[i] = 0x10
-	}
-	if len(m.XID) > 0 {
-		i -= len(m.XID)
-		copy(dAtA[i:], m.XID)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.XID)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
-}
-
-func (m *BranchRollbackResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *BranchRollbackResponse) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *BranchRollbackResponse) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
-	_ = i
-	var l int
-	_ = l
-	if len(m.LockKeys) > 0 {
-		for iNdEx := len(m.LockKeys) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.LockKeys[iNdEx])
-			copy(dAtA[i:], m.LockKeys[iNdEx])
-			i = encodeVarintApi(dAtA, i, uint64(len(m.LockKeys[iNdEx])))
-			i--
-			dAtA[i] = 0x32
-		}
-	}
-	if m.BranchStatus != 0 {
-		i = encodeVarintApi(dAtA, i, uint64(m.BranchStatus))
-		i--
-		dAtA[i] = 0x28
-	}
-	if m.BranchID != 0 {
-		i = encodeVarintApi(dAtA, i, uint64(m.BranchID))
-		i--
-		dAtA[i] = 0x20
-	}
-	if len(m.XID) > 0 {
-		i -= len(m.XID)
-		copy(dAtA[i:], m.XID)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.XID)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.Message) > 0 {
-		i -= len(m.Message)
-		copy(dAtA[i:], m.Message)
-		i = encodeVarintApi(dAtA, i, uint64(len(m.Message)))
-		i--
-		dAtA[i] = 0x12
-	}
-	if m.ResultCode != 0 {
-		i = encodeVarintApi(dAtA, i, uint64(m.ResultCode))
-		i--
-		dAtA[i] = 0x8
-	}
-	return len(dAtA) - i, nil
-}
-
 func encodeVarintApi(dAtA []byte, offset int, v uint64) int {
 	offset -= sovApi(v)
 	base := offset
@@ -4008,11 +2946,11 @@ func (m *GlobalSession) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Addressing)
+	l = len(m.XID)
 	if l > 0 {
 		n += 1 + l + sovApi(uint64(l))
 	}
-	l = len(m.XID)
+	l = len(m.ApplicationID)
 	if l > 0 {
 		n += 1 + l + sovApi(uint64(l))
 	}
@@ -4032,9 +2970,6 @@ func (m *GlobalSession) Size() (n int) {
 	if m.Status != 0 {
 		n += 1 + sovApi(uint64(m.Status))
 	}
-	if m.Active {
-		n += 2
-	}
 	return n
 }
 
@@ -4044,16 +2979,20 @@ func (m *BranchSession) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Addressing)
+	l = len(m.BranchID)
 	if l > 0 {
 		n += 1 + l + sovApi(uint64(l))
+	}
+	l = len(m.ApplicationID)
+	if l > 0 {
+		n += 1 + l + sovApi(uint64(l))
+	}
+	if m.BranchSessionID != 0 {
+		n += 1 + sovApi(uint64(m.BranchSessionID))
 	}
 	l = len(m.XID)
 	if l > 0 {
 		n += 1 + l + sovApi(uint64(l))
-	}
-	if m.BranchID != 0 {
-		n += 1 + sovApi(uint64(m.BranchID))
 	}
 	if m.TransactionID != 0 {
 		n += 1 + sovApi(uint64(m.TransactionID))
@@ -4076,11 +3015,8 @@ func (m *BranchSession) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovApi(uint64(l))
 	}
-	if m.Async {
-		n += 2
-	}
-	if m.SkipCheckLock {
-		n += 2
+	if m.BeginTime != 0 {
+		n += 1 + sovApi(uint64(m.BeginTime))
 	}
 	return n
 }
@@ -4091,7 +3027,7 @@ func (m *GlobalBeginRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Addressing)
+	l = len(m.ApplicationID)
 	if l > 0 {
 		n += 1 + l + sovApi(uint64(l))
 	}
@@ -4131,10 +3067,6 @@ func (m *BranchRegisterRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Addressing)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
-	}
 	l = len(m.XID)
 	if l > 0 {
 		n += 1 + l + sovApi(uint64(l))
@@ -4154,9 +3086,6 @@ func (m *BranchRegisterRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovApi(uint64(l))
 	}
-	if m.Async {
-		n += 2
-	}
 	return n
 }
 
@@ -4173,8 +3102,12 @@ func (m *BranchRegisterResponse) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovApi(uint64(l))
 	}
-	if m.BranchID != 0 {
-		n += 1 + sovApi(uint64(m.BranchID))
+	l = len(m.BranchID)
+	if l > 0 {
+		n += 1 + l + sovApi(uint64(l))
+	}
+	if m.BranchSessionID != 0 {
+		n += 1 + sovApi(uint64(m.BranchSessionID))
 	}
 	return n
 }
@@ -4185,26 +3118,12 @@ func (m *BranchReportRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.XID)
+	l = len(m.BranchID)
 	if l > 0 {
 		n += 1 + l + sovApi(uint64(l))
-	}
-	if m.BranchID != 0 {
-		n += 1 + sovApi(uint64(m.BranchID))
-	}
-	l = len(m.ResourceID)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
-	}
-	if m.BranchType != 0 {
-		n += 1 + sovApi(uint64(m.BranchType))
 	}
 	if m.BranchStatus != 0 {
 		n += 1 + sovApi(uint64(m.BranchStatus))
-	}
-	l = len(m.ApplicationData)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
 	}
 	return n
 }
@@ -4231,10 +3150,6 @@ func (m *GlobalLockQueryRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.XID)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
-	}
 	l = len(m.ResourceID)
 	if l > 0 {
 		n += 1 + l + sovApi(uint64(l))
@@ -4242,9 +3157,6 @@ func (m *GlobalLockQueryRequest) Size() (n int) {
 	l = len(m.LockKey)
 	if l > 0 {
 		n += 1 + l + sovApi(uint64(l))
-	}
-	if m.BranchType != 0 {
-		n += 1 + sovApi(uint64(m.BranchType))
 	}
 	return n
 }
@@ -4399,126 +3311,6 @@ func (m *GlobalReportResponse) Size() (n int) {
 	return n
 }
 
-func (m *BranchCommitRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.XID)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
-	}
-	if m.BranchID != 0 {
-		n += 1 + sovApi(uint64(m.BranchID))
-	}
-	l = len(m.ResourceID)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
-	}
-	l = len(m.LockKey)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
-	}
-	if m.BranchType != 0 {
-		n += 1 + sovApi(uint64(m.BranchType))
-	}
-	l = len(m.ApplicationData)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
-	}
-	return n
-}
-
-func (m *BranchCommitResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.ResultCode != 0 {
-		n += 1 + sovApi(uint64(m.ResultCode))
-	}
-	l = len(m.Message)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
-	}
-	l = len(m.XID)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
-	}
-	if m.BranchID != 0 {
-		n += 1 + sovApi(uint64(m.BranchID))
-	}
-	if m.BranchStatus != 0 {
-		n += 1 + sovApi(uint64(m.BranchStatus))
-	}
-	return n
-}
-
-func (m *BranchRollbackRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	l = len(m.XID)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
-	}
-	if m.BranchID != 0 {
-		n += 1 + sovApi(uint64(m.BranchID))
-	}
-	l = len(m.ResourceID)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
-	}
-	l = len(m.LockKey)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
-	}
-	if m.BranchType != 0 {
-		n += 1 + sovApi(uint64(m.BranchType))
-	}
-	l = len(m.ApplicationData)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
-	}
-	return n
-}
-
-func (m *BranchRollbackResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.ResultCode != 0 {
-		n += 1 + sovApi(uint64(m.ResultCode))
-	}
-	l = len(m.Message)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
-	}
-	l = len(m.XID)
-	if l > 0 {
-		n += 1 + l + sovApi(uint64(l))
-	}
-	if m.BranchID != 0 {
-		n += 1 + sovApi(uint64(m.BranchID))
-	}
-	if m.BranchStatus != 0 {
-		n += 1 + sovApi(uint64(m.BranchStatus))
-	}
-	if len(m.LockKeys) > 0 {
-		for _, s := range m.LockKeys {
-			l = len(s)
-			n += 1 + l + sovApi(uint64(l))
-		}
-	}
-	return n
-}
-
 func sovApi(x uint64) (n int) {
 	return (math_bits.Len64(x|1) + 6) / 7
 }
@@ -4530,14 +3322,13 @@ func (this *GlobalSession) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&GlobalSession{`,
-		`Addressing:` + fmt.Sprintf("%v", this.Addressing) + `,`,
 		`XID:` + fmt.Sprintf("%v", this.XID) + `,`,
+		`ApplicationID:` + fmt.Sprintf("%v", this.ApplicationID) + `,`,
 		`TransactionID:` + fmt.Sprintf("%v", this.TransactionID) + `,`,
 		`TransactionName:` + fmt.Sprintf("%v", this.TransactionName) + `,`,
 		`Timeout:` + fmt.Sprintf("%v", this.Timeout) + `,`,
 		`BeginTime:` + fmt.Sprintf("%v", this.BeginTime) + `,`,
 		`Status:` + fmt.Sprintf("%v", this.Status) + `,`,
-		`Active:` + fmt.Sprintf("%v", this.Active) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4547,17 +3338,17 @@ func (this *BranchSession) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&BranchSession{`,
-		`Addressing:` + fmt.Sprintf("%v", this.Addressing) + `,`,
-		`XID:` + fmt.Sprintf("%v", this.XID) + `,`,
 		`BranchID:` + fmt.Sprintf("%v", this.BranchID) + `,`,
+		`ApplicationID:` + fmt.Sprintf("%v", this.ApplicationID) + `,`,
+		`BranchSessionID:` + fmt.Sprintf("%v", this.BranchSessionID) + `,`,
+		`XID:` + fmt.Sprintf("%v", this.XID) + `,`,
 		`TransactionID:` + fmt.Sprintf("%v", this.TransactionID) + `,`,
 		`ResourceID:` + fmt.Sprintf("%v", this.ResourceID) + `,`,
 		`LockKey:` + fmt.Sprintf("%v", this.LockKey) + `,`,
 		`Type:` + fmt.Sprintf("%v", this.Type) + `,`,
 		`Status:` + fmt.Sprintf("%v", this.Status) + `,`,
 		`ApplicationData:` + fmt.Sprintf("%v", this.ApplicationData) + `,`,
-		`Async:` + fmt.Sprintf("%v", this.Async) + `,`,
-		`SkipCheckLock:` + fmt.Sprintf("%v", this.SkipCheckLock) + `,`,
+		`BeginTime:` + fmt.Sprintf("%v", this.BeginTime) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4567,7 +3358,7 @@ func (this *GlobalBeginRequest) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&GlobalBeginRequest{`,
-		`Addressing:` + fmt.Sprintf("%v", this.Addressing) + `,`,
+		`ApplicationID:` + fmt.Sprintf("%v", this.ApplicationID) + `,`,
 		`Timeout:` + fmt.Sprintf("%v", this.Timeout) + `,`,
 		`TransactionName:` + fmt.Sprintf("%v", this.TransactionName) + `,`,
 		`}`,
@@ -4591,13 +3382,11 @@ func (this *BranchRegisterRequest) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&BranchRegisterRequest{`,
-		`Addressing:` + fmt.Sprintf("%v", this.Addressing) + `,`,
 		`XID:` + fmt.Sprintf("%v", this.XID) + `,`,
 		`ResourceID:` + fmt.Sprintf("%v", this.ResourceID) + `,`,
 		`LockKey:` + fmt.Sprintf("%v", this.LockKey) + `,`,
 		`BranchType:` + fmt.Sprintf("%v", this.BranchType) + `,`,
 		`ApplicationData:` + fmt.Sprintf("%v", this.ApplicationData) + `,`,
-		`Async:` + fmt.Sprintf("%v", this.Async) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4610,6 +3399,7 @@ func (this *BranchRegisterResponse) String() string {
 		`ResultCode:` + fmt.Sprintf("%v", this.ResultCode) + `,`,
 		`Message:` + fmt.Sprintf("%v", this.Message) + `,`,
 		`BranchID:` + fmt.Sprintf("%v", this.BranchID) + `,`,
+		`BranchSessionID:` + fmt.Sprintf("%v", this.BranchSessionID) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4619,12 +3409,8 @@ func (this *BranchReportRequest) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&BranchReportRequest{`,
-		`XID:` + fmt.Sprintf("%v", this.XID) + `,`,
 		`BranchID:` + fmt.Sprintf("%v", this.BranchID) + `,`,
-		`ResourceID:` + fmt.Sprintf("%v", this.ResourceID) + `,`,
-		`BranchType:` + fmt.Sprintf("%v", this.BranchType) + `,`,
 		`BranchStatus:` + fmt.Sprintf("%v", this.BranchStatus) + `,`,
-		`ApplicationData:` + fmt.Sprintf("%v", this.ApplicationData) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4645,10 +3431,8 @@ func (this *GlobalLockQueryRequest) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&GlobalLockQueryRequest{`,
-		`XID:` + fmt.Sprintf("%v", this.XID) + `,`,
 		`ResourceID:` + fmt.Sprintf("%v", this.ResourceID) + `,`,
 		`LockKey:` + fmt.Sprintf("%v", this.LockKey) + `,`,
-		`BranchType:` + fmt.Sprintf("%v", this.BranchType) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -4754,65 +3538,6 @@ func (this *GlobalReportResponse) String() string {
 	}, "")
 	return s
 }
-func (this *BranchCommitRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&BranchCommitRequest{`,
-		`XID:` + fmt.Sprintf("%v", this.XID) + `,`,
-		`BranchID:` + fmt.Sprintf("%v", this.BranchID) + `,`,
-		`ResourceID:` + fmt.Sprintf("%v", this.ResourceID) + `,`,
-		`LockKey:` + fmt.Sprintf("%v", this.LockKey) + `,`,
-		`BranchType:` + fmt.Sprintf("%v", this.BranchType) + `,`,
-		`ApplicationData:` + fmt.Sprintf("%v", this.ApplicationData) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *BranchCommitResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&BranchCommitResponse{`,
-		`ResultCode:` + fmt.Sprintf("%v", this.ResultCode) + `,`,
-		`Message:` + fmt.Sprintf("%v", this.Message) + `,`,
-		`XID:` + fmt.Sprintf("%v", this.XID) + `,`,
-		`BranchID:` + fmt.Sprintf("%v", this.BranchID) + `,`,
-		`BranchStatus:` + fmt.Sprintf("%v", this.BranchStatus) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *BranchRollbackRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&BranchRollbackRequest{`,
-		`XID:` + fmt.Sprintf("%v", this.XID) + `,`,
-		`BranchID:` + fmt.Sprintf("%v", this.BranchID) + `,`,
-		`ResourceID:` + fmt.Sprintf("%v", this.ResourceID) + `,`,
-		`LockKey:` + fmt.Sprintf("%v", this.LockKey) + `,`,
-		`BranchType:` + fmt.Sprintf("%v", this.BranchType) + `,`,
-		`ApplicationData:` + fmt.Sprintf("%v", this.ApplicationData) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *BranchRollbackResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&BranchRollbackResponse{`,
-		`ResultCode:` + fmt.Sprintf("%v", this.ResultCode) + `,`,
-		`Message:` + fmt.Sprintf("%v", this.Message) + `,`,
-		`XID:` + fmt.Sprintf("%v", this.XID) + `,`,
-		`BranchID:` + fmt.Sprintf("%v", this.BranchID) + `,`,
-		`BranchStatus:` + fmt.Sprintf("%v", this.BranchStatus) + `,`,
-		`LockKeys:` + fmt.Sprintf("%v", this.LockKeys) + `,`,
-		`}`,
-	}, "")
-	return s
-}
 func valueToStringApi(v interface{}) string {
 	rv := reflect.ValueOf(v)
 	if rv.IsNil() {
@@ -4852,38 +3577,6 @@ func (m *GlobalSession) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Addressing", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Addressing = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field XID", wireType)
 			}
 			var stringLen uint64
@@ -4913,6 +3606,38 @@ func (m *GlobalSession) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.XID = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ApplicationID", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthApi
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthApi
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ApplicationID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 0 {
@@ -5022,26 +3747,6 @@ func (m *GlobalSession) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 8:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Active", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.Active = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipApi(dAtA[iNdEx:])
@@ -5094,7 +3799,7 @@ func (m *BranchSession) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Addressing", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field BranchID", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -5122,9 +3827,60 @@ func (m *BranchSession) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Addressing = string(dAtA[iNdEx:postIndex])
+			m.BranchID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ApplicationID", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthApi
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthApi
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ApplicationID = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BranchSessionID", wireType)
+			}
+			m.BranchSessionID = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.BranchSessionID |= int64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field XID", wireType)
 			}
@@ -5156,26 +3912,7 @@ func (m *BranchSession) Unmarshal(dAtA []byte) error {
 			}
 			m.XID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 3:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BranchID", wireType)
-			}
-			m.BranchID = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BranchID |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 4:
+		case 5:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field TransactionID", wireType)
 			}
@@ -5194,7 +3931,7 @@ func (m *BranchSession) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 5:
+		case 6:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ResourceID", wireType)
 			}
@@ -5226,7 +3963,7 @@ func (m *BranchSession) Unmarshal(dAtA []byte) error {
 			}
 			m.ResourceID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 6:
+		case 7:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LockKey", wireType)
 			}
@@ -5258,7 +3995,7 @@ func (m *BranchSession) Unmarshal(dAtA []byte) error {
 			}
 			m.LockKey = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 7:
+		case 8:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Type", wireType)
 			}
@@ -5277,7 +4014,7 @@ func (m *BranchSession) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 8:
+		case 9:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Status", wireType)
 			}
@@ -5296,7 +4033,7 @@ func (m *BranchSession) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 9:
+		case 10:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ApplicationData", wireType)
 			}
@@ -5330,31 +4067,11 @@ func (m *BranchSession) Unmarshal(dAtA []byte) error {
 				m.ApplicationData = []byte{}
 			}
 			iNdEx = postIndex
-		case 10:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Async", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.Async = bool(v != 0)
 		case 11:
 			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field SkipCheckLock", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field BeginTime", wireType)
 			}
-			var v int
+			m.BeginTime = 0
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowApi
@@ -5364,12 +4081,11 @@ func (m *BranchSession) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				v |= int(b&0x7F) << shift
+				m.BeginTime |= int64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
-			m.SkipCheckLock = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipApi(dAtA[iNdEx:])
@@ -5422,7 +4138,7 @@ func (m *GlobalBeginRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Addressing", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field ApplicationID", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -5450,7 +4166,7 @@ func (m *GlobalBeginRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Addressing = string(dAtA[iNdEx:postIndex])
+			m.ApplicationID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 0 {
@@ -5604,7 +4320,7 @@ func (m *GlobalBeginResponse) Unmarshal(dAtA []byte) error {
 			}
 			m.Message = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 3:
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field XID", wireType)
 			}
@@ -5688,38 +4404,6 @@ func (m *BranchRegisterRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Addressing", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Addressing = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field XID", wireType)
 			}
 			var stringLen uint64
@@ -5750,7 +4434,7 @@ func (m *BranchRegisterRequest) Unmarshal(dAtA []byte) error {
 			}
 			m.XID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 3:
+		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ResourceID", wireType)
 			}
@@ -5782,7 +4466,7 @@ func (m *BranchRegisterRequest) Unmarshal(dAtA []byte) error {
 			}
 			m.ResourceID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 4:
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LockKey", wireType)
 			}
@@ -5814,7 +4498,7 @@ func (m *BranchRegisterRequest) Unmarshal(dAtA []byte) error {
 			}
 			m.LockKey = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 5:
+		case 4:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field BranchType", wireType)
 			}
@@ -5833,7 +4517,7 @@ func (m *BranchRegisterRequest) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 6:
+		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ApplicationData", wireType)
 			}
@@ -5867,26 +4551,6 @@ func (m *BranchRegisterRequest) Unmarshal(dAtA []byte) error {
 				m.ApplicationData = []byte{}
 			}
 			iNdEx = postIndex
-		case 7:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Async", wireType)
-			}
-			var v int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				v |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			m.Async = bool(v != 0)
 		default:
 			iNdEx = preIndex
 			skippy, err := skipApi(dAtA[iNdEx:])
@@ -5989,10 +4653,10 @@ func (m *BranchRegisterResponse) Unmarshal(dAtA []byte) error {
 			m.Message = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
-			if wireType != 0 {
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field BranchID", wireType)
 			}
-			m.BranchID = 0
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowApi
@@ -6002,7 +4666,39 @@ func (m *BranchRegisterResponse) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.BranchID |= int64(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthApi
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthApi
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.BranchID = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field BranchSessionID", wireType)
+			}
+			m.BranchSessionID = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowApi
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.BranchSessionID |= int64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -6059,59 +4755,8 @@ func (m *BranchReportRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field XID", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XID = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field BranchID", wireType)
 			}
-			m.BranchID = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BranchID |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ResourceID", wireType)
-			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
@@ -6138,28 +4783,9 @@ func (m *BranchReportRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.ResourceID = string(dAtA[iNdEx:postIndex])
+			m.BranchID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BranchType", wireType)
-			}
-			m.BranchType = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BranchType |= BranchSession_BranchType(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 5:
+		case 2:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field BranchStatus", wireType)
 			}
@@ -6178,40 +4804,6 @@ func (m *BranchReportRequest) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ApplicationData", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ApplicationData = append(m.ApplicationData[:0], dAtA[iNdEx:postIndex]...)
-			if m.ApplicationData == nil {
-				m.ApplicationData = []byte{}
-			}
-			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipApi(dAtA[iNdEx:])
@@ -6365,38 +4957,6 @@ func (m *GlobalLockQueryRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field XID", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XID = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ResourceID", wireType)
 			}
 			var stringLen uint64
@@ -6427,7 +4987,7 @@ func (m *GlobalLockQueryRequest) Unmarshal(dAtA []byte) error {
 			}
 			m.ResourceID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 3:
+		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LockKey", wireType)
 			}
@@ -6459,25 +5019,6 @@ func (m *GlobalLockQueryRequest) Unmarshal(dAtA []byte) error {
 			}
 			m.LockKey = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BranchType", wireType)
-			}
-			m.BranchType = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BranchType |= BranchSession_BranchType(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
 		default:
 			iNdEx = preIndex
 			skippy, err := skipApi(dAtA[iNdEx:])
@@ -7426,816 +5967,6 @@ func (m *GlobalReportResponse) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *BranchCommitRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: BranchCommitRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: BranchCommitRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field XID", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XID = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BranchID", wireType)
-			}
-			m.BranchID = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BranchID |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ResourceID", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ResourceID = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LockKey", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.LockKey = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 5:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BranchType", wireType)
-			}
-			m.BranchType = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BranchType |= BranchSession_BranchType(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ApplicationData", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ApplicationData = append(m.ApplicationData[:0], dAtA[iNdEx:postIndex]...)
-			if m.ApplicationData == nil {
-				m.ApplicationData = []byte{}
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *BranchCommitResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: BranchCommitResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: BranchCommitResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ResultCode", wireType)
-			}
-			m.ResultCode = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.ResultCode |= ResultCode(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Message", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Message = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field XID", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XID = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BranchID", wireType)
-			}
-			m.BranchID = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BranchID |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 5:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BranchStatus", wireType)
-			}
-			m.BranchStatus = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BranchStatus |= BranchSession_BranchStatus(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		default:
-			iNdEx = preIndex
-			skippy, err := skipApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *BranchRollbackRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: BranchRollbackRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: BranchRollbackRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field XID", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XID = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BranchID", wireType)
-			}
-			m.BranchID = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BranchID |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ResourceID", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ResourceID = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LockKey", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.LockKey = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 5:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BranchType", wireType)
-			}
-			m.BranchType = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BranchType |= BranchSession_BranchType(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ApplicationData", wireType)
-			}
-			var byteLen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				byteLen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if byteLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + byteLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ApplicationData = append(m.ApplicationData[:0], dAtA[iNdEx:postIndex]...)
-			if m.ApplicationData == nil {
-				m.ApplicationData = []byte{}
-			}
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipApi(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if (skippy < 0) || (iNdEx+skippy) < 0 {
-				return ErrInvalidLengthApi
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *BranchRollbackResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowApi
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: BranchRollbackResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: BranchRollbackResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ResultCode", wireType)
-			}
-			m.ResultCode = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.ResultCode |= ResultCode(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Message", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Message = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 3:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field XID", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.XID = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 4:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BranchID", wireType)
-			}
-			m.BranchID = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BranchID |= int64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 5:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field BranchStatus", wireType)
-			}
-			m.BranchStatus = 0
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				m.BranchStatus |= BranchSession_BranchStatus(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field LockKeys", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowApi
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= uint64(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthApi
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex < 0 {
-				return ErrInvalidLengthApi
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.LockKeys = append(m.LockKeys, string(dAtA[iNdEx:postIndex]))
-			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipApi(dAtA[iNdEx:])

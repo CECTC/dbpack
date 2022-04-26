@@ -1,28 +1,42 @@
+/*
+ * Copyright 2022 CECTC, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package sdb
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/suite"
+	clientv3 "go.etcd.io/etcd/client/v3"
 
 	"github.com/cectc/dbpack/pkg/config"
 	"github.com/cectc/dbpack/pkg/driver"
 	"github.com/cectc/dbpack/pkg/dt"
 	"github.com/cectc/dbpack/pkg/dt/api"
-	"github.com/cectc/dbpack/pkg/dt/storage/factory"
-	_ "github.com/cectc/dbpack/pkg/dt/storage/mysql"
+	"github.com/cectc/dbpack/pkg/dt/storage/etcd"
 	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/third_party/pools"
 )
 
 const (
-	phiEmployeeDSN = `root:123456@tcp(127.0.0.1:3306)/employees?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8`
-	phiMetaDSN     = `root:123456@tcp(127.0.0.1:3306)/meta?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8`
+	phiEmployeeDSN = `root:123456@tcp(127.0.0.1:3306)/employees?timeout=1s&readTimeout=1s&writeTimeout=1s&parseTime=true&loc=Local&charset=utf8mb4,utf8`
 
 	insertEmployeeForDT   = `INSERT INTO employees ( id, emp_no, birth_date, first_name, last_name, gender, hire_date ) VALUES (?, ?, ?, ?, ?, ?, ?)`
 	insertDepartmentForDT = `INSERT INTO departments ( id, dept_no, dept_name ) VALUES (?, ?, ?)`
@@ -63,38 +77,18 @@ func (suite *_DistributedTransactionSuite) SetupSuite() {
 		return collector.NewBackendConnection
 	})
 
-	d, err := factory.Create("mysql", map[string]interface{}{
-		"dsn":                  phiMetaDSN,
-		"global_table":         "global_table",
-		"branch_table":         "branch_table",
-		"lock_table":           "lock_table",
-		"query_limit":          100,
-		"max_open_connections": 100,
-		"max_idle_connections": 20,
-		"max_lifetime":         "4h",
-	})
-	if err != nil {
-		log.Fatalf("failed to construct mysql driver: %v", err)
+	var conf = &config.DistributedTransaction{
+		ApplicationID:                    "svc",
+		RetryDeadThreshold:               130000,
+		RollbackRetryTimeoutUnlockEnable: true,
+		EtcdConfig: clientv3.Config{
+			Endpoints: []string{"localhost:2379", "localhost:2378", "localhost:2377"},
+		},
 	}
 
-	dt.InitDistributedTransactionManager(&config.DistributedTransaction{
-		Port:                             8092,
-		Addressing:                       "localhost:8092",
-		RetryDeadThreshold:               130000,
-		MaxCommitRetryTimeout:            -1,
-		MaxRollbackRetryTimeout:          -1,
-		RollbackRetryTimeoutUnlockEnable: true,
-		AsyncCommittingRetryPeriod:       10 * time.Second,
-		CommittingRetryPeriod:            10 * time.Second,
-		RollingBackRetryPeriod:           1 * time.Second,
-		TimeoutRetryPeriod:               1 * time.Second,
-		ClientParameters: config.ClientParameters{
-			Time:                10 * time.Second,
-			Timeout:             1 * time.Second,
-			PermitWithoutStream: true,
-		},
-		Storage: nil,
-	}, d)
+	driver := etcd.NewEtcdStore(conf.EtcdConfig)
+
+	dt.InitDistributedTransactionManager(conf, driver)
 
 	db, err := sql.Open(driverName, dataSourceName)
 	if suite.NoErrorf(err, "connection error: %v", err) {
@@ -108,11 +102,7 @@ func (suite *_DistributedTransactionSuite) SetupSuite() {
 
 func (suite *_DistributedTransactionSuite) TestDistributedTransaction() {
 	transactionManager := dt.GetDistributedTransactionManager()
-	xid, err := transactionManager.BeginLocal(context.Background(), &api.GlobalBeginRequest{
-		Addressing:      "localhost:8092",
-		Timeout:         60000,
-		TransactionName: "test-distributed-transaction",
-	})
+	xid, err := transactionManager.Begin(context.Background(), "test-distributed-transaction", 60000)
 	if suite.NoErrorf(err, "begin global transaction error: %v", err) {
 		tx, err := suite.db.Begin()
 		if suite.NoErrorf(err, "begin tx error: %v", err) {
@@ -145,12 +135,9 @@ func (suite *_DistributedTransactionSuite) TestDistributedTransaction() {
 
 			err = tx.Commit()
 			if suite.NoErrorf(err, "commit local transaction error: %v", err) {
-				status, err := transactionManager.RollbackLocal(context.Background(),
-					&api.GlobalRollbackRequest{
-						XID: xid,
-					})
+				status, err := transactionManager.Rollback(context.Background(), xid)
 				if suite.NoErrorf(err, "rollback global transaction err: %v", err) {
-					suite.Equal(api.RolledBack, status)
+					suite.Equal(api.Rollbacking, status)
 				}
 				time.Sleep(5 * time.Second)
 

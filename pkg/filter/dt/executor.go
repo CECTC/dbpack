@@ -26,7 +26,6 @@ import (
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/driver"
 	"github.com/cectc/dbpack/pkg/dt"
-	"github.com/cectc/dbpack/pkg/dt/api"
 	"github.com/cectc/dbpack/pkg/dt/schema"
 	"github.com/cectc/dbpack/pkg/dt/undolog"
 	"github.com/cectc/dbpack/pkg/misc"
@@ -50,7 +49,6 @@ type deleteExecutor struct {
 }
 
 type selectForUpdateExecutor struct {
-	xid               string
 	conn              *driver.BackendConnection
 	stmt              *ast.SelectStmt
 	args              map[string]interface{}
@@ -291,13 +289,8 @@ func (executor *selectForUpdateExecutor) Execute(ctx context.Context, result pro
 			err      error
 		)
 		for i := 0; i < executor.lockRetryTimes; i++ {
-			lockable, err = dt.GetDistributedTransactionManager().LockQuery(ctx,
-				&api.GlobalLockQueryRequest{
-					XID:        executor.xid,
-					ResourceID: executor.conn.DataSourceName(),
-					LockKey:    lockKeys,
-					BranchType: api.AT,
-				})
+			lockable, err = dt.GetDistributedTransactionManager().IsLockable(ctx,
+				executor.conn.DataSourceName(), lockKeys)
 			if lockable && err == nil {
 				break
 			}
@@ -495,17 +488,22 @@ func (executor *globalLockExecutor) Executable(ctx context.Context, lockRetryInt
 	if lockKeys == "" {
 		return true, nil
 	} else {
-		// var lockable bool
-		var err error
+		var (
+			err      error
+			lockable bool
+		)
 		for i := 0; i < lockRetryTimes; i++ {
-			// todo lock query
-			time.Sleep(lockRetryInterval)
+			lockable, err = dt.GetDistributedTransactionManager().IsLockable(ctx,
+				executor.conn.DataSourceName(), lockKeys)
+			if err != nil {
+				time.Sleep(lockRetryInterval)
+			}
+			if lockable {
+				return true, nil
+			}
 		}
-		if err != nil {
-			return false, err
-		}
+		return false, err
 	}
-	return false, nil
 }
 
 func appendInParam(size int) string {
