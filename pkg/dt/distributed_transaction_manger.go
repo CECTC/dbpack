@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	timeUtils "github.com/opentrx/seata-golang/v2/pkg/util/time"
-	"github.com/opentrx/seata-golang/v2/pkg/util/uuid"
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/cectc/dbpack/pkg/config"
@@ -30,6 +28,7 @@ import (
 	"github.com/cectc/dbpack/pkg/dt/storage"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
+	"github.com/cectc/dbpack/pkg/misc/uuid"
 	"github.com/cectc/dbpack/pkg/resource"
 )
 
@@ -84,7 +83,7 @@ func (manager *DistributedTransactionManager) Begin(ctx context.Context, transac
 		TransactionID:   transactionID,
 		TransactionName: transactionName,
 		Timeout:         timeout,
-		BeginTime:       int64(timeUtils.CurrentTimeMillis()),
+		BeginTime:       int64(misc.CurrentTimeMillis()),
 		Status:          api.Begin,
 	}
 	if err := manager.storageDriver.AddGlobalSession(ctx, gt); err != nil {
@@ -118,7 +117,7 @@ func (manager *DistributedTransactionManager) BranchRegister(ctx context.Context
 		Type:            in.BranchType,
 		Status:          api.Registered,
 		ApplicationData: in.ApplicationData,
-		BeginTime:       int64(timeUtils.CurrentTimeMillis()),
+		BeginTime:       int64(misc.CurrentTimeMillis()),
 	}
 
 	if err := manager.storageDriver.AddBranchSession(ctx, bs); err != nil {
@@ -205,7 +204,7 @@ func (manager *DistributedTransactionManager) processGlobalSessions() error {
 					return err
 				}
 			}
-			manager.globalSessionQueue.AddAfter(gs, time.Duration(timeUtils.CurrentTimeMillis()-uint64(gs.BeginTime))*time.Millisecond)
+			manager.globalSessionQueue.AddAfter(gs, time.Duration(misc.CurrentTimeMillis()-uint64(gs.BeginTime))*time.Millisecond)
 		}
 		if gs.Status == api.Committing || gs.Status == api.Rollbacking {
 			bsKeys, err := manager.storageDriver.GetBranchSessionKeys(context.Background(), gs.XID)
@@ -359,9 +358,9 @@ func (manager *DistributedTransactionManager) watchBranchSession() {
 }
 
 func isGlobalSessionTimeout(gs *api.GlobalSession) bool {
-	return (timeUtils.CurrentTimeMillis() - uint64(gs.BeginTime)) > uint64(gs.Timeout)
+	return (misc.CurrentTimeMillis() - uint64(gs.BeginTime)) > uint64(gs.Timeout)
 }
 
 func (manager *DistributedTransactionManager) IsRollingBackDead(bs *api.BranchSession) bool {
-	return (timeUtils.CurrentTimeMillis() - uint64(bs.BeginTime)) > uint64(manager.retryDeadThreshold)
+	return (misc.CurrentTimeMillis() - uint64(bs.BeginTime)) > uint64(manager.retryDeadThreshold)
 }
