@@ -30,5 +30,11 @@
 + Filter: responsible for metrics statistics, SQL interception, encryption and decryption of sensitive information, etc.
 + ConnectionFilter: process the intercepted SQL on the connection.
 
+## 讨论群
+
+进入微信讨论群，请扫描下面的二维码，回复“进群”。
+
+<img src="https://cectc.github.io/dbpack-doc/images/image-20220427091848831.png" alt="image-20220427091848831" style="zoom:50%" align="left"/>
+
 ## License
 DBPack is licensed under the [Apache License, Version 2.0](LICENSE).
