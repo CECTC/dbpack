@@ -30,5 +30,10 @@
 + Filter: responsible for metrics statistics, SQL interception, encryption and decryption of sensitive information, etc.
 + ConnectionFilter: process the intercepted SQL on the connection.
 
+## WeChat group
+To enter the WeChat discussion group, please scan the QR code below and reply with the code "join the group".
+
+<img src="https://cectc.github.io/dbpack-doc/images/image-20220427091848831.png" alt="image-20220427091848831" width="200px"/>
+
 ## License
 DBPack is licensed under the [Apache License, Version 2.0](LICENSE).
