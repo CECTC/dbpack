@@ -273,13 +273,26 @@ func (manager *DistributedTransactionManager) processBranchSessions() error {
 		return err
 	}
 	for _, bs := range branchSessions {
-		if bs.Status == api.PhaseTwoRollbacking && manager.IsRollingBackDead(bs) {
-			if manager.rollbackRetryTimeoutUnlockEnable {
-				if _, err := manager.storageDriver.ReleaseLockKeys(context.Background(), bs.ResourceID, []string{bs.LockKey}); err != nil {
-					return err
-				}
+		switch bs.Status {
+		case api.Registered:
+		case api.PhaseOneFailed:
+			if err := manager.storageDriver.DeleteBranchSession(context.Background(), bs.BranchID); err != nil {
+				return err
 			}
-			log.Debugf("branch session rollback dead, branch id: %s, lock key: %s", bs.BranchID, bs.LockKey)
+		case api.PhaseTwoCommitting:
+			manager.branchSessionQueue.Add(bs)
+		case api.PhaseTwoRollbacking:
+			if manager.IsRollingBackDead(bs) {
+				log.Debugf("branch session rollback dead, key: %s, lock key: %s", bs.BranchID, bs.LockKey)
+				if manager.rollbackRetryTimeoutUnlockEnable {
+					log.Debugf("lock key: %s released", bs.BranchID, bs.LockKey)
+					if _, err := manager.storageDriver.ReleaseLockKeys(context.Background(), bs.ResourceID, []string{bs.LockKey}); err != nil {
+						return err
+					}
+				}
+			} else {
+				manager.branchSessionQueue.Add(bs)
+			}
 		}
 	}
 	return nil
