@@ -23,6 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/concurrency"
 
 	"github.com/cectc/dbpack/pkg/dt/api"
 	"github.com/cectc/dbpack/pkg/dt/storage"
@@ -39,6 +40,7 @@ const (
 
 type store struct {
 	client                    *clientv3.Client
+	session                   *concurrency.Session
 	initGlobalSessionRevision int64
 	initBranchSessionRevision int64
 }
@@ -46,10 +48,15 @@ type store struct {
 func NewEtcdStore(config clientv3.Config) *store {
 	client, err := clientv3.New(config)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+	}
+	session, err := concurrency.NewSession(client)
+	if err != nil {
+		log.Fatal(err)
 	}
 	return &store{
 		client:                    client,
+		session:                   session,
 		initGlobalSessionRevision: 0,
 		initBranchSessionRevision: 0,
 	}
@@ -66,6 +73,16 @@ type watchChan struct {
 	incomingEventChan chan *event
 	resultChan        chan storage.TransactionSession
 	isGlobalSession   bool
+}
+
+func (s *store) LeaderElection(applicationID string) bool {
+	e := concurrency.NewElection(s.session, fmt.Sprintf("%s/leader-election/", applicationID))
+	ctx := context.Background()
+	// Elect a leader (or wait that the leader resign)
+	if err := e.Campaign(ctx, "e"); err != nil {
+		log.Fatal(err)
+	}
+	return true
 }
 
 func (s *store) AddGlobalSession(ctx context.Context, globalSession *api.GlobalSession) error {
