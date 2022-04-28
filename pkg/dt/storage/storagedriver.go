@@ -23,6 +23,7 @@ import (
 )
 
 type Driver interface {
+	LeaderElection(applicationID string) bool
 	AddGlobalSession(ctx context.Context, globalSession *api.GlobalSession) error
 	AddBranchSession(ctx context.Context, branchSession *api.BranchSession) error
 	GlobalCommit(ctx context.Context, xid string) (api.GlobalSession_GlobalStatus, error)

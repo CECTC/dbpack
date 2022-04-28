@@ -49,15 +49,19 @@ func InitDistributedTransactionManager(conf *config.DistributedTransaction, stor
 		globalSessionQueue: workqueue.NewDelayingQueue(),
 		branchSessionQueue: workqueue.New(),
 	}
-	if err := manager.processGlobalSessions(); err != nil {
-		panic(err)
-	}
-	if err := manager.processBranchSessions(); err != nil {
-		panic(err)
-	}
-	go manager.processGlobalSessionQueue()
-	go manager.processBranchSessionQueue()
-	go manager.watchBranchSession()
+	go func() {
+		if storageDriver.LeaderElection(manager.applicationID) {
+			if err := manager.processGlobalSessions(); err != nil {
+				log.Fatal(err)
+			}
+			if err := manager.processBranchSessions(); err != nil {
+				log.Fatal(err)
+			}
+			go manager.processGlobalSessionQueue()
+			go manager.processBranchSessionQueue()
+			go manager.watchBranchSession()
+		}
+	}()
 }
 
 func GetDistributedTransactionManager() *DistributedTransactionManager {
