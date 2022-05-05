@@ -2,7 +2,7 @@
 
 ### Step0: Clone dbpack
 ```shell
-git clone git@github.com:CECTC/dbpack.git
+git clone git@github.com:cectc/dbpack.git
 cd dbpack
 ```
 
