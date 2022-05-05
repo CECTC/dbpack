@@ -23,7 +23,7 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface SoItemMapper {
     @Insert("INSERT /*+ XID('${xid}') */\n" +
-            "INTO `seata_order`.`so_item` ( `so_sysno`, `product_sysno`, `product_name`, `cost_price`, `original_price`, `deal_price`, `quantity` )\n" +
+            "INTO `order`.`so_item` ( `so_sysno`, `product_sysno`, `product_name`, `cost_price`, `original_price`, `deal_price`, `quantity` )\n" +
             "VALUES\n" +
             "(#{soSysNo}, #{productSysNo}, #{productName}, #{costPrice}, #{originalPrice}, #{dealPrice}, #{quantity} );")
     void createSoItem(SoItem soItem);

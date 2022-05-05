@@ -24,7 +24,7 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface SoMasterMapper {
     @Insert("INSERT /*+ XID('${xid}') */\n" +
-            "INTO `seata_order`.`so_master` (\n" +
+            "INTO `order`.`so_master` (\n" +
             "\t`sysno`,\n" +
             "\t`so_id`,\n" +
             "\t`buyer_user_sysno`,\n" +

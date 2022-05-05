@@ -22,6 +22,6 @@ import org.apache.ibatis.annotations.Update;
 
 @Mapper
 public interface ProductMapper {
-    @Update("UPDATE /*+ XID('${xid}') */ `seata_product`.`inventory` SET `available_qty` = `available_qty` - #{qty}, allocated_qty = allocated_qty + #{qty} WHERE product_sysno = #{productSysNo} AND available_qty >= #{qty}")
+    @Update("UPDATE /*+ XID('${xid}') */ `product`.`inventory` SET `available_qty` = `available_qty` - #{qty}, allocated_qty = allocated_qty + #{qty} WHERE product_sysno = #{productSysNo} AND available_qty >= #{qty}")
     boolean allocateInventory(@Param("xid") String xid, @Param("productSysNo") long productSysNo, @Param("qty") int qty);
 }
