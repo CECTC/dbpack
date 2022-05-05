@@ -72,7 +72,7 @@ CREATE TABLE `product` (
 -- Records of product
 -- ----------------------------
 BEGIN;
-INSERT INTO `product` VALUES (1, '刺力王', '从小喝到大的刺力王', '好喝好喝好好喝', '', 'https://img10.360buyimg.com/mobilecms/s500x500_jfs/t1/61921/34/1166/131384/5cf60a94E411eee07/1ee010f4142236c3.jpg', 0, '', 15, 5, 5, 5, 1, '', 1, '2019-05-28 03:36:17', '', '', '2019-06-06 01:37:36');
+INSERT INTO `product` VALUES (1, 'apple iphone 13', 'apple iphone 13', 'apple iphone 13', '', 'https://img10.360buyimg.com/mobilecms/s500x500_jfs/t1/61921/34/1166/131384/5cf60a94E411eee07/1ee010f4142236c3.jpg', 0, '', 15, 5, 5, 5, 1, '', 1, '2019-05-28 03:36:17', '', '', '2019-06-06 01:37:36');
 COMMIT;
 
 -- ----------------------------
