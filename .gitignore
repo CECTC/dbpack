@@ -2,3 +2,8 @@
 .idea/
 coverage.txt
 dist/
+
+**/.mvn/wrapper/maven-wrapper.jar
+**/.mvn/wrapper/MavenWrapperDownloader.java
+**/src/main/**/target/
+**/src/test/**/target/
