@@ -21,22 +21,6 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- ----------------------------
--- Table structure for branch_transaction
--- ----------------------------
-DROP TABLE IF EXISTS `branch_transaction`;
-CREATE TABLE `branch_transaction` (
-  `sysno` bigint(20) NOT NULL AUTO_INCREMENT,
-  `xid` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
-  `branch_id` bigint(20) NOT NULL,
-  `args_json` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `state` tinyint(4) DEFAULT NULL COMMENT '1，初始化；2，已提交；3，已回滚',
-  `gmt_create` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `gmt_modified` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`sysno`) USING BTREE,
-  UNIQUE KEY `xid` (`xid`,`branch_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='事务记录表';
-
--- ----------------------------
 -- Table structure for inventory
 -- ----------------------------
 DROP TABLE IF EXISTS `inventory`;
