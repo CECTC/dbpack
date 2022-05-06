@@ -23,7 +23,7 @@ import java.util.Random;
 
 public class SnowflakeIdGenerator {
 
-    final static Logger logger = LoggerFactory.getLogger(BaseController.class);
+    final static Logger logger = LoggerFactory.getLogger(SnowflakeIdGenerator.class);
 
     private long workerId;
     private long dataCenterId;
