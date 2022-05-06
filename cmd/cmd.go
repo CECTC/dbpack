@@ -18,10 +18,10 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
@@ -36,6 +36,7 @@ import (
 	"github.com/cectc/dbpack/pkg/filter"
 	_ "github.com/cectc/dbpack/pkg/filter/dt"
 	"github.com/cectc/dbpack/pkg/listener"
+	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/pkg/server"
@@ -117,41 +118,42 @@ var (
 				case config.Mysql:
 					listener, err := listener.NewMysqlListener(listenerConf)
 					if err != nil {
-						panic(err)
+						log.Fatalf("create mysql listener failed %v", err)
 					}
 					dbListener := listener.(proto.DBListener)
 					executor := executors[listenerConf.Executor]
 					if executor == nil {
-						panic(errors.Errorf("executor: %s is not exists for mysql listener", listenerConf.Executor))
+						log.Fatalf("executor: %s is not exists for mysql listener", listenerConf.Executor)
 					}
 					dbListener.SetExecutor(executor)
 					dbpack.AddListener(dbListener)
 				case config.Http:
 					listener, err := listener.NewHttpListener(listenerConf)
 					if err != nil {
-						panic(err)
+						log.Fatalf("create http listener failed %v", err)
 					}
 					dbpack.AddListener(listener)
 				default:
-					panic(fmt.Sprintf("unsupported %v listener protocol type", listenerConf.ProtocolType))
+					log.Fatalf("unsupported %v listener protocol type", listenerConf.ProtocolType)
 				}
 			}
-
-			dbpack.Start()
 
 			ctx, cancel := context.WithCancel(context.Background())
 			c := make(chan os.Signal, 2)
 			signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 			go func() {
 				<-c
-				cancel()
+				go func() {
+					// cancel server after sleeping `TerminationDrainDuration`
+					// cancel asynchronously to avoid blocking the second term signal
+					time.Sleep(conf.TerminationDrainDuration)
+					cancel()
+				}()
 				<-c
 				os.Exit(1) // second signal. Exit directly.
 			}()
 
-			<-ctx.Done()
-			//h.Stop()
-			return
+			dbpack.Start(ctx)
 		},
 	}
 )

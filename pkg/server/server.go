@@ -17,6 +17,9 @@
 package server
 
 import (
+	"context"
+	"sync"
+
 	"github.com/cectc/dbpack/pkg/proto"
 )
 
@@ -34,8 +37,25 @@ func (srv *Server) AddListener(listener proto.Listener) {
 	srv.listeners = append(srv.listeners, listener)
 }
 
-func (srv *Server) Start() {
+func (srv *Server) Start(ctx context.Context) {
+	go func() {
+		<-ctx.Done()
+		srv.close()
+	}()
+
+	var wg sync.WaitGroup
 	for _, l := range srv.listeners {
-		go l.Listen()
+		wg.Add(1)
+		go func(l proto.Listener) {
+			defer wg.Done()
+			l.Listen()
+		}(l)
+	}
+	wg.Wait()
+}
+
+func (srv *Server) close() {
+	for _, l := range srv.listeners {
+		l.Close()
 	}
 }

@@ -31,7 +31,6 @@ type (
 
 	Listener interface {
 		Listen()
-
 		Close()
 	}
 
