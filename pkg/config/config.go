@@ -41,6 +41,8 @@ type Configuration struct {
 	DataSources []*DataSource `yaml:"data_source_cluster" json:"data_source_cluster"`
 
 	DistributedTransaction *DistributedTransaction `yaml:"distributed_transaction" json:"distributed_transaction"`
+
+	TerminationDrainDuration time.Duration `yaml:"termination_drain_duration" json:"termination_drain_duration"`
 }
 
 type (
@@ -163,13 +165,10 @@ func (storage Storage) setParameter(key string, value interface{}) {
 	storage[storage.Type()][key] = value
 }
 
-func parse(path string) *Configuration {
-	log.Infof("load config from :  %s", path)
-	content, err := ioutil.ReadFile(path)
-	if err != nil {
-		log.Fatalf("[config] [default load] load config failed, error: %v", err)
+func parse(content []byte) *Configuration {
+	cfg := &Configuration{
+		TerminationDrainDuration: time.Second * 3,
 	}
-	cfg := &Configuration{}
 	if err := yaml.Unmarshal(content, cfg); err != nil {
 		log.Fatalf("[config] [default load] yaml unmarshal config failed, error: %v", err)
 	}
@@ -180,6 +179,10 @@ func parse(path string) *Configuration {
 // Load config file and parse
 func Load(path string) *Configuration {
 	configPath, _ := filepath.Abs(path)
-	cfg := parse(configPath)
-	return cfg
+	log.Infof("load config from :  %s", configPath)
+	content, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		log.Fatalf("[config] [default load] load config failed, error: %v", err)
+	}
+	return parse(content)
 }
