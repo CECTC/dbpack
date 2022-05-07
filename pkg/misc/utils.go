@@ -1229,8 +1229,8 @@ func RandomBuf(size int) ([]byte, error) {
 	return buf, nil
 }
 
-// Escape remove exceptional character
-func Escape(sql string) string {
+// EscapeSql remove exceptional character
+func EscapeSql(sql string) string {
 	dest := make([]byte, 0, 2*len(sql))
 
 	for i, w := 0, 0; i < len(sql); i += w {
