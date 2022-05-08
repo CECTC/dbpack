@@ -25,11 +25,12 @@ import (
 )
 
 const (
-	driverName                           = "mysql"
-	dataSourceName                       = "dksl:123456@tcp(127.0.0.1:13306)/employees?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
-	selectDrugResource                   = "select id, drug_res_type_id, base_type from drug_resource where id between ? and ?"
-	selectDrugResourceOrderByIDDesc      = "select id, drug_res_type_id, base_type from drug_resource where id between ? and ? order by id desc"
-	selectDrugResourceOrderByIDDescLimit = "select id, drug_res_type_id, base_type from drug_resource where id between ? and ? order by id desc limit ?, ?"
+	driverName                            = "mysql"
+	dataSourceName                        = "dksl:123456@tcp(127.0.0.1:13306)/employees?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
+	selectDrugResource                    = "select id, drug_res_type_id, base_type from drug_resource where id between ? and ?"
+	selectDrugResourceOrderByIDDesc       = "select id, drug_res_type_id, base_type from drug_resource where id between ? and ? order by id desc"
+	selectDrugResourceOrderByIDDescLimit  = "select id, drug_res_type_id, base_type from drug_resource where id between ? and ? order by id desc limit ?, ?"
+	selectDrugResourceOrderByIDDescLimit2 = "select id, drug_res_type_id, base_type from drug_resource where id between ? and ? order by id desc limit ?"
 )
 
 type _ShardingSuite struct {
@@ -78,6 +79,20 @@ func (suite *_ShardingSuite) TestSelectOrderBy() {
 
 func (suite *_ShardingSuite) TestSelectOrderByAndLimit() {
 	rows, err := suite.db.Query(selectDrugResourceOrderByIDDescLimit, 200, 300, 10, 20)
+	if suite.NoErrorf(err, "select row error: %v", err) {
+		var id int64
+		var drugResTypeId string
+		var baseType int
+		for rows.Next() {
+			err := rows.Scan(&id, &drugResTypeId, &baseType)
+			suite.NoError(err)
+			suite.T().Logf("id: %d, drug resource type id: %s, base type: %d", id, drugResTypeId, baseType)
+		}
+	}
+}
+
+func (suite *_ShardingSuite) TestSelectOrderByAndLimit2() {
+	rows, err := suite.db.Query(selectDrugResourceOrderByIDDescLimit2, 200, 300, 10)
 	if suite.NoErrorf(err, "select row error: %v", err) {
 		var id int64
 		var drugResTypeId string
