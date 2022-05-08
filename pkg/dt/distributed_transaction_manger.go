@@ -161,6 +161,9 @@ func (manager *DistributedTransactionManager) IsLockable(ctx context.Context, re
 }
 
 func (manager *DistributedTransactionManager) branchCommit(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
+	if bs.Type == api.TCC {
+		return manager.tccBranchCommit(bs)
+	}
 	db := resource.GetDBManager().GetDB(bs.ResourceID)
 	if db == nil {
 		return 0, fmt.Errorf("DB resource is not exist, db name: %s", bs.ResourceID)
@@ -177,6 +180,9 @@ func (manager *DistributedTransactionManager) branchCommit(bs *api.BranchSession
 }
 
 func (manager *DistributedTransactionManager) branchRollback(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
+	if bs.Type == api.TCC {
+		return manager.tccBranchRollback(bs)
+	}
 	status, lockKeys, err := manager._branchRollback(bs)
 	if len(lockKeys) > 0 {
 		if _, err := manager.storageDriver.ReleaseLockKeys(context.Background(), bs.ResourceID, lockKeys); err != nil {
@@ -340,16 +346,8 @@ func (manager *DistributedTransactionManager) processNextBranchSession(ctx conte
 	defer manager.branchSessionQueue.Done(obj)
 
 	bs := obj.(*api.BranchSession)
-	var (
-		status api.BranchSession_BranchStatus
-		err    error
-	)
 	if bs.Status == api.PhaseTwoCommitting {
-		if bs.Type == api.TCC {
-			status, err = manager.tccBranchCommit(bs)
-		} else {
-			status, err = manager.branchCommit(bs)
-		}
+		status, err := manager.branchCommit(bs)
 		if err != nil {
 			log.Error(err)
 			manager.branchSessionQueue.Add(obj)
@@ -366,11 +364,7 @@ func (manager *DistributedTransactionManager) processNextBranchSession(ctx conte
 				}
 			}
 		} else {
-			if bs.Type == api.TCC {
-				status, err = manager.tccBranchRollback(bs)
-			} else {
-				status, err = manager.branchRollback(bs)
-			}
+			status, err := manager.branchRollback(bs)
 			if err != nil {
 				log.Error(err)
 				manager.branchSessionQueue.Add(obj)
