@@ -18,14 +18,19 @@ package dt
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"time"
 
+	"github.com/go-resty/resty/v2"
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/cectc/dbpack/pkg/config"
 	"github.com/cectc/dbpack/pkg/dt/api"
 	"github.com/cectc/dbpack/pkg/dt/storage"
+	"github.com/cectc/dbpack/pkg/filter/dt"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/misc/uuid"
@@ -322,8 +327,16 @@ func (manager *DistributedTransactionManager) processNextBranchSession(ctx conte
 	defer manager.branchSessionQueue.Done(obj)
 
 	bs := obj.(*api.BranchSession)
+	var (
+		status api.BranchSession_BranchStatus
+		err    error
+	)
 	if bs.Status == api.PhaseTwoCommitting {
-		status, err := manager.branchCommit(bs)
+		if bs.Type == api.TCC {
+			status, err = manager.tccBranchCommit(bs)
+		} else {
+			status, err = manager.branchCommit(bs)
+		}
 		if err != nil {
 			log.Error(err)
 			manager.branchSessionQueue.Add(obj)
@@ -340,7 +353,11 @@ func (manager *DistributedTransactionManager) processNextBranchSession(ctx conte
 				}
 			}
 		} else {
-			status, err := manager.branchRollback(bs)
+			if bs.Type == api.TCC {
+				status, err = manager.tccBranchRollback(bs)
+			} else {
+				status, err = manager.branchRollback(bs)
+			}
 			if err != nil {
 				log.Error(err)
 				manager.branchSessionQueue.Add(obj)
@@ -367,4 +384,83 @@ func isGlobalSessionTimeout(gs *api.GlobalSession) bool {
 
 func (manager *DistributedTransactionManager) IsRollingBackDead(bs *api.BranchSession) bool {
 	return (misc.CurrentTimeMillis() - uint64(bs.BeginTime)) > uint64(manager.retryDeadThreshold)
+}
+
+func (manager *DistributedTransactionManager) tccBranchCommit(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
+	requestContext := &dt.RequestContext{
+		ActionContext: make(map[string]string),
+		Headers:       []byte{},
+		Body:          []byte{},
+	}
+	err := requestContext.Decode(bs.ApplicationData)
+	if err != nil {
+		return api.PhaseTwoCommitting, fmt.Errorf("error decoding bs.ApplicationData: %v", err)
+	}
+
+	resp, err := manager.doHttpRequest(requestContext, true)
+	if err != nil {
+		return api.PhaseTwoCommitting, fmt.Errorf("error doHttpRequest commit: %v", err)
+	}
+	if resp.StatusCode() == http.StatusOK {
+		return api.PhaseTwoCommitting, fmt.Errorf("error commit http response code %d", resp.StatusCode())
+	}
+	return api.Complete, nil
+}
+
+func (manager *DistributedTransactionManager) tccBranchRollback(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
+	requestContext := &dt.RequestContext{
+		ActionContext: make(map[string]string),
+		Headers:       []byte{},
+		Body:          []byte{},
+	}
+	err := requestContext.Decode(bs.ApplicationData)
+	if err != nil {
+		return api.PhaseTwoRollbacking, fmt.Errorf("error decoding bs.ApplicationData: %v", err)
+	}
+
+	resp, err := manager.doHttpRequest(requestContext, false)
+	if err != nil {
+		return api.PhaseTwoRollbacking, fmt.Errorf("error doHttpRequest rollback: %v", err)
+	}
+	if resp.StatusCode() == http.StatusOK {
+		return api.PhaseTwoRollbacking, fmt.Errorf("error rollback http response code %d", resp.StatusCode())
+	}
+	return api.Complete, nil
+}
+
+func (manager *DistributedTransactionManager) doHttpRequest(requestContext *dt.RequestContext, commit bool) (*resty.Response, error) {
+	var (
+		host        string
+		path        string
+		queryString string
+	)
+	host = requestContext.ActionContext[dt.VarHost]
+	if commit {
+		path = requestContext.ActionContext[dt.CommitRequestPath]
+	} else {
+		path = requestContext.ActionContext[dt.RollbackRequestPath]
+	}
+
+	u := url.URL{
+		Scheme: "http",
+		Path:   path,
+		Host:   host,
+	}
+	queryString, ok := requestContext.ActionContext[dt.VarQueryString]
+	if ok {
+		u.RawQuery = queryString
+	}
+
+	client := resty.New()
+	request := client.R()
+
+	headers := make(map[string]string)
+	err := json.Unmarshal(requestContext.Headers, &headers)
+	if err != nil {
+		return nil, fmt.Errorf("error json.Unmarshal requestContext.Headers: %v", err)
+	}
+	request.SetHeaders(headers)
+	request.SetBody(requestContext.Body)
+
+	return request.Post(u.String())
 }
