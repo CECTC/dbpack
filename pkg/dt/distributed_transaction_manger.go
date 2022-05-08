@@ -399,10 +399,10 @@ func (manager *DistributedTransactionManager) tccBranchCommit(bs *api.BranchSess
 
 	resp, err := manager.doHttpRequest(requestContext, true)
 	if err != nil {
-		return api.PhaseTwoCommitting, fmt.Errorf("error doHttpRequest commit: %v", err)
+		return api.PhaseTwoCommitting, fmt.Errorf("error doHttpRequest for tccBranchCommit: %v", err)
 	}
-	if resp.StatusCode() == http.StatusOK {
-		return api.PhaseTwoCommitting, fmt.Errorf("error commit http response code %d", resp.StatusCode())
+	if resp.StatusCode() != http.StatusOK {
+		return api.PhaseTwoCommitting, fmt.Errorf("error tccBranchCommit response code %d", resp.StatusCode())
 	}
 	return api.Complete, nil
 }
@@ -420,10 +420,10 @@ func (manager *DistributedTransactionManager) tccBranchRollback(bs *api.BranchSe
 
 	resp, err := manager.doHttpRequest(requestContext, false)
 	if err != nil {
-		return api.PhaseTwoRollbacking, fmt.Errorf("error doHttpRequest rollback: %v", err)
+		return api.PhaseTwoRollbacking, fmt.Errorf("error doHttpRequest for tccBranchRollback: %v", err)
 	}
-	if resp.StatusCode() == http.StatusOK {
-		return api.PhaseTwoRollbacking, fmt.Errorf("error rollback http response code %d", resp.StatusCode())
+	if resp.StatusCode() != http.StatusOK {
+		return api.PhaseTwoRollbacking, fmt.Errorf("error tccBranchRollback response code %d", resp.StatusCode())
 	}
 	return api.Complete, nil
 }
