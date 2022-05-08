@@ -49,6 +49,10 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 		err            error
 		content        []byte
 		shardingConfig *config.ShardingConfig
+		all            []*DataSourceBrief
+		executors      map[string]proto.DBGroupExecutor
+		algorithms     map[string]cond.ShardingAlgorithm
+		topologies     map[string]*topo.Topology
 	)
 
 	if content, err = json.Marshal(conf.Config); err != nil {
@@ -59,17 +63,20 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 		log.Errorf("unmarshal read sharding executor config failed, %s", err)
 		return nil, err
 	}
-	all, executors, err := convertDBGroupConfigsToExecutors(shardingConfig.DBGroups)
+	all, executors, err = convertDBGroupConfigsToExecutors(shardingConfig.DBGroups)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	algs, topos, err := convertLogicTableConfigsToShardingAlgorithms(shardingConfig.LogicTables)
+	algorithms, topologies, err = convertLogicTableConfigsToShardingAlgorithms(shardingConfig.LogicTables)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 
 	executor := &ShardingExecutor{
 		PreFilters:          make([]proto.DBPreFilter, 0),
 		PostFilters:         make([]proto.DBPostFilter, 0),
 		all:                 all,
-		optimizer:           optimize.NewOptimizer(executors, algs, topos),
+		optimizer:           optimize.NewOptimizer(executors, algorithms, topologies),
 		localTransactionMap: make(map[uint32]proto.Tx, 0),
 	}
 
