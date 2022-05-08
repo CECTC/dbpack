@@ -28,6 +28,7 @@ import (
 	"github.com/cectc/dbpack/pkg/filter"
 	"github.com/cectc/dbpack/pkg/lb"
 	"github.com/cectc/dbpack/pkg/log"
+	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 	driver "github.com/cectc/dbpack/third_party/types/parser_driver"
@@ -37,6 +38,7 @@ type ReadWriteSplittingExecutor struct {
 	PreFilters  []proto.DBPreFilter
 	PostFilters []proto.DBPostFilter
 
+	all     []*DataSourceBrief
 	masters lb.Interface
 	reads   lb.Interface
 	// map[uint32]proto.Tx
@@ -47,7 +49,7 @@ func NewReadWriteSplittingExecutor(conf *config.Executor) (proto.Executor, error
 	var (
 		err      error
 		content  []byte
-		rwConfig *ReadWriteSplittingConfig
+		rwConfig *config.ReadWriteSplittingConfig
 	)
 
 	if content, err = json.Marshal(conf.Config); err != nil {
@@ -59,7 +61,7 @@ func NewReadWriteSplittingExecutor(conf *config.Executor) (proto.Executor, error
 		return nil, err
 	}
 
-	masters, reads, err := groupDataSourceRefs(rwConfig.DataSources)
+	all, masters, reads, err := groupDataSourceRefs(rwConfig.DataSources)
 	if err != nil {
 		return nil, err
 	}
@@ -82,6 +84,7 @@ func NewReadWriteSplittingExecutor(conf *config.Executor) (proto.Executor, error
 	executor := &ReadWriteSplittingExecutor{
 		PreFilters:          make([]proto.DBPreFilter, 0),
 		PostFilters:         make([]proto.DBPostFilter, 0),
+		all:                 all,
 		masters:             masterLB,
 		reads:               readLB,
 		localTransactionMap: &sync.Map{},
@@ -172,8 +175,18 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 				tx = txi.(proto.Tx)
 				return tx.Query(ctx, sql)
 			}
-			db = executor.reads.Next(proto.WithSlave(ctx)).(*DataSourceBrief)
-			return db.DB.Query(ctx, sql)
+			// set to all db
+			for _, db := range executor.all {
+				go func(db *DataSourceBrief) {
+					if _, _, err := db.DB.Query(ctx, sql); err != nil {
+						log.Error(err)
+					}
+				}(db)
+			}
+			return &mysql.Result{
+				AffectedRows: 0,
+				InsertId:     0,
+			}, 0, nil
 		}
 	case *ast.BeginStmt:
 		db = executor.masters.Next(proto.WithMaster(ctx)).(*DataSourceBrief)

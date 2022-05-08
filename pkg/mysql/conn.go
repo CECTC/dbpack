@@ -579,16 +579,16 @@ func (c *Conn) writeColumnDefinition(field *Field) error {
 	return c.WriteEphemeralPacket()
 }
 
-// writeFields writes the fields of a Result. It should be called only
+// WriteFields writes the fields of a Result. It should be called only
 // if there are valid Columns in the result.
-func (c *Conn) WriteFields(capabilities uint32, result *Result) error {
+func (c *Conn) WriteFields(capabilities uint32, fields []*Field) error {
 	// Send the number of fields first.
-	if err := c.sendColumnCount(uint64(len(result.Fields))); err != nil {
+	if err := c.sendColumnCount(uint64(len(fields))); err != nil {
 		return err
 	}
 
 	// Now send each Field.
-	for _, field := range result.Fields {
+	for _, field := range fields {
 		fld := field
 		if err := c.writeColumnDefinition(fld); err != nil {
 			return err
@@ -645,7 +645,7 @@ func (c *Conn) WriteRows(result *Result) error {
 			}
 			return err
 		}
-		textRow := TextRow{row}
+		textRow := TextRow{Row: row}
 		values, err := textRow.Decode()
 		if err != nil {
 			return err
@@ -755,7 +755,7 @@ func (c *Conn) writeTextToBinaryRows(result *Result) error {
 			}
 			return err
 		}
-		textRow := TextRow{row}
+		textRow := TextRow{Row: row}
 		values, err := textRow.Decode()
 		if err != nil {
 			return err
@@ -776,6 +776,15 @@ func (c *Conn) WriteBinaryRows(result *Result) error {
 			}
 			return err
 		}
+		if err := c.WritePacket(row.Data()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Conn) WriteRowsDirect(result *MergeResult) error {
+	for _, row := range result.Rows {
 		if err := c.WritePacket(row.Data()); err != nil {
 			return err
 		}

@@ -23,54 +23,22 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/cectc/dbpack/pkg/lb"
+	"github.com/cectc/dbpack/pkg/config"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
 )
 
-type (
-	DataSourceRef struct {
-		Name   string `yaml:"name" json:"name"`
-		Weight string `yaml:"weight,omitempty" json:"weight,omitempty"`
-	}
-
-	DataSourceBrief struct {
-		Name        string `yaml:"name" json:"name"`
-		WriteWeight int    `yaml:"write_weight" json:"write_weight"`
-		ReadWeight  int    `yaml:"read_weight" json:"read_weight"`
-		IsMaster    bool   `yaml:"is_master" json:"is_master"`
-		DB          proto.DB
-	}
-
-	ReadWriteSplittingConfig struct {
-		LoadBalanceAlgorithm lb.LoadBalanceAlgorithm `yaml:"load_balance_algorithm" json:"load_balance_algorithm"`
-		DataSources          []*DataSourceRef        `yaml:"data_sources" json:"data_sources"`
-	}
-
-	DataSourceRefGroup struct {
-		Name  string           `yaml:"name" json:"name"`
-		Group []*DataSourceRef `yaml:"group" json:"group"`
-	}
-
-	ShardingRule struct {
-		Column string `yaml:"column" json:"column"`
-		Expr   string `yaml:"expr" json:"expr"`
-	}
-
-	VirtualTableRule struct {
-		Name               string          `yaml:"name" json:"name"`
-		AllowFullTableScan bool            `yaml:"allow_full_table_scan" json:"allow_full_table_scan"`
-		ShardingDB         []*ShardingRule `yaml:"sharding_db" json:"sharding_db"`
-		ShardingTable      []*ShardingRule `yaml:"sharding_table" json:"sharding_table"`
-		Topology           *Topology       `yaml:"topology" json:"topology"`
-		ShadowTopology     *Topology       `yaml:"shadow_topology" json:"shadow_topology"`
-	}
-
-	Topology struct {
-		DBNamePattern    string `yaml:"db_name_pattern" json:"db_name_pattern"`
-		TableNamePattern string `yaml:"table_name_pattern" json:"table_name_pattern"`
-	}
+const (
+	weightRegex = `^r([\d]+)w([\d]+)$`
 )
+
+type DataSourceBrief struct {
+	Name        string `yaml:"name" json:"name"`
+	WriteWeight int    `yaml:"write_weight" json:"write_weight"`
+	ReadWeight  int    `yaml:"read_weight" json:"read_weight"`
+	IsMaster    bool   `yaml:"is_master" json:"is_master"`
+	DB          proto.DB
+}
 
 func (brief *DataSourceBrief) Counting() bool {
 	return brief.DB.Status() == proto.Running
@@ -83,8 +51,8 @@ func (brief *DataSourceBrief) Weight(ctx context.Context) int {
 	return brief.ReadWeight
 }
 
-func (ref *DataSourceRef) castToDataSourceBrief() (*DataSourceBrief, error) {
-	weightRegexp := regexp.MustCompile(`^r([\d]+)w([\d]+)$`)
+func castToDataSourceBrief(ref *config.DataSourceRef) (*DataSourceBrief, error) {
+	weightRegexp := regexp.MustCompile(weightRegex)
 	params := weightRegexp.FindStringSubmatch(ref.Weight)
 	if len(params) != 3 {
 		return nil, errors.Errorf("datasource reference '%s' weight invalid: %s", ref.Name, ref.Weight)
@@ -110,12 +78,12 @@ func (ref *DataSourceRef) castToDataSourceBrief() (*DataSourceBrief, error) {
 }
 
 // groupDataSourceRefs cast DataSourceRef to DataSourceBrief, then group them.
-func groupDataSourceRefs(dataSources []*DataSourceRef) (masters []*DataSourceBrief, reads []*DataSourceBrief, err error) {
+func groupDataSourceRefs(dataSources []*config.DataSourceRef) (all, masters, reads []*DataSourceBrief, err error) {
 	for i := 0; i < len(dataSources); i++ {
 		ds := dataSources[i]
-		brief, err := ds.castToDataSourceBrief()
+		brief, err := castToDataSourceBrief(ds)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		if brief.IsMaster {
 			masters = append(masters, brief)
@@ -123,6 +91,7 @@ func groupDataSourceRefs(dataSources []*DataSourceRef) (masters []*DataSourceBri
 		if brief.ReadWeight > 0 {
 			reads = append(reads, brief)
 		}
+		all = append(all, brief)
 	}
 	return
 }

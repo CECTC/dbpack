@@ -64,9 +64,14 @@ unit-test: ## run unit test
 	go test ./pkg/... -coverprofile=coverage.txt -covermode=atomic
 
 ########################################################
-build:  ## build dbpack cli, and put in dist dir
+build-local:  ## build dbpack cli, and put in dist dir
 	@mkdir -p dist
 	${GO_BUILD_ENVVARS} go build -o ./dist/dbpack ./cmd
+
+########################################################
+build:  ## build dbpack cli, and put in dist dir
+	@mkdir -p dist
+	GOOS="linux"  GOARCH="amd64" CGO_ENABLED=0 go build -o ./dist/dbpack ./cmd
 
 ########################################################
 docker-build: build ## build docker image
@@ -76,6 +81,7 @@ docker-build: build ## build docker image
 integration-test: build docker-build
 	sh test/cmd/test_single_db.sh
 	sh test/cmd/test_read_write_splitting.sh
+	sh test/cmd/test_sharding.sh
 
 ########################################################
 clean: ## clean temporary build dir

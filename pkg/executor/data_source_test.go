@@ -22,6 +22,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/cectc/dbpack/pkg/config"
 	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/testdata"
 )
@@ -35,25 +36,25 @@ func TestCastToDataSourceBrief(t *testing.T) {
 	resource.SetDBManager(manager)
 
 	testCases := []struct {
-		in     *DataSourceRef
+		in     *config.DataSourceRef
 		expect *DataSourceBrief
 	}{
 		{
-			in:     &DataSourceRef{Name: "employee", Weight: "r0w10"},
+			in:     &config.DataSourceRef{Name: "employee", Weight: "r0w10"},
 			expect: &DataSourceBrief{Name: "employee", WriteWeight: 10, ReadWeight: 0, IsMaster: true},
 		},
 		{
-			in:     &DataSourceRef{Name: "employee", Weight: "r5w5"},
+			in:     &config.DataSourceRef{Name: "employee", Weight: "r5w5"},
 			expect: &DataSourceBrief{Name: "employee", WriteWeight: 5, ReadWeight: 5, IsMaster: true},
 		},
 		{
-			in:     &DataSourceRef{Name: "employee", Weight: "r10w0"},
+			in:     &config.DataSourceRef{Name: "employee", Weight: "r10w0"},
 			expect: &DataSourceBrief{Name: "employee", WriteWeight: 0, ReadWeight: 10, IsMaster: false},
 		},
 	}
 
 	for _, testCase := range testCases {
-		brief, err := testCase.in.castToDataSourceBrief()
+		brief, err := castToDataSourceBrief(testCase.in)
 		assert.Nil(t, err)
 		assert.Equal(t, testCase.expect.Name, brief.Name)
 		assert.Equal(t, testCase.expect.WriteWeight, brief.WriteWeight)
@@ -71,15 +72,21 @@ func TestGroupDataSourceRefs(t *testing.T) {
 	resource.SetDBManager(manager)
 
 	testCases := []struct {
-		in            []*DataSourceRef
+		in            []*config.DataSourceRef
+		expectAll     []*DataSourceBrief
 		expectMasters []*DataSourceBrief
 		expectReads   []*DataSourceBrief
 	}{
 		{
-			in: []*DataSourceRef{
+			in: []*config.DataSourceRef{
 				{Name: "employee0", Weight: "r0w5"},
 				{Name: "employee1", Weight: "r5w5"},
 				{Name: "employee2", Weight: "r5w0"},
+			},
+			expectAll: []*DataSourceBrief{
+				{Name: "employee0", WriteWeight: 5, ReadWeight: 0, IsMaster: true},
+				{Name: "employee1", WriteWeight: 5, ReadWeight: 5, IsMaster: true},
+				{Name: "employee2", WriteWeight: 0, ReadWeight: 5, IsMaster: false},
 			},
 			expectMasters: []*DataSourceBrief{
 				{Name: "employee0", WriteWeight: 5, ReadWeight: 0, IsMaster: true},
@@ -91,8 +98,11 @@ func TestGroupDataSourceRefs(t *testing.T) {
 			},
 		},
 		{
-			in: []*DataSourceRef{
+			in: []*config.DataSourceRef{
 				{Name: "employee0", Weight: "r0w5"},
+			},
+			expectAll: []*DataSourceBrief{
+				{Name: "employee0", WriteWeight: 5, ReadWeight: 0, IsMaster: true},
 			},
 			expectMasters: []*DataSourceBrief{
 				{Name: "employee0", WriteWeight: 5, ReadWeight: 0, IsMaster: true},
@@ -100,8 +110,11 @@ func TestGroupDataSourceRefs(t *testing.T) {
 			expectReads: nil,
 		},
 		{
-			in: []*DataSourceRef{
+			in: []*config.DataSourceRef{
 				{Name: "employee2", Weight: "r5w0"},
+			},
+			expectAll: []*DataSourceBrief{
+				{Name: "employee2", WriteWeight: 0, ReadWeight: 5, IsMaster: false},
 			},
 			expectMasters: nil,
 			expectReads: []*DataSourceBrief{
@@ -111,8 +124,18 @@ func TestGroupDataSourceRefs(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		masters, reads, err := groupDataSourceRefs(testCase.in)
+		all, masters, reads, err := groupDataSourceRefs(testCase.in)
 		assert.Nil(t, err)
+		if testCase.expectAll == nil {
+			assert.Equal(t, testCase.expectAll, all)
+		} else {
+			for i, db := range testCase.expectAll {
+				assert.Equal(t, db.Name, all[i].Name)
+				assert.Equal(t, db.WriteWeight, all[i].WriteWeight)
+				assert.Equal(t, db.ReadWeight, all[i].ReadWeight)
+				assert.Equal(t, db.IsMaster, all[i].IsMaster)
+			}
+		}
 		if testCase.expectMasters == nil {
 			assert.Equal(t, testCase.expectMasters, masters)
 		} else {

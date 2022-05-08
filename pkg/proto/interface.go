@@ -24,6 +24,7 @@ import (
 	"github.com/valyala/fasthttp"
 
 	"github.com/cectc/dbpack/pkg/config"
+	"github.com/cectc/dbpack/third_party/parser/ast"
 )
 
 type (
@@ -149,6 +150,27 @@ type (
 
 	DBManager interface {
 		GetDB(name string) DB
+	}
+
+	// DBGroupExecutor prepare a query, execute the statement, and then close the statement.
+	DBGroupExecutor interface {
+		Begin(ctx context.Context) (Tx, Result, error)
+		Query(ctx context.Context, query string) (Result, uint16, error)
+		Execute(ctx context.Context, query string) (Result, uint16, error)
+		PrepareQuery(ctx context.Context, query string, args ...interface{}) (Result, uint16, error)
+		PrepareExecute(ctx context.Context, query string, args ...interface{}) (Result, uint16, error)
+	}
+
+	// Plan represents a plan for query/execute command.
+	Plan interface {
+		// Execute executes the current Plan.
+		Execute(ctx context.Context) (Result, uint16, error)
+	}
+
+	// Optimizer represents a sql statement optimizer which can be used to create QueryPlan or ExecPlan.
+	Optimizer interface {
+		// Optimize optimizes the sql with arguments then returns a Plan.
+		Optimize(ctx context.Context, stmt ast.StmtNode, args ...interface{}) (Plan, error)
 	}
 )
 
