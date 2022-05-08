@@ -30,16 +30,29 @@ import (
 	"github.com/cectc/dbpack/pkg/config"
 	"github.com/cectc/dbpack/pkg/dt/api"
 	"github.com/cectc/dbpack/pkg/dt/storage"
-	"github.com/cectc/dbpack/pkg/filter/dt"
+	"github.com/cectc/dbpack/pkg/filter/dt/ctx"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/misc/uuid"
 	"github.com/cectc/dbpack/pkg/resource"
 )
 
-const DefaultRetryDeadThreshold = 130 * 1000
+const (
+	// CommitRequestPath represents for tcc commit request path
+	CommitRequestPath = "tcc_commit_request_path"
 
-var manager *DistributedTransactionManager
+	// RollbackRequestPath represents for tcc rollback request path
+	RollbackRequestPath = "tcc_rollback_request_path"
+
+	// DefaultRetryDeadThreshold is max retry milliseconds
+	DefaultRetryDeadThreshold = 130 * 1000
+)
+
+var (
+	VarHost        = "host"
+	VarQueryString = "queryString"
+	manager        *DistributedTransactionManager
+)
 
 func InitDistributedTransactionManager(conf *config.DistributedTransaction, storageDriver storage.Driver) {
 	if conf.RetryDeadThreshold == 0 {
@@ -387,7 +400,7 @@ func (manager *DistributedTransactionManager) IsRollingBackDead(bs *api.BranchSe
 }
 
 func (manager *DistributedTransactionManager) tccBranchCommit(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
-	requestContext := &dt.RequestContext{
+	requestContext := &ctx.RequestContext{
 		ActionContext: make(map[string]string),
 		Headers:       []byte{},
 		Body:          []byte{},
@@ -408,7 +421,7 @@ func (manager *DistributedTransactionManager) tccBranchCommit(bs *api.BranchSess
 }
 
 func (manager *DistributedTransactionManager) tccBranchRollback(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
-	requestContext := &dt.RequestContext{
+	requestContext := &ctx.RequestContext{
 		ActionContext: make(map[string]string),
 		Headers:       []byte{},
 		Body:          []byte{},
@@ -428,17 +441,17 @@ func (manager *DistributedTransactionManager) tccBranchRollback(bs *api.BranchSe
 	return api.Complete, nil
 }
 
-func (manager *DistributedTransactionManager) doHttpRequest(requestContext *dt.RequestContext, commit bool) (*resty.Response, error) {
+func (manager *DistributedTransactionManager) doHttpRequest(requestContext *ctx.RequestContext, commit bool) (*resty.Response, error) {
 	var (
 		host        string
 		path        string
 		queryString string
 	)
-	host = requestContext.ActionContext[dt.VarHost]
+	host = requestContext.ActionContext[VarHost]
 	if commit {
-		path = requestContext.ActionContext[dt.CommitRequestPath]
+		path = requestContext.ActionContext[CommitRequestPath]
 	} else {
-		path = requestContext.ActionContext[dt.RollbackRequestPath]
+		path = requestContext.ActionContext[RollbackRequestPath]
 	}
 
 	u := url.URL{
@@ -446,7 +459,7 @@ func (manager *DistributedTransactionManager) doHttpRequest(requestContext *dt.R
 		Path:   path,
 		Host:   host,
 	}
-	queryString, ok := requestContext.ActionContext[dt.VarQueryString]
+	queryString, ok := requestContext.ActionContext[VarQueryString]
 	if ok {
 		u.RawQuery = queryString
 	}

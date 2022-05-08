@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dt
+package ctx
 
 import (
 	"bytes"
@@ -23,11 +23,6 @@ import (
 	"vimagination.zapto.org/byteio"
 
 	"github.com/cectc/dbpack/pkg/log"
-)
-
-var (
-	VarHost        = "host"
-	VarQueryString = "queryString"
 )
 
 type RequestContext struct {

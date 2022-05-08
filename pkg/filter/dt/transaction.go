@@ -26,12 +26,8 @@ import (
 
 	"github.com/cectc/dbpack/pkg/dt"
 	"github.com/cectc/dbpack/pkg/dt/api"
+	ctx2 "github.com/cectc/dbpack/pkg/filter/dt/ctx"
 	"github.com/cectc/dbpack/pkg/log"
-)
-
-const (
-	CommitRequestPath   = "tcc_commit_request_path"
-	RollbackRequestPath = "tcc_rollback_request_path"
 )
 
 // handleHttp1GlobalBegin return bool, represent whether continue
@@ -76,18 +72,18 @@ func (f *_httpFilter) handleHttp1BranchRegister(ctx *fasthttp.RequestCtx, tccRes
 
 	bodyBytes := ctx.PostBody()
 
-	requestContext := &RequestContext{
+	requestContext := &ctx2.RequestContext{
 		ActionContext: make(map[string]string),
 		Headers:       ctx.Request.Header.Header(),
 		Body:          bodyBytes,
 	}
 
-	requestContext.ActionContext[VarHost] = f.conf.BackendHost
-	requestContext.ActionContext[CommitRequestPath] = tccResource.CommitRequestPath
-	requestContext.ActionContext[RollbackRequestPath] = tccResource.RollbackRequestPath
+	requestContext.ActionContext[dt.VarHost] = f.conf.BackendHost
+	requestContext.ActionContext[dt.CommitRequestPath] = tccResource.CommitRequestPath
+	requestContext.ActionContext[dt.RollbackRequestPath] = tccResource.RollbackRequestPath
 	queryString := ctx.Request.RequestURI()
 	if string(queryString) != "" {
-		requestContext.ActionContext[VarQueryString] = string(queryString)
+		requestContext.ActionContext[dt.VarQueryString] = string(queryString)
 	}
 
 	data, err := requestContext.Encode()
