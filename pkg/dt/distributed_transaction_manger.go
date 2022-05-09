@@ -30,7 +30,6 @@ import (
 	"github.com/cectc/dbpack/pkg/config"
 	"github.com/cectc/dbpack/pkg/dt/api"
 	"github.com/cectc/dbpack/pkg/dt/storage"
-	"github.com/cectc/dbpack/pkg/filter/dt/ctx"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/misc/uuid"
@@ -394,7 +393,7 @@ func (manager *DistributedTransactionManager) IsRollingBackDead(bs *api.BranchSe
 }
 
 func (manager *DistributedTransactionManager) tccBranchCommit(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
-	requestContext := &ctx.RequestContext{
+	requestContext := &RequestContext{
 		ActionContext: make(map[string]string),
 		Headers:       []byte{},
 		Body:          []byte{},
@@ -415,7 +414,7 @@ func (manager *DistributedTransactionManager) tccBranchCommit(bs *api.BranchSess
 }
 
 func (manager *DistributedTransactionManager) tccBranchRollback(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
-	requestContext := &ctx.RequestContext{
+	requestContext := &RequestContext{
 		ActionContext: make(map[string]string),
 		Headers:       []byte{},
 		Body:          []byte{},
@@ -435,7 +434,7 @@ func (manager *DistributedTransactionManager) tccBranchRollback(bs *api.BranchSe
 	return api.Complete, nil
 }
 
-func (manager *DistributedTransactionManager) doHttpRequest(requestContext *ctx.RequestContext, commit bool) (*resty.Response, error) {
+func (manager *DistributedTransactionManager) doHttpRequest(requestContext *RequestContext, commit bool) (*resty.Response, error) {
 	var (
 		host        string
 		path        string

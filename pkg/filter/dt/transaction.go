@@ -26,7 +26,6 @@ import (
 
 	"github.com/cectc/dbpack/pkg/dt"
 	"github.com/cectc/dbpack/pkg/dt/api"
-	ctx2 "github.com/cectc/dbpack/pkg/filter/dt/ctx"
 	"github.com/cectc/dbpack/pkg/log"
 )
 
@@ -72,7 +71,7 @@ func (f *_httpFilter) handleHttp1BranchRegister(ctx *fasthttp.RequestCtx, tccRes
 
 	bodyBytes := ctx.PostBody()
 
-	requestContext := &ctx2.RequestContext{
+	requestContext := &dt.RequestContext{
 		ActionContext: make(map[string]string),
 		Headers:       ctx.Request.Header.Header(),
 		Body:          bodyBytes,
