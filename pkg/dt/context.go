@@ -25,11 +25,6 @@ import (
 	"github.com/cectc/dbpack/pkg/log"
 )
 
-var (
-	VarHost        = "host"
-	VarQueryString = "queryString"
-)
-
 type RequestContext struct {
 	ActionContext map[string]string
 	Headers       []byte

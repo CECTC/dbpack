@@ -18,9 +18,13 @@ package dt
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"time"
 
+	"github.com/go-resty/resty/v2"
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/cectc/dbpack/pkg/config"
@@ -32,9 +36,22 @@ import (
 	"github.com/cectc/dbpack/pkg/resource"
 )
 
-const DefaultRetryDeadThreshold = 130 * 1000
+const (
+	// CommitRequestPath represents for tcc commit request path
+	CommitRequestPath = "tcc_commit_request_path"
 
-var manager *DistributedTransactionManager
+	// RollbackRequestPath represents for tcc rollback request path
+	RollbackRequestPath = "tcc_rollback_request_path"
+
+	// DefaultRetryDeadThreshold is max retry milliseconds
+	DefaultRetryDeadThreshold = 130 * 1000
+)
+
+var (
+	VarHost        = "host"
+	VarQueryString = "queryString"
+	manager        *DistributedTransactionManager
+)
 
 func InitDistributedTransactionManager(conf *config.DistributedTransaction, storageDriver storage.Driver) {
 	if conf.RetryDeadThreshold == 0 {
@@ -143,6 +160,9 @@ func (manager *DistributedTransactionManager) IsLockable(ctx context.Context, re
 }
 
 func (manager *DistributedTransactionManager) branchCommit(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
+	if bs.Type == api.TCC {
+		return manager.tccBranchCommit(bs)
+	}
 	db := resource.GetDBManager().GetDB(bs.ResourceID)
 	if db == nil {
 		return 0, fmt.Errorf("DB resource is not exist, db name: %s", bs.ResourceID)
@@ -159,6 +179,9 @@ func (manager *DistributedTransactionManager) branchCommit(bs *api.BranchSession
 }
 
 func (manager *DistributedTransactionManager) branchRollback(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
+	if bs.Type == api.TCC {
+		return manager.tccBranchRollback(bs)
+	}
 	status, lockKeys, err := manager._branchRollback(bs)
 	if len(lockKeys) > 0 {
 		if _, err := manager.storageDriver.ReleaseLockKeys(context.Background(), bs.ResourceID, lockKeys); err != nil {
@@ -367,4 +390,83 @@ func isGlobalSessionTimeout(gs *api.GlobalSession) bool {
 
 func (manager *DistributedTransactionManager) IsRollingBackDead(bs *api.BranchSession) bool {
 	return (misc.CurrentTimeMillis() - uint64(bs.BeginTime)) > uint64(manager.retryDeadThreshold)
+}
+
+func (manager *DistributedTransactionManager) tccBranchCommit(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
+	requestContext := &RequestContext{
+		ActionContext: make(map[string]string),
+		Headers:       []byte{},
+		Body:          []byte{},
+	}
+	err := requestContext.Decode(bs.ApplicationData)
+	if err != nil {
+		return api.PhaseTwoCommitting, fmt.Errorf("error decoding bs.ApplicationData: %v", err)
+	}
+
+	resp, err := manager.doHttpRequest(requestContext, true)
+	if err != nil {
+		return api.PhaseTwoCommitting, fmt.Errorf("error doHttpRequest for tccBranchCommit: %v", err)
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return api.PhaseTwoCommitting, fmt.Errorf("error tccBranchCommit response code %d", resp.StatusCode())
+	}
+	return api.Complete, nil
+}
+
+func (manager *DistributedTransactionManager) tccBranchRollback(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
+	requestContext := &RequestContext{
+		ActionContext: make(map[string]string),
+		Headers:       []byte{},
+		Body:          []byte{},
+	}
+	err := requestContext.Decode(bs.ApplicationData)
+	if err != nil {
+		return api.PhaseTwoRollbacking, fmt.Errorf("error decoding bs.ApplicationData: %v", err)
+	}
+
+	resp, err := manager.doHttpRequest(requestContext, false)
+	if err != nil {
+		return api.PhaseTwoRollbacking, fmt.Errorf("error doHttpRequest for tccBranchRollback: %v", err)
+	}
+	if resp.StatusCode() != http.StatusOK {
+		return api.PhaseTwoRollbacking, fmt.Errorf("error tccBranchRollback response code %d", resp.StatusCode())
+	}
+	return api.Complete, nil
+}
+
+func (manager *DistributedTransactionManager) doHttpRequest(requestContext *RequestContext, commit bool) (*resty.Response, error) {
+	var (
+		host        string
+		path        string
+		queryString string
+	)
+	host = requestContext.ActionContext[VarHost]
+	if commit {
+		path = requestContext.ActionContext[CommitRequestPath]
+	} else {
+		path = requestContext.ActionContext[RollbackRequestPath]
+	}
+
+	u := url.URL{
+		Scheme: "http",
+		Path:   path,
+		Host:   host,
+	}
+	queryString, ok := requestContext.ActionContext[VarQueryString]
+	if ok {
+		u.RawQuery = queryString
+	}
+
+	client := resty.New()
+	request := client.R()
+
+	headers := make(map[string]string)
+	err := json.Unmarshal(requestContext.Headers, &headers)
+	if err != nil {
+		return nil, fmt.Errorf("error json.Unmarshal requestContext.Headers: %v", err)
+	}
+	request.SetHeaders(headers)
+	request.SetBody(requestContext.Body)
+
+	return request.Post(u.String())
 }
