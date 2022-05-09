@@ -13,6 +13,7 @@
 + simple and easy distributed transaction solution
 + support read write splitting，supports custom SQL routing via Hint
 + deployed as a sidecar，support any language
++ sharding: support query on sharded table, support order by，support limit
 + more features on the road
 
 ## Requirements
