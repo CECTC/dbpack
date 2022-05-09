@@ -80,10 +80,12 @@ type Row struct {
 
 type BinaryRow struct {
 	*Row
+	Values []*proto.Value
 }
 
 type TextRow struct {
 	*Row
+	Values []*proto.Value
 }
 
 func (row *Row) Columns() []string {
@@ -112,8 +114,12 @@ func (row *Row) Columns() []string {
 	return columns
 }
 
-func (row *Row) Fields() []*Field {
-	return row.ResultSet.Columns
+func (row *Row) Fields() []proto.Field {
+	fields := make([]proto.Field, 0, len(row.ResultSet.Columns))
+	for _, field := range row.ResultSet.Columns {
+		fields = append(fields, field)
+	}
+	return fields
 }
 
 func (row *Row) Data() []byte {
@@ -169,7 +175,7 @@ func (rows *TextRow) Decode() ([]*proto.Value, error) {
 		}
 		return nil, err // err != nil
 	}
-
+	rows.Values = dest
 	return dest, nil
 }
 
@@ -442,6 +448,6 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 			return nil, fmt.Errorf("unknown field type %d", field.FieldType)
 		}
 	}
-
+	rows.Values = dest
 	return dest, nil
 }

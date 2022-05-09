@@ -39,6 +39,7 @@ import (
 	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/packet"
 	"github.com/cectc/dbpack/pkg/proto"
+	"github.com/cectc/dbpack/pkg/visitor"
 	"github.com/cectc/dbpack/third_party/parser"
 )
 
@@ -548,6 +549,7 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 				}
 				return nil
 			}
+			stmt.Accept(&visitor.ParamVisitor{})
 
 			ctx := proto.WithCommandType(ctx, commandType)
 			ctx = proto.WithQueryStmt(ctx, stmt)
@@ -559,23 +561,43 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 				}
 				return nil
 			}
-			rlt := result.(*mysql.Result)
-			if len(rlt.Fields) == 0 {
-				// A successful callback with no fields means that this was a
-				// DML or other write-only operation.
-				//
-				// We should not send any more packets after this, but make sure
-				// to extract the affected rows and last insert id from the result
-				// struct here since clients expect it.
-				return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, c.StatusFlags, warn)
+			if rlt, ok := result.(*mysql.Result); ok {
+				if len(rlt.Fields) == 0 {
+					// A successful callback with no fields means that this was a
+					// DML or other write-only operation.
+					//
+					// We should not send any more packets after this, but make sure
+					// to extract the affected rows and last insert id from the result
+					// struct here since clients expect it.
+					return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, c.StatusFlags, warn)
+				}
+				err = c.WriteFields(l.capabilities, rlt.Fields)
+				if err != nil {
+					return err
+				}
+				err = c.WriteRows(rlt)
+				if err != nil {
+					return err
+				}
 			}
-			err = c.WriteFields(l.capabilities, rlt)
-			if err != nil {
-				return err
-			}
-			err = c.WriteRows(rlt)
-			if err != nil {
-				return err
+			if rlt, ok := result.(*mysql.MergeResult); ok {
+				if len(rlt.Fields) == 0 {
+					// A successful callback with no fields means that this was a
+					// DML or other write-only operation.
+					//
+					// We should not send any more packets after this, but make sure
+					// to extract the affected rows and last insert id from the result
+					// struct here since clients expect it.
+					return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, c.StatusFlags, warn)
+				}
+				err = c.WriteFields(l.capabilities, rlt.Fields)
+				if err != nil {
+					return err
+				}
+				err = c.WriteRowsDirect(rlt)
+				if err != nil {
+					return err
+				}
 			}
 			if err := c.WriteEndResult(l.capabilities, false, 0, 0, warn); err != nil {
 				log.Errorf("Error writing result to %s: %v", c, err)
@@ -614,7 +636,7 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 			fld := field.(*mysql.Field)
 			result.Fields[i] = fld
 		}
-		err = c.WriteFields(l.capabilities, result)
+		err = c.WriteFields(l.capabilities, result.Fields)
 		if err != nil {
 			return err
 		}
@@ -638,6 +660,8 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 				return writeErr
 			}
 		}
+		act.Accept(&visitor.ParamVisitor{})
+
 		stmt.StmtNode = act
 
 		paramsCount := uint16(strings.Count(query, "?"))
@@ -696,24 +720,44 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 				}
 				return nil
 			}
-			rlt := result.(*mysql.Result)
-			if len(rlt.Fields) == 0 {
-				// A successful callback with no fields means that this was a
-				// DML or other write-only operation.
-				//
-				// We should not send any more packets after this, but make sure
-				// to extract the affected rows and last insert id from the result
-				// struct here since clients expect it.
-				return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, c.StatusFlags, warn)
-			}
+			if rlt, ok := result.(*mysql.Result); ok {
+				if len(rlt.Fields) == 0 {
+					// A successful callback with no fields means that this was a
+					// DML or other write-only operation.
+					//
+					// We should not send any more packets after this, but make sure
+					// to extract the affected rows and last insert id from the result
+					// struct here since clients expect it.
+					return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, c.StatusFlags, warn)
+				}
 
-			err = c.WriteFields(l.capabilities, rlt)
-			if err != nil {
-				return err
+				err = c.WriteFields(l.capabilities, rlt.Fields)
+				if err != nil {
+					return err
+				}
+				err = c.WriteBinaryRows(rlt)
+				if err != nil {
+					return err
+				}
 			}
-			err = c.WriteBinaryRows(rlt)
-			if err != nil {
-				return err
+			if rlt, ok := result.(*mysql.MergeResult); ok {
+				if len(rlt.Fields) == 0 {
+					// A successful callback with no fields means that this was a
+					// DML or other write-only operation.
+					//
+					// We should not send any more packets after this, but make sure
+					// to extract the affected rows and last insert id from the result
+					// struct here since clients expect it.
+					return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, c.StatusFlags, warn)
+				}
+				err = c.WriteFields(l.capabilities, rlt.Fields)
+				if err != nil {
+					return err
+				}
+				err = c.WriteRowsDirect(rlt)
+				if err != nil {
+					return err
+				}
 			}
 			if err := c.WriteEndResult(l.capabilities, false, 0, 0, warn); err != nil {
 				log.Errorf("Error writing result to %s: %v", c, err)

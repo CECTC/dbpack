@@ -27,7 +27,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "123456"
     volumes:
-    - ./scripts/:/docker-entrypoint-initdb.d/:rw
+    - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:rw
     command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
   dbpack:
     image: dbpack:latest

@@ -16,6 +16,8 @@
 
 package mysql
 
+import "github.com/cectc/dbpack/pkg/proto"
+
 type Result struct {
 	Fields       []*Field // Columns information
 	AffectedRows uint64
@@ -28,5 +30,20 @@ func (res *Result) LastInsertId() (uint64, error) {
 }
 
 func (res *Result) RowsAffected() (uint64, error) {
+	return res.AffectedRows, nil
+}
+
+type MergeResult struct {
+	Fields       []*Field
+	AffectedRows uint64
+	InsertId     uint64
+	Rows         []proto.Row
+}
+
+func (res *MergeResult) LastInsertId() (uint64, error) {
+	return res.InsertId, nil
+}
+
+func (res *MergeResult) RowsAffected() (uint64, error) {
 	return res.AffectedRows, nil
 }

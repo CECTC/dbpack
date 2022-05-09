@@ -104,6 +104,13 @@ var (
 					}
 					executors[executorConf.Name] = executor
 				}
+				if executorConf.Mode == config.SHD {
+					executor, err := executor.NewShardingExecutor(executorConf)
+					if err != nil {
+						panic(err)
+					}
+					executors[executorConf.Name] = executor
+				}
 			}
 
 			if conf.DistributedTransaction != nil {

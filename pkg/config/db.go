@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+
+	"github.com/cectc/dbpack/pkg/lb"
 )
 
 type (
@@ -43,6 +45,41 @@ type (
 		PingInterval             time.Duration `yaml:"ping_interval" json:"ping_interval"`
 		PingTimesForChangeStatus int           `yaml:"ping_times_for_change_status" json:"ping_times_for_change_status"`
 		Filters                  []string      `yaml:"filters" json:"filters"`
+	}
+
+	DataSourceRef struct {
+		Name   string `yaml:"name" json:"name"`
+		Weight string `yaml:"weight,omitempty" json:"weight,omitempty"`
+	}
+
+	ReadWriteSplittingConfig struct {
+		LoadBalanceAlgorithm lb.LoadBalanceAlgorithm `yaml:"load_balance_algorithm" json:"load_balance_algorithm"`
+		DataSources          []*DataSourceRef        `yaml:"data_sources" json:"data_sources"`
+	}
+
+	DataSourceRefGroup struct {
+		Name        string                  `yaml:"name" json:"name"`
+		LBAlgorithm lb.LoadBalanceAlgorithm `yaml:"load_balance_algorithm" json:"load_balance_algorithm"`
+		DataSources []*DataSourceRef        `yaml:"data_sources" json:"data_sources"`
+	}
+
+	ShardingRule struct {
+		Column            string     `yaml:"column" json:"column"`
+		ShardingAlgorithm string     `yaml:"sharding_algorithm" json:"sharding_algorithm"`
+		Config            Parameters `yaml:"config,omitempty" json:"config,omitempty"`
+	}
+
+	LogicTable struct {
+		DBName        string         `yaml:"db_name" json:"db_name"`
+		TableName     string         `yaml:"table_name" json:"table_name"`
+		AllowFullScan bool           `yaml:"allow_full_scan" json:"allow_full_scan"`
+		ShardingRule  *ShardingRule  `yaml:"sharding_rule" json:"sharding_rule"`
+		Topology      map[int]string `yaml:"topology" json:"topology"`
+	}
+
+	ShardingConfig struct {
+		DBGroups    []*DataSourceRefGroup `yaml:"db_groups" json:"db_groups"`
+		LogicTables []*LogicTable         `yaml:"logic_tables" json:"logic_tables"`
 	}
 )
 

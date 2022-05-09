@@ -359,7 +359,7 @@ var zeroDateTime = []byte("0000-00-00 00:00:00.000000")
 const digits01 = "0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"
 const digits10 = "0000000000111111111122222222223333333333444444444455555555556666666666777777777788888888889999999999"
 
-func appendMicrosecs(dst, src []byte, decimals int) []byte {
+func appendMicroSecs(dst, src []byte, decimals int) []byte {
 	if decimals <= 0 {
 		return dst
 	}
@@ -464,7 +464,7 @@ func FormatBinaryDateTime(src []byte, length uint8) (driver.Value, error) {
 		digits10[p2], digits01[p2], ':',
 		digits10[p3], digits01[p3],
 	)
-	return appendMicrosecs(dst, src[2:], int(length)-20), nil
+	return appendMicroSecs(dst, src[2:], int(length)-20), nil
 }
 
 func FormatBinaryTime(src []byte, length uint8) (driver.Value, error) {
@@ -506,7 +506,7 @@ func FormatBinaryTime(src []byte, length uint8) (driver.Value, error) {
 		digits10[min], digits01[min], ':',
 		digits10[sec], digits01[sec],
 	)
-	return appendMicrosecs(dst, src[8:], int(length)-9), nil
+	return appendMicroSecs(dst, src[8:], int(length)-9), nil
 }
 
 /******************************************************************************
