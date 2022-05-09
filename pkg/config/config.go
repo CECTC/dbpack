@@ -43,6 +43,8 @@ type Configuration struct {
 	DistributedTransaction *DistributedTransaction `yaml:"distributed_transaction" json:"distributed_transaction"`
 
 	TerminationDrainDuration time.Duration `yaml:"termination_drain_duration" json:"termination_drain_duration"`
+
+	ExporterPort *int `yaml:"exporter_port"`
 }
 
 type (

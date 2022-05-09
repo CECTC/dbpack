@@ -95,6 +95,7 @@ func (f *_mysqlFilter) GetName() string {
 }
 
 func (f *_mysqlFilter) PreHandle(ctx context.Context, conn proto.Connection) error {
+	var err error
 	bc := conn.(*driver.BackendConnection)
 	commandType := proto.CommandType(ctx)
 	if commandType == constant.ComStmtExecute {
@@ -104,17 +105,18 @@ func (f *_mysqlFilter) PreHandle(ctx context.Context, conn proto.Connection) err
 		}
 		switch stmtNode := stmt.StmtNode.(type) {
 		case *ast.DeleteStmt:
-			return processBeforeDelete(ctx, bc, stmt, stmtNode)
+			err = processBeforeDelete(ctx, bc, stmt, stmtNode)
 		case *ast.UpdateStmt:
-			return processBeforeUpdate(ctx, bc, stmt, stmtNode)
+			err = processBeforeUpdate(ctx, bc, stmt, stmtNode)
 		default:
 			return nil
 		}
 	}
-	return nil
+	return err
 }
 
 func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn proto.Connection) error {
+	var err error
 	bc := conn.(*driver.BackendConnection)
 	commandType := proto.CommandType(ctx)
 	if commandType == constant.ComStmtExecute {
@@ -124,20 +126,20 @@ func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn
 		}
 		switch stmtNode := stmt.StmtNode.(type) {
 		case *ast.DeleteStmt:
-			return f.processAfterDelete(ctx, bc, result, stmt, stmtNode)
+			err = f.processAfterDelete(ctx, bc, result, stmt, stmtNode)
 		case *ast.InsertStmt:
-			return f.processAfterInsert(ctx, bc, result, stmt, stmtNode)
+			err = f.processAfterInsert(ctx, bc, result, stmt, stmtNode)
 		case *ast.UpdateStmt:
-			return f.processAfterUpdate(ctx, bc, result, stmt, stmtNode)
+			err = f.processAfterUpdate(ctx, bc, result, stmt, stmtNode)
 		case *ast.SelectStmt:
 			if stmtNode.LockInfo != nil && stmtNode.LockInfo.LockType == ast.SelectLockForUpdate {
-				return f.processSelectForUpdate(ctx, bc, result, stmt, stmtNode)
+				err = f.processSelectForUpdate(ctx, bc, result, stmt, stmtNode)
 			}
 		default:
 			return nil
 		}
 	}
-	return nil
+	return err
 }
 
 func processBeforeDelete(ctx context.Context, conn *driver.BackendConnection, stmt *proto.Stmt, deleteStmt *ast.DeleteStmt) error {
