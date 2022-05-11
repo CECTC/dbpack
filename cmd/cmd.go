@@ -18,6 +18,9 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -25,6 +28,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 
 	"github.com/cectc/dbpack/pkg/config"
@@ -35,6 +39,7 @@ import (
 	"github.com/cectc/dbpack/pkg/executor"
 	"github.com/cectc/dbpack/pkg/filter"
 	_ "github.com/cectc/dbpack/pkg/filter/dt"
+	_ "github.com/cectc/dbpack/pkg/filter/metrics"
 	"github.com/cectc/dbpack/pkg/listener"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/proto"
@@ -161,6 +166,13 @@ var (
 			}()
 
 			dbpack.Start(ctx)
+			if conf.ExporterPort != nil {
+				lis, err := net.Listen("tcp4", fmt.Sprintf(":%d", *conf.ExporterPort))
+				if err != nil {
+					panic(err)
+				}
+				go initMetrics(ctx, lis)
+			}
 		},
 	}
 )
@@ -169,6 +181,23 @@ var (
 func init() {
 	startCommand.PersistentFlags().StringVarP(&configPath, constant.ConfigPathKey, "c", os.Getenv(constant.EnvDBPackConfig), "Load configuration from `FILE`")
 	rootCommand.AddCommand(startCommand)
+}
+
+func initMetrics(ctx context.Context, lis net.Listener) {
+	go func() {
+		<-ctx.Done()
+		lis.Close()
+	}()
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	httpS := &http.Server{
+		Handler: mux,
+	}
+	err := httpS.Serve(lis)
+	if err != nil {
+		log.Fatalf("unable create status server: %+v", err)
+		return
+	}
 }
 
 //func initHolmes() *holmes.Holmes {

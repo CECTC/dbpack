@@ -24,6 +24,7 @@ data_source_cluster:
     ping_interval: 20s
     ping_times_for_change_status: 3
     filters:
+      - ConnectionMetricFilter
       - MysqlDistributedTransaction
 
 filters:
@@ -32,6 +33,7 @@ filters:
       appid: svc
       lock_retry_interval: 50ms
       lock_retry_times: 30
+  - name: ConnectionMetricFilter
 
 distributed_transaction:
   appid: svc
@@ -40,3 +42,5 @@ distributed_transaction:
   etcd_config:
     endpoints:
       - etcd:2379
+
+exporter_port: 9999

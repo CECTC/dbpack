@@ -53,3 +53,5 @@ distributed_transaction:
   etcd_config:
     endpoints:
       - etcd:2379
+
+exporter_port: 9999

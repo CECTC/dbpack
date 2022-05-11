@@ -52,3 +52,5 @@ data_source_cluster:
     dsn: root:123456@tcp(dbpack-mysql2:3306)/drug_1?timeout=60s&readTimeout=60s&writeTimeout=60s&parseTime=true&loc=Local&charset=utf8mb4,utf8
     ping_interval: 20s
     ping_times_for_change_status: 3
+
+exporter_port: 9999

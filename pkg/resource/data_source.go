@@ -62,6 +62,7 @@ func InitDBManager(dataSources []*config.DataSource, factory func(dbName, dsn st
 				}
 			}
 		}
+
 		db.SetConnectionPreFilters(connectionPreFilters)
 		db.SetConnectionPostFilters(connectionPostFilters)
 		resourcePools[dataSource.Name] = db
