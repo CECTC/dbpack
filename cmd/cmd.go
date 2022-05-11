@@ -72,15 +72,6 @@ var (
 			//h := initHolmes()
 			//h.Start()
 			conf := config.Load(configPath)
-			if conf.ExporterPort != nil {
-				lis, err := net.Listen("tcp4", fmt.Sprintf(":%d", *conf.ExporterPort))
-				if err != nil {
-					panic(err)
-				}
-
-				defer lis.Close()
-				go initMetrics(lis)
-			}
 
 			for _, filterConf := range conf.Filters {
 				factory := filter.GetFilterFactory(filterConf.Name)
@@ -175,6 +166,13 @@ var (
 			}()
 
 			dbpack.Start(ctx)
+			if conf.ExporterPort != nil {
+				lis, err := net.Listen("tcp4", fmt.Sprintf(":%d", *conf.ExporterPort))
+				if err != nil {
+					panic(err)
+				}
+				go initMetrics(ctx, lis)
+			}
 		},
 	}
 )
@@ -185,7 +183,11 @@ func init() {
 	rootCommand.AddCommand(startCommand)
 }
 
-func initMetrics(lis net.Listener) {
+func initMetrics(ctx context.Context, lis net.Listener) {
+	go func() {
+		<-ctx.Done()
+		lis.Close()
+	}()
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 	httpS := &http.Server{
