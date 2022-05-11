@@ -72,11 +72,35 @@ func (f *_connectionMetricFilter) PreHandle(ctx context.Context, conn proto.Conn
 func (f *_connectionMetricFilter) PostHandle(ctx context.Context, result proto.Result, conn proto.Connection) error {
 	v := proto.Variable(ctx, f.timeKey)
 	if startAt, ok := v.(time.Time); ok {
-		stmt := proto.PrepareStmt(ctx)
 		commandType := proto.CommandType(ctx)
 		var command string
 		var strCommandType string
-		switch stmt.StmtNode.(type) {
+		var stmtNode ast.StmtNode
+
+		switch commandType {
+		case constant.ComQuery:
+			strCommandType = "com_query"
+			stmtNode = proto.QueryStmt(ctx)
+			if stmtNode == nil {
+				log.Warn("not support stmt")
+				return nil
+			}
+		case constant.ComStmtExecute:
+			strCommandType = "com_stmt_execute"
+			stmt := proto.PrepareStmt(ctx)
+			if stmt == nil {
+				log.Warn("not support stmt")
+				return nil
+			}
+			stmtNode = stmt.StmtNode
+		}
+
+		if len(strCommandType) == 0 {
+			log.Warnf("not support command_type %v", commandType)
+			return nil
+		}
+
+		switch stmtNode.(type) {
 		case *ast.DeleteStmt:
 			command = "delete"
 		case *ast.InsertStmt:
@@ -87,18 +111,7 @@ func (f *_connectionMetricFilter) PostHandle(ctx context.Context, result proto.R
 			command = "select"
 		}
 
-		switch commandType {
-		case constant.ComQuery:
-			strCommandType = "com_query"
-		case constant.ComStmtExecute:
-			strCommandType = "com_stmt_execute"
-		}
-
-		if len(strCommandType) > 0 && len(command) > 0 {
-			f.connectionFilterExecDuration.WithLabelValues(conn.DataSourceName(), strCommandType, command).Observe(time.Since(startAt).Seconds())
-		} else {
-			log.Warnf("not support command_type %v and not support command %s", commandType, stmt.StmtNode.Text())
-		}
+		f.connectionFilterExecDuration.WithLabelValues(conn.DataSourceName(), strCommandType, command).Observe(time.Since(startAt).Seconds())
 	}
 	return nil
 }
