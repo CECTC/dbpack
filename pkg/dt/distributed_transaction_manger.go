@@ -311,7 +311,7 @@ func (manager *DistributedTransactionManager) processBranchSessions() error {
 			if manager.IsRollingBackDead(bs) {
 				log.Debugf("branch session rollback dead, key: %s, lock key: %s", bs.BranchID, bs.LockKey)
 				if manager.rollbackRetryTimeoutUnlockEnable {
-					log.Debugf("lock key: %s released", bs.BranchID, bs.LockKey)
+					log.Debugf("branch id: %d, lock key: %s released", bs.BranchID, bs.LockKey)
 					if _, err := manager.storageDriver.ReleaseLockKeys(context.Background(), bs.ResourceID, []string{bs.LockKey}); err != nil {
 						return err
 					}
