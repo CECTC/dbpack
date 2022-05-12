@@ -514,6 +514,7 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 		// https://dev.constant.Com/doc/internals/en/com-quit.html
 		c.RecycleReadPacket()
 		connectionID := proto.ConnectionID(ctx)
+		l.executor.ConnectionClose(proto.WithConnectionID(context.Background(), connectionID))
 		log.Debugf("connection closed, id: %d", connectionID)
 		return errors.New("ComQuit")
 	case constant.ComInitDB:
