@@ -16,6 +16,9 @@
 + sharding: support query on sharded table, support order by，support limit
 + more features on the road
 
+## Documentation
+[Official Website](https://cectc.github.io/dbpack-doc/)
+
 ## Requirements
 
 + Go 1.17 or higher
