@@ -42,7 +42,8 @@ const (
 	beforeImage     = "BeforeImage"
 	XID             = "x_dbpack_xid"
 	BranchID        = "x_dbpack_branch_id"
-	hintXID         = "xid"
+	hintXID         = "XID"
+	hintGlobalLock  = "GlobalLock"
 )
 
 func init() {
@@ -105,9 +106,9 @@ func (f *_mysqlFilter) PreHandle(ctx context.Context, conn proto.Connection) err
 		}
 		switch stmtNode := stmt.StmtNode.(type) {
 		case *ast.DeleteStmt:
-			err = processBeforeDelete(ctx, bc, stmt, stmtNode)
+			err = f.processBeforeDelete(ctx, bc, stmt, stmtNode)
 		case *ast.UpdateStmt:
-			err = processBeforeUpdate(ctx, bc, stmt, stmtNode)
+			err = f.processBeforeUpdate(ctx, bc, stmt, stmtNode)
 		default:
 			return nil
 		}
@@ -142,7 +143,23 @@ func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn
 	return err
 }
 
-func processBeforeDelete(ctx context.Context, conn *driver.BackendConnection, stmt *proto.Stmt, deleteStmt *ast.DeleteStmt) error {
+func (f *_mysqlFilter) processBeforeDelete(ctx context.Context, conn *driver.BackendConnection, stmt *proto.Stmt, deleteStmt *ast.DeleteStmt) error {
+	if hasGlobalLockHint(deleteStmt.TableHints) {
+		executor := &globalLockExecutor{
+			conn:       conn,
+			isUpdate:   false,
+			deleteStmt: deleteStmt,
+			updateStmt: nil,
+		}
+		result, err := executor.Executable(ctx, f.lockRetryInterval, f.lockRetryTimes)
+		if err != nil {
+			return err
+		}
+		if !result {
+			return errors.New("resource locked by distributed transaction global lock!")
+		}
+		return nil
+	}
 	if has, _ := hasXIDHint(deleteStmt.TableHints); !has {
 		return nil
 	}
@@ -161,7 +178,23 @@ func processBeforeDelete(ctx context.Context, conn *driver.BackendConnection, st
 	return nil
 }
 
-func processBeforeUpdate(ctx context.Context, conn *driver.BackendConnection, stmt *proto.Stmt, updateStmt *ast.UpdateStmt) error {
+func (f *_mysqlFilter) processBeforeUpdate(ctx context.Context, conn *driver.BackendConnection, stmt *proto.Stmt, updateStmt *ast.UpdateStmt) error {
+	if hasGlobalLockHint(updateStmt.TableHints) {
+		executor := &globalLockExecutor{
+			conn:       conn,
+			isUpdate:   true,
+			deleteStmt: nil,
+			updateStmt: updateStmt,
+		}
+		result, err := executor.Executable(ctx, f.lockRetryInterval, f.lockRetryTimes)
+		if err != nil {
+			return err
+		}
+		if !result {
+			return errors.New("resource locked by distributed transaction global lock!")
+		}
+		return nil
+	}
 	if has, _ := hasXIDHint(updateStmt.TableHints); !has {
 		return nil
 	}
@@ -339,4 +372,13 @@ func hasXIDHint(hints []*ast.TableOptimizerHint) (bool, string) {
 		}
 	}
 	return false, ""
+}
+
+func hasGlobalLockHint(hints []*ast.TableOptimizerHint) bool {
+	for _, hint := range hints {
+		if strings.EqualFold(hint.HintName.String(), hintGlobalLock) {
+			return true
+		}
+	}
+	return false
 }

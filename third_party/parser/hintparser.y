@@ -96,9 +96,9 @@ import (
 
 	/* DBPack hint names */
 	hintXID        "XID"
-	hintGlobalLock "GlobalLock"
-	hintUseDB      "UseDB"
-	hintTraceID    "TraceID"
+	hintGlobalLock "GLOBALLOCK"
+	hintUseDB      "USEDB"
+	hintTraceID    "TRACEID"
 
 	/* Other keywords */
 	hintPartition       "PARTITION"
@@ -238,20 +238,20 @@ TableOptimizerHintOpt:
             HintData: model.NewCIStr($3),
         }
     }
-|   "GlobalLock" '()'
+|   "GLOBALLOCK" '('')'
     {
     	$$ = &ast.TableOptimizerHint{
             HintName: model.NewCIStr($1),
         }
     }
-|   "UseDB" '(' Value ')'
+|   "USEDB" '(' Value ')'
     {
     	$$ = &ast.TableOptimizerHint{
             HintName: model.NewCIStr($1),
             HintData: model.NewCIStr($3),
         }
     }
-|   "TraceID" '(' Value ')'
+|   "TRACEID" '(' Value ')'
     {
     	$$ = &ast.TableOptimizerHint{
             HintName: model.NewCIStr($1),
@@ -477,6 +477,10 @@ Identifier:
 |	"RESOURCE_GROUP"
 |	"QB_NAME"
 /* DBPack hint names */
+|   "XID"
+|   "GLOBALLOCK"
+|   "USEDB"
+|   "TRACEID"
 /* other keywords */
 |	"DUPSWEEDOUT"
 |	"FIRSTMATCH"

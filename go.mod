@@ -3,6 +3,7 @@ module github.com/cectc/dbpack
 go 1.18
 
 require (
+	github.com/agiledragon/gomonkey/v2 v2.7.0
 	github.com/cespare/xxhash/v2 v2.1.2
 	github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548
 	github.com/cznic/parser v0.0.0-20181122101858-d773202d5b1f
