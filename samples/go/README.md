@@ -16,7 +16,7 @@ cd dbpack
 
 ### Step3: run dbpack
 ```bash
-make build
+make build-local
 
 vim ./samples/go/config1.yaml
 # update distributed_transaction.etcd_config.endpoints
