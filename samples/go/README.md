@@ -29,11 +29,11 @@ vim ./samples/go/config3.yaml
 # update data_source_cluster.dsn
 # update distributed_transaction.etcd_config.endpoints
 
-./dist/dbpack start -config ../samples/go/config1.yml
+./dist/dbpack start --config ./samples/go/config1.yml
 
-./dist/dbpack start -config ../samples/go/config2.yml
+./dist/dbpack start --config ./samples/go/config2.yml
 
-./dist/dbpack start -config ../samples/go/config3.yml
+./dist/dbpack start --config ./samples/go/config3.yml
 ```
 
 ### Step4: setup aggregation_svc client
