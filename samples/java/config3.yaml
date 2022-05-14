@@ -23,7 +23,7 @@ filters:
       lock_retry_times: 15
 
 data_source_cluster:
-  - name: seata_order
+  - name: order
     capacity: 30
     max_capacity: 100
     idle_timeout: 60s
