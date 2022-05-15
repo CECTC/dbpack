@@ -54,14 +54,14 @@ class OrderDB
         $this->getConnection()->beginTransaction();
 
         foreach ($soMasters as $master) {
-            if (!$this->insertSoMaster($xid, $master)) {
+            if (!$this->insertSo($xid, $master)) {
                 $this->getConnection()->rollBack();
             }
         }
         return $this->getConnection()->commit();
     }
 
-    private function insertSoMaster(string $xid, array $soMaster): bool
+    private function insertSo(string $xid, array $soMaster): bool
     {
         $soId = hrtime(true);
         $insertSoMasterSql = sprintf(self::insertSoMaster, $xid);

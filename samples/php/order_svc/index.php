@@ -21,6 +21,8 @@ if ($reqPath === 'createSo') {
     } else {
         responseError();
     }
+} else {
+    echo 'api not exist';
 }
 
 function responseOK() {
