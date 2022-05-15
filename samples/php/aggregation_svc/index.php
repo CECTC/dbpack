@@ -3,6 +3,7 @@
 $reqPath = strtok($_SERVER["REQUEST_URI"], '?');
 
 $reaHeaders = getallheaders();
+
 $xid = $reaHeaders['x_dbpack_xid'] ?? '';
 
 if (empty($xid)) {
@@ -11,23 +12,25 @@ if (empty($xid)) {
 
 $aggregationSvc = new AggregationSvc();
 
-switch ($reqPath) {
-    case '/v1/order/create':
-        if ($aggregationSvc->CreateSo($xid, false)) {
-            responseOK();
-        } else {
-            responseError();
-        }
-        break;
-    case '/v1/order/create2':
-        if ($aggregationSvc->CreateSo($xid, true)) {
-            responseOK();
-        } else {
-            responseError();
-        }
-        break;
-    default:
-        echo 'api not found';
+if ($_SERVER['REQUEST_METHOD'] === 'post') {
+    switch ($reqPath) {
+        case '/v1/order/create':
+            if ($aggregationSvc->CreateSo($xid, false)) {
+                responseOK();
+            } else {
+                responseError();
+            }
+            break;
+        case '/v1/order/create2':
+            if ($aggregationSvc->CreateSo($xid, true)) {
+                responseOK();
+            } else {
+                responseError();
+            }
+            break;
+        default:
+            die('api not found');
+    }
 }
 
 function responseOK() {

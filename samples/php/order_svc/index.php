@@ -9,20 +9,20 @@ if (empty($xid)) {
     die('xid is not provided!');
 }
 
-if ($reqPath === 'createSo') {
-    $reqBody = file_get_contents('php://input');
-    $soMasters = json_decode($reqBody, true);
+if ($_SERVER['REQUEST_METHOD'] === 'post') {
+    if ($reqPath === 'createSo') {
+        $reqBody = file_get_contents('php://input');
+        $soMasters = json_decode($reqBody, true);
 
-    $orderDB = OrderDB::getInstance();
-    $result = $orderDB->createSo($xid, $soMasters);
+        $orderDB = OrderDB::getInstance();
+        $result = $orderDB->createSo($xid, $soMasters);
 
-    if ($result) {
-        responseOK();
-    } else {
-        responseError();
+        if ($result) {
+            responseOK();
+        } else {
+            responseError();
+        }
     }
-} else {
-    echo 'api not exist';
 }
 
 function responseOK() {

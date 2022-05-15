@@ -9,20 +9,20 @@ if (empty($xid)) {
     die('xid is not provided!');
 }
 
-if ($reqPath === 'allocateInventory') {
-    $reqBody = file_get_contents('php://input');
-    $inventories = json_decode($reqBody, true);
+if ($_SERVER['REQUEST_METHOD'] === 'post') {
+    if ($reqPath === 'allocateInventory') {
+        $reqBody = file_get_contents('php://input');
+        $inventories = json_decode($reqBody, true);
 
-    $productDB = ProductDB::getInstance();
-    $result = $productDB->allocateInventory($xid, $inventories);
+        $productDB = ProductDB::getInstance();
+        $result = $productDB->allocateInventory($xid, $inventories);
 
-    if ($result) {
-        responseOK();
-    } else {
-        responseError();
+        if ($result) {
+            responseOK();
+        } else {
+            responseError();
+        }
     }
-} else {
-    echo 'api not exist';
 }
 
 function responseOK() {
