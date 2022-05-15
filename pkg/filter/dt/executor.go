@@ -63,11 +63,11 @@ type updateExecutor struct {
 }
 
 type globalLockExecutor struct {
-	conn        *driver.BackendConnection
-	originalSQL string
-	isUpdate    bool
-	deleteStmt  *ast.DeleteStmt
-	updateStmt  *ast.UpdateStmt
+	conn       *driver.BackendConnection
+	isUpdate   bool
+	deleteStmt *ast.DeleteStmt
+	updateStmt *ast.UpdateStmt
+	args       map[string]interface{}
 }
 
 func (executor *insertExecutor) GetTableName() string {
@@ -452,7 +452,14 @@ func (executor *globalLockExecutor) BeforeImage(ctx context.Context) (*schema.Ta
 	}
 
 	sql := executor.buildBeforeImageSql(tableMeta)
-	result, _, err := executor.conn.ExecuteMulti(sql, true)
+	var args []interface{}
+	argsCount := strings.Count(sql, "?")
+	begin := len(executor.args) - argsCount
+	for ; begin < len(executor.args); begin++ {
+		parameterID := fmt.Sprintf("v%d", begin+1)
+		args = append(args, executor.args[parameterID])
+	}
+	result, _, err := executor.conn.PrepareQueryArgs(sql, args)
 	if err != nil {
 		return nil, err
 	}

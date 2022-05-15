@@ -51,7 +51,7 @@ jobs:
       - name: Unit Tests
         run: |
           mkdir -p build
-          go test $(go list ./... | grep -v /test/ | grep -v /parser | grep -v /types) -coverprofile=coverage.txt -covermode=atomic
+          go test -gcflags=all=-l $(go list ./... | grep -v /test/ | grep -v /parser | grep -v /types) -coverprofile=coverage.txt -covermode=atomic
 
       - name: Post Coverage
         run: bash <(curl -s https://codecov.io/bash)
