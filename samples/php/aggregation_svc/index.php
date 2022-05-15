@@ -13,19 +13,19 @@ $aggregationSvc = new AggregationSvc();
 
 switch ($reqPath) {
     case '/v1/order/create':
-         if ($aggregationSvc->CreateSo($xid, false)) {
-             http_response_code(200);
-             echo json_encode([
-                 'success' => true,
-                 'message' => 'success',
-             ]);
-         } else {
-             http_response_code(400);
-             echo json_encode([
-                 'success' => false,
-                 'message' => 'fail',
-             ]);
-         }
+        if ($aggregationSvc->CreateSo($xid, false)) {
+            http_response_code(200);
+            echo json_encode([
+                'success' => true,
+                'message' => 'success',
+            ]);
+        } else {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'message' => 'fail',
+            ]);
+        }
         break;
     case '/v1/order/create2':
         if ($aggregationSvc->CreateSo($xid, true)) {
