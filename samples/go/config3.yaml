@@ -13,7 +13,7 @@ executors:
   - name: redirect
     mode: sdb
     config:
-      data_source_ref: seata_order
+      data_source_ref: order
 
 filters:
   - name: MysqlDistributedTransaction

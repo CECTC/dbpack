@@ -13,7 +13,7 @@ executors:
   - name: redirect
     mode: sdb
     config:
-      data_source_ref: seata_product
+      data_source_ref: product
 
 filters:
   - name: MysqlDistributedTransaction
