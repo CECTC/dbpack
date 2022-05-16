@@ -32,8 +32,8 @@ const (
 type Topology struct {
 	DBName    string
 	TableName string
-	// dbName
-	DBs []string
+	// dbName -> table slice
+	DBs map[string][]string
 	// tableName -> dbName
 	Tables map[string]string
 	// index -> tableName
@@ -46,7 +46,7 @@ func ParseTopology(dbName, tableName string, topology map[int]string) (*Topology
 	var (
 		dbLen           = len(topology)
 		topologyRegexp  = regexp.MustCompile(topologyRegex)
-		dbs             = make([]string, 0)
+		dbs             = make(map[string][]string, 0)
 		tables          = make(map[string]string, 0)
 		tableIndexMap   = make(map[int]string, 0)
 		tableIndexSlice = make([]int, 0)
@@ -71,15 +71,17 @@ func ParseTopology(dbName, tableName string, topology map[int]string) (*Topology
 		if begin >= end {
 			return nil, errors.Errorf("incorrect topology, begin index must less than end index")
 		}
+		tableSlice := make([]string, 0)
 		for j := begin; j <= end; j++ {
 			index := j
 			realTable := fmt.Sprintf("%s_%d", tableName, index)
 			tables[realTable] = realDB
 			tableIndexMap[index] = realTable
 			tableIndexSlice = append(tableIndexSlice, index)
+			tableSlice = append(tableSlice, realTable)
 			max = mathutil.Max(max, index)
 		}
-		dbs = append(dbs, realDB)
+		dbs[realDB] = tableSlice
 	}
 	if max != len(tableIndexSlice)-1 {
 		return nil, errors.Errorf("table index must from 0 to %d", len(tableIndexSlice)-1)

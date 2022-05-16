@@ -28,6 +28,7 @@ import (
 	"github.com/cectc/dbpack/pkg/dt"
 	"github.com/cectc/dbpack/pkg/dt/schema"
 	"github.com/cectc/dbpack/pkg/dt/undolog"
+	"github.com/cectc/dbpack/pkg/meta"
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/proto"
@@ -87,7 +88,7 @@ func (executor *insertExecutor) GetInsertColumns() []string {
 func (executor *insertExecutor) getTableMeta(ctx context.Context) (schema.TableMeta, error) {
 	dbName := executor.conn.DataSourceName()
 	db := resource.GetDBManager().GetDB(dbName)
-	return dt.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
+	return meta.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
 }
 
 func (executor *insertExecutor) BeforeImage(ctx context.Context) (*schema.TableRecords, error) {
@@ -211,7 +212,7 @@ func (executor *deleteExecutor) GetWhereCondition() string {
 func (executor *deleteExecutor) getTableMeta(ctx context.Context) (schema.TableMeta, error) {
 	dbName := executor.conn.DataSourceName()
 	db := resource.GetDBManager().GetDB(dbName)
-	return dt.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
+	return meta.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
 }
 
 func (executor *deleteExecutor) BeforeImage(ctx context.Context) (*schema.TableRecords, error) {
@@ -306,7 +307,7 @@ func (executor *selectForUpdateExecutor) Execute(ctx context.Context, result pro
 func (executor *selectForUpdateExecutor) getTableMeta(ctx context.Context) (schema.TableMeta, error) {
 	dbName := executor.conn.DataSourceName()
 	db := resource.GetDBManager().GetDB(dbName)
-	return dt.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
+	return meta.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
 }
 
 func (executor *updateExecutor) GetTableName() string {
@@ -333,7 +334,7 @@ func (executor *updateExecutor) GetWhereCondition() string {
 func (executor *updateExecutor) getTableMeta(ctx context.Context) (schema.TableMeta, error) {
 	dbName := executor.conn.DataSourceName()
 	db := resource.GetDBManager().GetDB(dbName)
-	return dt.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
+	return meta.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
 }
 
 func (executor *updateExecutor) BeforeImage(ctx context.Context) (*schema.TableRecords, error) {
@@ -442,7 +443,7 @@ func (executor *globalLockExecutor) GetWhereCondition() string {
 func (executor *globalLockExecutor) getTableMeta(ctx context.Context) (schema.TableMeta, error) {
 	dbName := executor.conn.DataSourceName()
 	db := resource.GetDBManager().GetDB(dbName)
-	return dt.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
+	return meta.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
 }
 
 func (executor *globalLockExecutor) BeforeImage(ctx context.Context) (*schema.TableRecords, error) {
