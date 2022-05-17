@@ -37,11 +37,11 @@ vim ./samples/php/config3.yaml
 # update data_source_cluster.dsn
 # update distributed_transaction.etcd_config.endpoints
 
-./dist/dbpack start -config ../samples/php/config1.yml
+./dist/dbpack start -config ../samples/php/config1.yaml
 
-./dist/dbpack start -config ../samples/php/config2.yml
+./dist/dbpack start -config ../samples/php/config2.yaml
 
-./dist/dbpack start -config ../samples/php/config3.yml
+./dist/dbpack start -config ../samples/php/config3.yaml
 ```
 
 ### Step4: setup aggregation_svc client
