@@ -12,6 +12,9 @@ atlassian-ide-plugin.xml
 # Editor-based Rest Client
 .idea/httpRequests
 
+### Python template
+__pycache__
+
 ### Go template
 # Binaries for programs and plugins
 *.exe
@@ -79,3 +82,6 @@ dist/
 **/.mvn/wrapper/MavenWrapperDownloader.java
 **/src/main/**/target/
 **/src/test/**/target/
+
+
+
