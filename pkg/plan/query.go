@@ -50,28 +50,28 @@ type Limit struct {
 	Count            int64
 }
 
-func (s *QueryOnSingleDBPlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
+func (p *QueryOnSingleDBPlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
 	var (
 		sb   strings.Builder
 		args []interface{}
 		err  error
 	)
-	s.castLimit(s.Stmt.Limit)
-	if err = s.generate(&sb, &args); err != nil {
+	p.castLimit(p.Stmt.Limit)
+	if err = p.generate(&sb, &args); err != nil {
 		return nil, 0, errors.Wrap(err, "failed to generate sql")
 	}
 	sql := sb.String()
-	log.Debugf("query on single db, db name: %s, sql: %s", s.Database, sql)
+	log.Debugf("query on single db, db name: %s, sql: %s", p.Database, sql)
 	commandType := proto.CommandType(ctx)
 	switch commandType {
 	case constant.ComQuery:
-		result, warnings, err := s.Executor.Query(ctx, sql)
+		result, warnings, err := p.Executor.Query(ctx, sql)
 		if err != nil {
 			return nil, 0, errors.WithStack(err)
 		}
 		return result, warnings, nil
 	case constant.ComStmtExecute:
-		result, warnings, err := s.Executor.PrepareQuery(ctx, sql, args...)
+		result, warnings, err := p.Executor.PrepareQuery(ctx, sql, args...)
 		if err != nil {
 			return nil, 0, errors.WithStack(err)
 		}
@@ -80,40 +80,40 @@ func (s *QueryOnSingleDBPlan) Execute(ctx context.Context) (proto.Result, uint16
 	return nil, 0, nil
 }
 
-func (s *QueryOnSingleDBPlan) generate(sb *strings.Builder, args *[]interface{}) (err error) {
-	switch len(s.Tables) {
+func (p *QueryOnSingleDBPlan) generate(sb *strings.Builder, args *[]interface{}) (err error) {
+	switch len(p.Tables) {
 	case 0:
-		err = generateSelect("", s.Stmt, sb, s.Limit)
-		s.appendArgs(args)
+		err = generateSelect("", p.Stmt, sb, p.Limit)
+		p.appendArgs(args)
 	case 1:
 		// single shard table
-		err = generateSelect(s.Tables[0], s.Stmt, sb, s.Limit)
-		s.appendArgs(args)
+		err = generateSelect(p.Tables[0], p.Stmt, sb, p.Limit)
+		p.appendArgs(args)
 	default:
-		if s.Stmt.OrderBy != nil {
-			sb.WriteString("select * from (")
+		if p.Stmt.OrderBy != nil {
+			sb.WriteString("SELECT * FROM (")
 		}
 		sb.WriteByte('(')
-		if err = generateSelect(s.Tables[0], s.Stmt, sb, s.Limit); err != nil {
+		if err = generateSelect(p.Tables[0], p.Stmt, sb, p.Limit); err != nil {
 			return
 		}
 		sb.WriteByte(')')
-		s.appendArgs(args)
+		p.appendArgs(args)
 
-		for i := 1; i < len(s.Tables); i++ {
+		for i := 1; i < len(p.Tables); i++ {
 			sb.WriteString(" UNION ALL ")
 
 			sb.WriteByte('(')
-			if err = generateSelect(s.Tables[i], s.Stmt, sb, s.Limit); err != nil {
+			if err = generateSelect(p.Tables[i], p.Stmt, sb, p.Limit); err != nil {
 				return
 			}
 			sb.WriteByte(')')
-			s.appendArgs(args)
+			p.appendArgs(args)
 		}
-		if s.Stmt.OrderBy != nil {
+		if p.Stmt.OrderBy != nil {
 			sb.WriteString(") t ")
 			restoreCtx := format.NewRestoreCtx(format.DefaultRestoreFlags, sb)
-			if err := s.Stmt.OrderBy.Restore(restoreCtx); err != nil {
+			if err := p.Stmt.OrderBy.Restore(restoreCtx); err != nil {
 				return errors.WithStack(err)
 			}
 		}
@@ -121,48 +121,48 @@ func (s *QueryOnSingleDBPlan) generate(sb *strings.Builder, args *[]interface{})
 	return
 }
 
-func (s *QueryOnSingleDBPlan) castLimit(limit *ast.Limit) {
-	if s.Stmt.Limit != nil {
+func (p *QueryOnSingleDBPlan) castLimit(limit *ast.Limit) {
+	if p.Stmt.Limit != nil {
 		var (
 			offset, count  int64
 			limitArgsCount = 0
 			err            error
 		)
-		if of, ok := s.Stmt.Limit.Offset.(*driver.ValueExpr); ok {
+		if of, ok := p.Stmt.Limit.Offset.(*driver.ValueExpr); ok {
 			offset = of.GetInt64()
 		}
-		if of, ok := s.Stmt.Limit.Offset.(*driver.ParamMarkerExpr); ok {
-			offsetString := fmt.Sprintf("%v", s.Args[of.Order])
+		if of, ok := p.Stmt.Limit.Offset.(*driver.ParamMarkerExpr); ok {
+			offsetString := fmt.Sprintf("%v", p.Args[of.Order])
 			offset, err = strconv.ParseInt(offsetString, 10, 64)
 			if err != nil {
 				log.Fatal(err)
 			}
 			limitArgsCount += 1
 		}
-		if ct, ok := s.Stmt.Limit.Count.(*driver.ValueExpr); ok {
+		if ct, ok := p.Stmt.Limit.Count.(*driver.ValueExpr); ok {
 			count = ct.GetInt64()
 		}
-		if ct, ok := s.Stmt.Limit.Count.(*driver.ParamMarkerExpr); ok {
-			countString := fmt.Sprintf("%v", s.Args[ct.Order])
+		if ct, ok := p.Stmt.Limit.Count.(*driver.ParamMarkerExpr); ok {
+			countString := fmt.Sprintf("%v", p.Args[ct.Order])
 			count, err = strconv.ParseInt(countString, 10, 64)
 			if err != nil {
 				log.Fatal(err)
 			}
 			limitArgsCount += 1
 		}
-		s.Limit = &Limit{
-			ArgsWithoutLimit: s.Args[:len(s.Args)-limitArgsCount],
+		p.Limit = &Limit{
+			ArgsWithoutLimit: p.Args[:len(p.Args)-limitArgsCount],
 			Offset:           offset,
 			Count:            count,
 		}
 	}
 }
 
-func (s *QueryOnSingleDBPlan) appendArgs(args *[]interface{}) {
-	if s.Limit != nil {
-		*args = append(*args, s.Limit.ArgsWithoutLimit...)
+func (p *QueryOnSingleDBPlan) appendArgs(args *[]interface{}) {
+	if p.Limit != nil {
+		*args = append(*args, p.Limit.ArgsWithoutLimit...)
 	} else {
-		*args = append(*args, s.Args...)
+		*args = append(*args, p.Args...)
 	}
 }
 
@@ -171,11 +171,11 @@ type QueryOnMultiDBPlan struct {
 	Plans []*QueryOnSingleDBPlan
 }
 
-func (u QueryOnMultiDBPlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
-	resultChan := make(chan *ResultWithErr, len(u.Plans))
+func (p *QueryOnMultiDBPlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
+	resultChan := make(chan *ResultWithErr, len(p.Plans))
 	var wg sync.WaitGroup
-	wg.Add(len(u.Plans))
-	for _, plan := range u.Plans {
+	wg.Add(len(p.Plans))
+	for _, plan := range p.Plans {
 		go func(plan *QueryOnSingleDBPlan) {
 			result, warn, err := plan.Execute(ctx)
 			rlt := &ResultWithErr{
@@ -191,7 +191,7 @@ func (u QueryOnMultiDBPlan) Execute(ctx context.Context) (proto.Result, uint16, 
 	wg.Wait()
 	close(resultChan)
 
-	resultList := make([]*ResultWithErr, 0, len(u.Plans))
+	resultList := make([]*ResultWithErr, 0, len(p.Plans))
 	for rlt := range resultChan {
 		if rlt.Error != nil {
 			return rlt.Result, rlt.Warning, rlt.Error
@@ -199,7 +199,7 @@ func (u QueryOnMultiDBPlan) Execute(ctx context.Context) (proto.Result, uint16, 
 		resultList = append(resultList, rlt)
 	}
 	sort.Sort(ResultWithErrs(resultList))
-	result, warn := mergeResult(ctx, resultList, u.Stmt.OrderBy, u.Plans[0].Limit)
+	result, warn := mergeResult(ctx, resultList, p.Stmt.OrderBy, p.Plans[0].Limit)
 	return result, warn, nil
 }
 

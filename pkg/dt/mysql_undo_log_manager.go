@@ -24,6 +24,7 @@ import (
 	"github.com/cectc/dbpack/pkg/driver"
 	"github.com/cectc/dbpack/pkg/dt/undolog"
 	"github.com/cectc/dbpack/pkg/log"
+	"github.com/cectc/dbpack/pkg/meta"
 	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/proto"
 )
@@ -111,7 +112,7 @@ func (manager MysqlUndoLogManager) Undo(db proto.DB, xid string) ([]string, erro
 	}
 
 	for _, sqlUndoLog := range undoLogs {
-		tableMeta, err := GetTableMetaCache().GetTableMeta(
+		tableMeta, err := meta.GetTableMetaCache().GetTableMeta(
 			proto.WithSchema(context.Background(), sqlUndoLog.SchemaName), db, sqlUndoLog.TableName)
 		if err != nil {
 			if _, err := tx.Rollback(context.Background()); err != nil {

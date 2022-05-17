@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dt
+package meta
 
 import (
 	"context"

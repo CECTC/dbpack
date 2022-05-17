@@ -530,7 +530,7 @@ func ParseInCondition(expr *ast.PatternInExpr, args ...interface{}) (Condition, 
 		}
 
 		return &ComplexCondition{
-			Op:         opcode.And,
+			Op:         opcode.Or,
 			Conditions: result,
 		}, nil
 	}
