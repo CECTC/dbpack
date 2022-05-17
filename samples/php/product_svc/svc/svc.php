@@ -8,8 +8,8 @@ class ProductDB
     private static ProductDB $_instance;
     private string $_host = '127.0.0.1';
     private int $_port = 13307;
-    private string $_username = 'root';
-    private string $_password = '';
+    private string $_username = 'hehe';
+    private string $_password = 'hehe';
     private string $_database = 'product';
 
     const allocateInventorySql = "update /*+ XID('%s') */ product.inventory set available_qty = available_qty - ?, 
@@ -17,7 +17,7 @@ class ProductDB
 
     public static function getInstance(): ProductDB
     {
-        if (!self::$_instance) {
+        if (empty(self::$_instance)) {
             self::$_instance = new self();
         }
         return self::$_instance;
@@ -30,6 +30,10 @@ class ProductDB
                 "mysql:host=$this->_host;port=$this->_port;dbname=$this->_database;charset=utf8",
                 $this->_username,
                 $this->_password,
+                [
+                    PDO::ATTR_PERSISTENT => true,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                ]
             );
         } catch (PDOException $e) {
             die($e->getMessage());
@@ -52,12 +56,13 @@ class ProductDB
         foreach ($inventories as $inventory) {
             $allocateInventorySql = sprintf(self::allocateInventorySql, $xid);
 
-            $result = $this->getConnection()->prepare($allocateInventorySql)->execute([
-                $inventory['Qty'],
-                $inventory['Qty'],
-                $inventory['ProductSysNo'],
-                $inventory['Qty'],
-            ]);
+            $statement = $this->getConnection()->prepare($allocateInventorySql);
+            $statement->bindValue(1, $inventory['Qty']);
+            $statement->bindValue(2, $inventory['Qty']);
+            $statement->bindValue(3, $inventory['ProductSysNo']);
+            $statement->bindValue(4, $inventory['Qty']);
+
+            $result = $statement->execute();
             if (!$result) {
                 $this->getConnection()->rollBack();
             }

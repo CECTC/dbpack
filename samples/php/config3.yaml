@@ -5,7 +5,7 @@ listeners:
       port: 13308
     config:
       users:
-        dksl: "123456"
+        hehe: "hehe"
       server_version: "8.0.27"
     executor: redirect
 
@@ -13,7 +13,7 @@ executors:
   - name: redirect
     mode: sdb
     config:
-      data_source_ref: seata_order
+      data_source_ref: order
 
 filters:
   - name: MysqlDistributedTransaction
@@ -23,11 +23,11 @@ filters:
       lock_retry_times: 15
 
 data_source_cluster:
-  - name: seata_order
+  - name: order
     capacity: 30
     max_capacity: 100
     idle_timeout: 60s
-    dsn: root:123456@tcp(127.0.0.1:3306)/order?timeout=60s&readTimeout=60s&writeTimeout=60s&parseTime=true&loc=Local&charset=utf8mb4,utf8
+    dsn: hehe:hehe@tcp(127.0.0.1:3306)/order?timeout=60s&readTimeout=60s&writeTimeout=60s&parseTime=true&loc=Local&charset=utf8mb4,utf8
     ping_interval: 20s
     ping_times_for_change_status: 3
     filters:

@@ -49,7 +49,7 @@ class AggregationSvc
         ];
         $url = 'http://localhost:3001/createSo';
         $response = $this->sendRequest($url, $xid, $soMasters);
-        if ($response === false) {
+        if (empty($response)) {
             return false;
         }
         $responseData = json_decode($response, true);
@@ -66,14 +66,14 @@ class AggregationSvc
         ];
         $url = 'http://localhost:3002/allocateInventory';
         $response = $this->sendRequest($url, $xid, $allocateInventoryReq);
-        if ($response === false) {
+        if (empty($response)) {
             return false;
         }
         $responseData = json_decode($response, true);
         return $responseData['success'] ?? false;
     }
 
-    private function sendRequest(string $url, string $xid, array $data): bool|string
+    private function sendRequest(string $url, string $xid, array $data): string
     {
         $ch = curl_init($url);
         curl_setopt_array($ch, [
@@ -88,11 +88,11 @@ class AggregationSvc
 
         $response = curl_exec($ch);
         if ($response === false) {
-            return false;
+            return "";
         }
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         if ($httpCode == 400) {
-            return false;
+            return "";
         }
         curl_close($ch);
 

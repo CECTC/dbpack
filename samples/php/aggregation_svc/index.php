@@ -1,9 +1,11 @@
 <?php
 
+require './svc/svc.php';
+
 $reqPath = strtok($_SERVER["REQUEST_URI"], '?');
 $reaHeaders = getallheaders();
 
-// "x" is in upper case here because the header name has been adjusted by php
+// "x" is in upper case here returned by getallheaders() function
 $xid = $reaHeaders['X_dbpack_xid'] ?? '';
 
 if (empty($xid)) {
@@ -12,7 +14,7 @@ if (empty($xid)) {
 
 $aggregationSvc = new AggregationSvc();
 
-if ($_SERVER['REQUEST_METHOD'] === 'post') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     switch ($reqPath) {
         case '/v1/order/create':
             if ($aggregationSvc->CreateSo($xid, false)) {

@@ -1,17 +1,17 @@
 <?php
 
-$reqPath = strtok($_SERVER["REQUEST_URI"], '?');
-$reaHeaders = getallheaders();
+require './svc/svc.php';
 
-// "x" is in upper case here because the header name has been adjusted by php
-$xid = $reaHeaders['X_dbpack_xid'] ?? '';
+$reqPath = strtok($_SERVER["REQUEST_URI"], '?');
+$reqHeaders = getallheaders();
+$xid = $reqHeaders['xid'] ?? '';
 
 if (empty($xid)) {
     die('xid is not provided!');
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'post') {
-    if ($reqPath === 'createSo') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($reqPath === '/createSo') {
         $reqBody = file_get_contents('php://input');
         $soMasters = json_decode($reqBody, true);
 

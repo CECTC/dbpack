@@ -8,8 +8,8 @@ class OrderDB
     private static OrderDB $_instance;
     private string $_host = '127.0.0.1';
     private int $_port = 13308;
-    private string $_username = 'root';
-    private string $_password = '';
+    private string $_username = 'hehe';
+    private string $_password = 'hehe';
     private string $_database = 'order';
 
     const insertSoMaster = "INSERT /*+ XID('%s') */ INTO order.so_master (sysno, so_id, buyer_user_sysno, seller_company_code, 
@@ -21,7 +21,7 @@ class OrderDB
 
     public static function getInstance(): OrderDB
     {
-        if (!self::$_instance) {
+        if (empty(self::$_instance)) {
             self::$_instance = new self();
         }
         return self::$_instance;
@@ -34,6 +34,10 @@ class OrderDB
                 "mysql:host=$this->_host;port=$this->_port;dbname=$this->_database;charset=utf8",
                 $this->_username,
                 $this->_password,
+                [
+                    PDO::ATTR_PERSISTENT => true,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                ]
             );
         } catch (PDOException $e) {
             die($e->getMessage());
@@ -64,42 +68,44 @@ class OrderDB
     private function insertSo(string $xid, array $soMaster): bool
     {
         $soId = hrtime(true);
+        $memo = '';
         $insertSoMasterSql = sprintf(self::insertSoMaster, $xid);
 
-        $result = $this->getConnection()->prepare($insertSoMasterSql)->execute([
-            $soId,
-            $soId,
-            $soMaster['buyerUserSysNo'],
-            $soMaster['sellerCompanyCode'],
-            $soMaster['receiveDivisionSysNo'],
-            $soMaster['receiveAddress'],
-            $soMaster['receiveZip'],
-            $soMaster['receiveContact'],
-            $soMaster['receiveContactPhone'],
-            $soMaster['stockSysNo'],
-            $soMaster['paymentType'],
-            $soMaster['soAmt'],
-            $soMaster['status'],
-            $soMaster['appID'],
-            '',
-        ]);
+        $statement = $this->getConnection()->prepare($insertSoMasterSql);
+        $statement->bindValue(1, $soId);
+        $statement->bindValue(2, $soId);
+        $statement->bindValue(3, $soMaster['buyerUserSysNo']);
+        $statement->bindValue(4, $soMaster['sellerCompanyCode']);
+        $statement->bindValue(5, $soMaster['receiveDivisionSysNo']);
+        $statement->bindValue(6, $soMaster['receiveAddress']);
+        $statement->bindValue(7, $soMaster['receiveZip']);
+        $statement->bindValue(8, $soMaster['receiveContact']);
+        $statement->bindValue(9, $soMaster['receiveContactPhone']);
+        $statement->bindValue(10, $soMaster['stockSysNo']);
+        $statement->bindValue(11, $soMaster['paymentType']);
+        $statement->bindValue(12, $soMaster['soAmt']);
+        $statement->bindValue(13, $soMaster['status']);
+        $statement->bindValue(14, $soMaster['appID']);
+        $statement->bindValue(15, $memo);
+
+        $result = $statement->execute();
         if (!$result) {
             return false;
         }
         $insertSoItemSql = sprintf(self::insertSoItem, $xid);
         foreach ($soMaster['soItems'] as $item) {
             $soItemId = hrtime(true);
+            $statement = $this->getConnection()->prepare($insertSoItemSql);
+            $statement->bindValue(1, $soItemId);
+            $statement->bindValue(2, $soId);
+            $statement->bindValue(3, $item['productSysNo']);
+            $statement->bindValue(4, $item['productName']);
+            $statement->bindValue(5, $item['costPrice']);
+            $statement->bindValue(6, $item['originalPrice']);
+            $statement->bindValue(7, $item['dealPrice']);
+            $statement->bindValue(8, $item['quantity']);
 
-            $result = $this->getConnection()->prepare($insertSoItemSql)->execute([
-                $soItemId,
-                $soId,
-                $item['productSysNo'],
-                $item['productName'],
-                $item['costPrice'],
-                $item['originalPrice'],
-                $item['dealPrice'],
-                $item['quantity'],
-            ]);
+            $result = $statement->execute();
             if (!$result) {
                 return false;
             }
