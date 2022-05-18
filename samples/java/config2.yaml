@@ -13,7 +13,7 @@ executors:
   - name: redirect
     mode: sdb
     config:
-      data_source_ref: seata_product
+      data_source_ref: product
 
 filters:
   - name: MysqlDistributedTransaction
@@ -23,11 +23,11 @@ filters:
       lock_retry_times: 15
 
 data_source_cluster:
-  - name: seata_product
+  - name: product
     capacity: 30
     max_capacity: 100
     idle_timeout: 60s
-    dsn: root:123456@tcp(127.0.0.1:3306)/seata_product?timeout=1s&readTimeout=1s&writeTimeout=1s&parseTime=true&loc=Local&charset=utf8mb4,utf8
+    dsn: root:123456@tcp(127.0.0.1:3306)/product?timeout=1s&readTimeout=1s&writeTimeout=1s&parseTime=true&loc=Local&charset=utf8mb4,utf8
     ping_interval: 20s
     ping_times_for_change_status: 3
     filters:

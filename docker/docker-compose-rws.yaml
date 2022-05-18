@@ -17,18 +17,20 @@ services:
       - local
     ports:
       - "2379:2379"
+
   mysql1:
     image: mysql:8.0
     container_name: dbpack-mysql1
     networks:
       - local
     ports:
-    - "3306:3306"
+      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: "123456"
     volumes:
-    - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:rw
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:rw
     command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
+
   mysql2:
     image: mysql:8.0
     container_name: dbpack-mysql2
@@ -41,20 +43,25 @@ services:
     volumes:
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:rw
     command: [ 'mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci' ]
+
   dbpack:
-    image: dbpack:latest
+    build:
+      context: ${PWD}
+      dockerfile: ./docker/Dockerfile
     container_name: dbpack
-    command: sh -c "sleep 60 && ./dbpack start -c config.yaml"
     networks:
       - local
     ports:
-    - "13306:13306"
+      - "13306:13306"
     volumes:
-    - ./conf/config_rws.yaml:/app/config.yaml
+      - ./conf/config_rws.yaml:/config.yaml
+      - ./scripts/wait-for-mysql.sh:/wait-for-mysql.sh
     depends_on:
       - etcd
       - mysql1
       - mysql2
+    command: ["./wait-for-mysql.sh","--","/dbpack", "start", "-c", "config.yaml"]
+
 networks:
   local:
     name: dbpack

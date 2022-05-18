@@ -18,50 +18,52 @@ cd dbpack
 ```bash
 make build-local
 
-vim ./samples/go/config1.yaml
+vim ./samples/python/config1.yaml
 # update distributed_transaction.etcd_config.endpoints
 
-vim ./samples/go/config2.yaml
+vim ./samples/python/config2.yaml
 # update data_source_cluster.dsn
 # update distributed_transaction.etcd_config.endpoints
 
-vim ./samples/go/config3.yaml
+vim ./samples/python/config3.yaml
 # update data_source_cluster.dsn
 # update distributed_transaction.etcd_config.endpoints
 
-./dist/dbpack start --config ./samples/go/config1.yml
+./dist/dbpack start --config samples/python/config1.yaml
 
-./dist/dbpack start --config ./samples/go/config2.yml
+./dist/dbpack start --config samples/python/config2.yaml
 
-./dist/dbpack start --config ./samples/go/config3.yml
+./dist/dbpack start --config samples/python/config3.yaml
 ```
 
-### Step4: setup aggregation_svc client
+### Step4: setup python requirements
 ```bash
-cd samples/go/
-
-go run aggregation_svc/main.go
+cd samples/python
+pip3 install -r requirements.txt
 ```
 
-### Step5: setup order_svc client
+### Step5: setup aggregation client
 ```bash
-cd samples/go/
-vim ./order_svc/main.go
-# update dsn
+cd samples/python/aggregation
 
-go run order_svc/main.go
+python3 app.py
 ```
 
-### Step6: setup product_svc client
+### Step6: setup order client
 ```bash
-cd samples/go/
-vim ./product_svc/main.go
-# update dsn
+cd samples/python/order
 
-go run product_svc/main.go
+python3 app.py
 ```
 
-### Step7: access and test
+### Step7: setup product client
+```bash
+cd samples/python/product
+
+python3 app.py
+```
+
+### Step8: access and test
 ```
 curl -XPOST http://localhost:13000/v1/order/create
 ```

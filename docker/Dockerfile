@@ -1,7 +1,9 @@
+FROM golang:1.16.3 as builder
+WORKDIR /app
+ADD . /app
+RUN make build-local
+
 FROM alpine:latest
-
-WORKDIR app
-
-COPY dist/ .
-
-CMD ["./dbpack", "start", "-c", "config.yaml"]
+WORKDIR /
+COPY --from=builder /app/dbpack /dbpack
+CMD ["/dbpack", "start", "-c", "config.yaml"]

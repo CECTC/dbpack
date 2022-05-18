@@ -65,20 +65,20 @@ unit-test: ## run unit test
 
 ########################################################
 build-local:  ## build dbpack cli, and put in dist dir
-	@mkdir -p dist
-	${GO_BUILD_ENVVARS} go build -o ./dist/dbpack ./cmd
+	${GO_BUILD_ENVVARS} go build -o dbpack ./cmd
 
 ########################################################
-build:  ## build dbpack cli, and put in dist dir
-	@mkdir -p dist
-	GOOS="linux"  GOARCH="amd64" CGO_ENABLED=0 go build -o ./dist/dbpack ./cmd
-
-########################################################
-docker-build: build ## build docker image
+docker-build: ## build docker image
+	go mod download
+	go mod tidy
 	docker build -f docker/Dockerfile -t dbpack:latest .
 
 ########################################################
-integration-test: build docker-build
+build:  ## build dbpack cli, and put in dist dir
+	GOOS="linux"  GOARCH="amd64" CGO_ENABLED=0 go build -o dbpack ./cmd
+
+########################################################
+integration-test:
 	sh test/cmd/test_single_db.sh
 	sh test/cmd/test_read_write_splitting.sh
 	sh test/cmd/test_sharding.sh
@@ -86,7 +86,6 @@ integration-test: build docker-build
 ########################################################
 clean: ## clean temporary build dir
 	@rm -rf coverage.txt
-	@rm -rf dist
 
 ########################################################
 license: ## Add license header for all code files

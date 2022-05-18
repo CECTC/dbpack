@@ -16,7 +16,7 @@ cd dbpack
 
 ### Step3: run dbpack
 ```bash
-make build
+make build-local
 
 vim ./samples/java/config1.yaml
 # update distributed_transaction.etcd_config.endpoints
@@ -29,11 +29,11 @@ vim ./samples/java/config3.yaml
 # update data_source_cluster.dsn
 # update distributed_transaction.etcd_config.endpoints
 
-./dist/dbpack start -config ../samples/java/config1.yml
+./dist/dbpack start --config ./samples/java/config1.yml
 
-./dist/dbpack start -config ../samples/java/config2.yml
+./dist/dbpack start --config ./samples/java/config2.yml
 
-./dist/dbpack start -config ../samples/java/config3.yml
+./dist/dbpack start --config ./samples/java/config3.yml
 ```
 
 ### Step4: setup aggregation_svc client

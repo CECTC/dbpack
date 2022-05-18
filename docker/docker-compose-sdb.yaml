@@ -30,18 +30,21 @@ services:
     - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql:rw
     command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
   dbpack:
-    image: dbpack:latest
+    build:
+      context: ${PWD}
+      dockerfile: ./docker/Dockerfile
     container_name: dbpack
-    command: sh -c "sleep 60 && ./dbpack start -c config.yaml"
     networks:
       - local
     ports:
-    - "13306:13306"
+      - "13306:13306"
     volumes:
-    - ./conf/config_sdb.yaml:/app/config.yaml
+      - ./conf/config_sdb.yaml:/config.yaml
+      - ./scripts/wait-for-mysql.sh:/wait-for-mysql.sh
     depends_on:
       - etcd
       - mysql
+    command: ["./wait-for-mysql.sh","--","/dbpack", "start", "-c", "config.yaml"]
 networks:
   local:
     name: dbpack
