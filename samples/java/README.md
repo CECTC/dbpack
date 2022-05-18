@@ -10,8 +10,8 @@ cd dbpack
 
 ### Step2: Setup mysql, initialize the database with the following sql script
 ```
-./samples/java/scripts/order.sql
-./samples/java/scripts/product.sql
+./samples/scripts/order.sql
+./samples/scripts/product.sql
 ```
 
 ### Step3: run dbpack
@@ -29,11 +29,11 @@ vim ./samples/java/config3.yaml
 # update data_source_cluster.dsn
 # update distributed_transaction.etcd_config.endpoints
 
-./dist/dbpack start --config ./samples/java/config1.yml
+./dist/dbpack start --config ./samples/java/config1.yaml
 
-./dist/dbpack start --config ./samples/java/config2.yml
+./dist/dbpack start --config ./samples/java/config2.yaml
 
-./dist/dbpack start --config ./samples/java/config3.yml
+./dist/dbpack start --config ./samples/java/config3.yaml
 ```
 
 ### Step4: setup aggregation_svc client
