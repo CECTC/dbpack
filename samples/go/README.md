@@ -10,8 +10,8 @@ cd dbpack
 
 ### Step2: Setup mysql, initialize the database with the following sql script
 ```
-./samples/go/scripts/order.sql
-./samples/go/scripts/product.sql
+./samples/scripts/order.sql
+./samples/scripts/product.sql
 ```
 
 ### Step3: run dbpack
@@ -29,11 +29,11 @@ vim ./samples/go/config3.yaml
 # update data_source_cluster.dsn
 # update distributed_transaction.etcd_config.endpoints
 
-./dist/dbpack start --config ./samples/go/config1.yml
+./dist/dbpack start --config ./samples/go/config1.yaml
 
-./dist/dbpack start --config ./samples/go/config2.yml
+./dist/dbpack start --config ./samples/go/config2.yaml
 
-./dist/dbpack start --config ./samples/go/config3.yml
+./dist/dbpack start --config ./samples/go/config3.yaml
 ```
 
 ### Step4: setup aggregation_svc client

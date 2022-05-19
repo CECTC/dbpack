@@ -10,8 +10,8 @@ cd dbpack
 
 ### Step2: Setup mysql, initialize the database with the following sql script
 ```
-./samples/go/scripts/order.sql
-./samples/go/scripts/product.sql
+./samples/scripts/order.sql
+./samples/scripts/product.sql
 ```
 
 ### Step3: run dbpack
