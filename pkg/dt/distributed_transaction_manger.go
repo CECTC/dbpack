@@ -111,7 +111,7 @@ func (manager *DistributedTransactionManager) Begin(ctx context.Context, transac
 		return "", err
 	}
 	manager.globalSessionQueue.AddAfter(gt, time.Duration(timeout)*time.Millisecond)
-	log.Infof("successfully begin global transaction xid = {}", gt.XID)
+	log.Infof("successfully begin global transaction xid = {%s}", gt.XID)
 	return xid, nil
 }
 
