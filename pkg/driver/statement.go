@@ -26,6 +26,7 @@ import (
 
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/errors"
+	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/packet"
@@ -414,6 +415,12 @@ func (stmt *BackendStatement) queryArgs(args []interface{}) (*mysql.Result, uint
 }
 
 func (stmt *BackendStatement) exec(args []byte) (*mysql.Result, uint16, error) {
+	defer func() {
+		if err := stmt.conn.WriteComStmtClose(stmt.id); err != nil {
+			log.Error(err)
+		}
+	}()
+
 	args[1] = byte(stmt.id)
 	args[2] = byte(stmt.id >> 8)
 	args[3] = byte(stmt.id >> 16)
