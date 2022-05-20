@@ -63,6 +63,14 @@
       "created_at": "2022-05-19T09:26:51Z",
       "repoId": 482797926,
       "pullRequestNo": 72
+    },
+    {
+      "name": "tanryberdi",
+      "id": 2136923,
+      "comment_id": 1132985305,
+      "created_at": "2022-05-20T14:41:45Z",
+      "repoId": 482797926,
+      "pullRequestNo": 75
     }
   ]
 }
