@@ -15,13 +15,6 @@ executors:
     config:
       data_source_ref: order
 
-filters:
-  - name: MysqlDistributedTransaction
-    conf:
-      appid: orderSvc
-      lock_retry_interval: 100ms
-      lock_retry_times: 15
-
 data_source_cluster:
   - name: order
     capacity: 30
@@ -31,7 +24,15 @@ data_source_cluster:
     ping_interval: 20s
     ping_times_for_change_status: 3
     filters:
-      - MysqlDistributedTransaction
+      - distributedTransaction
+
+filters:
+  - name: distributedTransaction
+    kind: MysqlDistributedTransaction
+    conf:
+      appid: orderSvc
+      lock_retry_interval: 100ms
+      lock_retry_times: 15
 
 distributed_transaction:
   appid: orderSvc

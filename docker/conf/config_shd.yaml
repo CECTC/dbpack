@@ -43,8 +43,7 @@ data_source_cluster:
     dsn: root:123456@tcp(dbpack-mysql1:3306)/drug_0?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8
     ping_interval: 20s
     ping_times_for_change_status: 3
-    filters:
-      - MysqlDistributedTransaction
+
   - name: drug_1
     capacity: 10
     max_capacity: 20

@@ -38,16 +38,16 @@ import (
 )
 
 const (
-	mysqlFilterName = "MysqlDistributedTransaction"
-	beforeImage     = "BeforeImage"
-	XID             = "x_dbpack_xid"
-	BranchID        = "x_dbpack_branch_id"
-	hintXID         = "XID"
-	hintGlobalLock  = "GlobalLock"
+	mysqlFilter    = "MysqlDistributedTransaction"
+	beforeImage    = "BeforeImage"
+	XID            = "x_dbpack_xid"
+	BranchID       = "x_dbpack_branch_id"
+	hintXID        = "XID"
+	hintGlobalLock = "GlobalLock"
 )
 
 func init() {
-	filter.RegistryFilterFactory(mysqlFilterName, &mysqlFactory{})
+	filter.RegistryFilterFactory(mysqlFilter, &mysqlFactory{})
 }
 
 type mysqlFactory struct {
@@ -92,7 +92,7 @@ type _mysqlFilter struct {
 }
 
 func (f *_mysqlFilter) GetName() string {
-	return mysqlFilterName
+	return mysqlFilter
 }
 
 func (f *_mysqlFilter) PreHandle(ctx context.Context, conn proto.Connection) error {

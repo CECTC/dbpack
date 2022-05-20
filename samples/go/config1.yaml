@@ -6,10 +6,11 @@ listeners:
     config:
       backend_host: localhost:3000
     filters:
-      - HttpDistributedTransaction
+      - httpDistributedTransaction
 
 filters:
-  - name: HttpDistributedTransaction
+  - name: httpDistributedTransaction
+    kind: HttpDistributedTransaction
     conf:
       appid: aggregationSvc
       transaction_infos:
