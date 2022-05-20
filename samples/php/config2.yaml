@@ -24,10 +24,10 @@ data_source_cluster:
     ping_interval: 20s
     ping_times_for_change_status: 3
     filters:
-      - distributedTransaction
+      - mysqlDTFilter
 
 filters:
-  - name: distributedTransaction
+  - name: mysqlDTFilter
     kind: MysqlDistributedTransaction
     conf:
       appid: productSvc

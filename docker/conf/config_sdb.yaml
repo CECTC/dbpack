@@ -25,10 +25,10 @@ data_source_cluster:
     ping_times_for_change_status: 3
     filters:
       - metricFilter
-      - distributedTransaction
+      - mysqlDTFilter
 
 filters:
-  - name: distributedTransaction
+  - name: mysqlDTFilter
     kind: MysqlDistributedTransaction
     conf:
       appid: svc
