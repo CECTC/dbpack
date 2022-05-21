@@ -343,6 +343,7 @@ func (db *DB) ping() (err error) {
 	if err != nil {
 		return err
 	}
+	defer db.pool.Put(r)
 	conn := r.(*driver.BackendConnection)
 	err = conn.Ping(context.Background())
 	return
