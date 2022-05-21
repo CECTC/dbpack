@@ -29,21 +29,21 @@ const (
 // FormatTimeMillis converts Millisecond to time string
 // tsMillis accurate to the millisecond，otherwise, an error will occur
 func FormatTimeMillis(tsMillis uint64) string {
-	return time.Unix(0, int64(tsMillis*UnixTimeUnitOffset)).Format(TimeFormat)
+	return time.Unix(0, int64(tsMillis*UnixTimeUnitOffset)).UTC().Format(TimeFormat)
 }
 
 // FormatDate converts to date string
 // tsMillis accurate to the millisecond，otherwise, an error will occur
 func FormatDate(tsMillis uint64) string {
-	return time.Unix(0, int64(tsMillis*UnixTimeUnitOffset)).Format(DateFormat)
+	return time.Unix(0, int64(tsMillis*UnixTimeUnitOffset)).UTC().Format(DateFormat)
 }
 
 // CurrentTimeMillis Returns the current Unix timestamp in milliseconds.
 func CurrentTimeMillis() uint64 {
-	return uint64(time.Now().UnixNano()) / UnixTimeUnitOffset
+	return uint64(time.Now().UTC().UnixNano()) / UnixTimeUnitOffset
 }
 
 // CurrentTimeNano Returns the current Unix timestamp in nanoseconds.
 func CurrentTimeNano() uint64 {
-	return uint64(time.Now().UnixNano())
+	return uint64(time.Now().UTC().UnixNano())
 }
