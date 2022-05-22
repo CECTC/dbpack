@@ -28,7 +28,6 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 
 	"github.com/cectc/dbpack/pkg/config"
@@ -54,8 +53,8 @@ func main() {
 }
 
 var (
-	Version             = "0.1.0"
-	defaultExporterPort = 18888
+	Version               = "0.1.0"
+	defaultHTTPListenPort = 18888
 
 	configPath string
 
@@ -170,16 +169,16 @@ var (
 			// default listen at 18888
 			var lis net.Listener
 			var lisErr error
-			if conf.ExporterPort != nil {
-				lis, lisErr = net.Listen("tcp4", fmt.Sprintf(":%d", *conf.ExporterPort))
+			if conf.HTTPListenPort != nil {
+				lis, lisErr = net.Listen("tcp4", fmt.Sprintf(":%d", *conf.HTTPListenPort))
 			} else {
-				lis, lisErr = net.Listen("tcp4", fmt.Sprintf(":%d", defaultExporterPort))
+				lis, lisErr = net.Listen("tcp4", fmt.Sprintf(":%d", defaultHTTPListenPort))
 			}
 
 			if lisErr != nil {
 				log.Fatalf("unable init metrics server: %+v", lisErr)
 			}
-			go initMetrics(ctx, lis)
+			go initServer(ctx, lis)
 
 			dbpack.Start(ctx)
 		},
@@ -192,21 +191,25 @@ func init() {
 	rootCommand.AddCommand(startCommand)
 }
 
-func initMetrics(ctx context.Context, lis net.Listener) {
+func initServer(ctx context.Context, lis net.Listener) {
 	go func() {
 		<-ctx.Done()
 		lis.Close()
 	}()
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
-	httpS := &http.Server{
-		Handler: mux,
+	handler, err := registerRoutes()
+	if err != nil {
+		log.Fatalf("failed to init handler: %+v", err)
+		return
 	}
-	err := httpS.Serve(lis)
+	httpS := &http.Server{
+		Handler: handler,
+	}
+	err = httpS.Serve(lis)
 	if err != nil {
 		log.Fatalf("unable create status server: %+v", err)
 		return
 	}
+	log.Infof("start api server :  %s", lis.Addr())
 }
 
 //func initHolmes() *holmes.Holmes {

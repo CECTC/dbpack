@@ -335,7 +335,7 @@ func (db *DB) ping() (err error) {
 		if currentCount%int64(db.pingTimesForChangeStatus) == 0 {
 			db.pingCount.Swap(0)
 			if currentCount > 0 {
-				db.status |= db.status
+				db.status = ^db.status & 1
 			}
 		}
 	}()
@@ -358,4 +358,13 @@ func (db *DB) Close() {
 // IsClosed returns true if the db is closed.
 func (db *DB) IsClosed() (closed bool) {
 	return db.pool.IsClosed()
+}
+
+func (db *DB) TestConn() error {
+	r, err := db.pool.Get(context.Background())
+	if err != nil {
+		return err
+	}
+	conn := r.(*driver.BackendConnection)
+	return conn.Ping(context.Background())
 }
