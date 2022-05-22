@@ -18,6 +18,7 @@
 
 ## Documentation
 [Official Website](https://cectc.github.io/dbpack-doc/)
+[Samples](https://github.com/CECTC/dbpack-samples)
 
 ## Requirements
 
