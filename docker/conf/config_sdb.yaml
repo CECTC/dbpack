@@ -24,16 +24,18 @@ data_source_cluster:
     ping_interval: 20s
     ping_times_for_change_status: 3
     filters:
-      - ConnectionMetricFilter
-      - MysqlDistributedTransaction
+      - metricFilter
+      - mysqlDTFilter
 
 filters:
-  - name: MysqlDistributedTransaction
+  - name: mysqlDTFilter
+    kind: MysqlDistributedTransaction
     conf:
       appid: svc
       lock_retry_interval: 50ms
       lock_retry_times: 30
-  - name: ConnectionMetricFilter
+  - name: metricFilter
+    kind: ConnectionMetricFilter
 
 distributed_transaction:
   appid: svc

@@ -64,6 +64,7 @@ type (
 
 	Filter struct {
 		Name   string     `yaml:"name" json:"name"`
+		Kind   string     `yaml:"kind" json:"kind"`
 		Config Parameters `yaml:"conf,omitempty" json:"conf,omitempty"`
 	}
 

@@ -30,11 +30,11 @@ import (
 )
 
 const (
-	connectionMetricFilterName = "ConnectionMetricFilter"
+	connectionMetricFilter = "ConnectionMetricFilter"
 )
 
 func init() {
-	filter.RegistryFilterFactory(connectionMetricFilterName, &connectionMetricFactory{})
+	filter.RegistryFilterFactory(connectionMetricFilter, &connectionMetricFactory{})
 }
 
 type connectionMetricFactory struct{}
@@ -59,7 +59,7 @@ type _connectionMetricFilter struct {
 }
 
 func (f *_connectionMetricFilter) GetName() string {
-	return connectionMetricFilterName
+	return connectionMetricFilter
 }
 
 func (f *_connectionMetricFilter) PreHandle(ctx context.Context, conn proto.Connection) error {

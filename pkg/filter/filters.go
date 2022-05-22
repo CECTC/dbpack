@@ -23,12 +23,12 @@ var (
 	filters         = make(map[string]proto.Filter)
 )
 
-func RegistryFilterFactory(name string, factory proto.FilterFactory) {
-	filterFactories[name] = factory
+func RegistryFilterFactory(kind string, factory proto.FilterFactory) {
+	filterFactories[kind] = factory
 }
 
-func GetFilterFactory(name string) proto.FilterFactory {
-	return filterFactories[name]
+func GetFilterFactory(kind string) proto.FilterFactory {
+	return filterFactories[kind]
 }
 
 func RegisterFilter(name string, filter proto.Filter) {

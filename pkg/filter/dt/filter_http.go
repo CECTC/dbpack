@@ -28,10 +28,10 @@ import (
 	"github.com/cectc/dbpack/pkg/proto"
 )
 
-const httpFilterName = "HttpDistributedTransaction"
+const httpFilter = "HttpDistributedTransaction"
 
 func init() {
-	filter.RegistryFilterFactory(httpFilterName, &httpFactory{})
+	filter.RegistryFilterFactory(httpFilter, &httpFactory{})
 }
 
 type httpFactory struct {
@@ -97,7 +97,7 @@ type _httpFilter struct {
 }
 
 func (f *_httpFilter) GetName() string {
-	return httpFilterName
+	return httpFilter
 }
 
 func (f _httpFilter) PreHandle(ctx *fasthttp.RequestCtx) error {

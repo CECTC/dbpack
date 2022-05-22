@@ -74,7 +74,7 @@ var (
 			conf := config.Load(configPath)
 
 			for _, filterConf := range conf.Filters {
-				factory := filter.GetFilterFactory(filterConf.Name)
+				factory := filter.GetFilterFactory(filterConf.Kind)
 				if factory == nil {
 					panic(errors.Errorf("there is no filter factory for filter: %s", filterConf.Name))
 				}
