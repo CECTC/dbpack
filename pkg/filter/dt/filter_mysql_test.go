@@ -177,32 +177,34 @@ func TestGlobalLock(t *testing.T) {
 	defer patches2.Reset()
 
 	for _, c := range testCases {
-		i = 0
-		p := parser.New()
-		stmt, err := p.ParseOneStmt(c.sql, "", "")
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-		stmt.Accept(&visitor.ParamVisitor{})
+		t.Run(c.sql, func(t *testing.T) {
+			i = 0
+			p := parser.New()
+			stmt, err := p.ParseOneStmt(c.sql, "", "")
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			stmt.Accept(&visitor.ParamVisitor{})
 
-		ctx := proto.WithCommandType(context.Background(), constant.ComStmtExecute)
-		ctx = proto.WithPrepareStmt(ctx, &proto.Stmt{
-			StatementID: 1,
-			PrepareStmt: c.sql,
-			ParamsCount: 1,
-			ParamData:   nil,
-			ParamsType:  nil,
-			ColumnNames: nil,
-			BindVars: map[string]interface{}{
-				"v1": 10,
-			},
-			StmtNode: stmt,
+			ctx := proto.WithCommandType(context.Background(), constant.ComStmtExecute)
+			ctx = proto.WithPrepareStmt(ctx, &proto.Stmt{
+				StatementID: 1,
+				PrepareStmt: c.sql,
+				ParamsCount: 1,
+				ParamData:   nil,
+				ParamsType:  nil,
+				ColumnNames: nil,
+				BindVars: map[string]interface{}{
+					"v1": 10,
+				},
+				StmtNode: stmt,
+			})
+
+			filter.lockRetryInterval = c.lockInterval
+			filter.lockRetryTimes = c.lockTimes
+			handleErr := filter.PreHandle(ctx, &driver.BackendConnection{})
+			assert.Equal(t, c.expectedErr, handleErr)
 		})
-
-		filter.lockRetryInterval = c.lockInterval
-		filter.lockRetryTimes = c.lockTimes
-		handleErr := filter.PreHandle(ctx, &driver.BackendConnection{})
-		assert.Equal(t, c.expectedErr, handleErr)
 	}
 }
