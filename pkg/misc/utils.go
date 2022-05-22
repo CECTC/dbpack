@@ -65,7 +65,7 @@ var (
 //      log.Fatal(err)
 //  }
 //  clientCert = append(clientCert, certs)
-//  mysql.RegisterTLSConfig("custom", &tls.Config{
+//  misc.RegisterTLSConfig("custom", &tls.Config{
 //      RootCAs: rootCertPool,
 //      Certificates: clientCert,
 //  })

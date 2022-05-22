@@ -17,19 +17,29 @@
 package misc
 
 import (
-	"strconv"
-	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func GetTransactionID(xid string) int64 {
-	if xid == "" {
-		return -1
+func TestGetTransactionID(t *testing.T) {
+	testCases := []struct {
+		in     string
+		expect int64
+	}{
+		{
+			in:     "gs/aggregationSvc/2612341069705662465",
+			expect: 2612341069705662465,
+		},
+		{
+			in:     "gs/aggregationSvc/0",
+			expect: 0,
+		},
 	}
-
-	idx := strings.LastIndex(xid, "/")
-	if len(xid) == idx+1 {
-		return -1
+	for _, c := range testCases {
+		t.Run(c.in, func(t *testing.T) {
+			transactionID := GetTransactionID(c.in)
+			assert.Equal(t, c.expect, transactionID)
+		})
 	}
-	tranID, _ := strconv.ParseInt(xid[idx+1:], 10, 64)
-	return tranID
 }

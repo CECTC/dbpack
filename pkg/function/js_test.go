@@ -56,10 +56,12 @@ func TestStringFunc(t *testing.T) {
 		{"STRCMP", int64(1), []interface{}{"def", "abc"}},
 	}
 	for _, c := range cases {
-		v, err := eval(c.f, c.args...)
-		if assert.NoError(t, err, c.f) {
-			assert.Equal(t, c.expect, v)
-		}
+		t.Run(c.f, func(t *testing.T) {
+			v, err := eval(c.f, c.args...)
+			if assert.NoError(t, err, c.f) {
+				assert.Equal(t, c.expect, v)
+			}
+		})
 	}
 }
 
@@ -67,9 +69,11 @@ func TestTimeFunc(t *testing.T) {
 	for _, c := range []string{
 		"NOW", "CURDATE", "CURRENT_DATE", "SYSDATE", "UNIX_TIMESTAMP", "CURTIME",
 	} {
-		v, err := eval(c)
-		assert.NoError(t, err)
-		t.Logf("%s: %v\n", c, v)
+		t.Run(c, func(t *testing.T) {
+			v, err := eval(c)
+			assert.NoError(t, err)
+			t.Logf("%s: %v\n", c, v)
+		})
 	}
 
 	now := time.Now()
@@ -119,16 +123,20 @@ func TestNumberFunc(t *testing.T) {
 		{"MOD", int64(5), []interface{}{5, 10}},
 	}
 	for _, c := range cases {
-		v, err := eval(c.f, c.args...)
-		if assert.NoError(t, err, c.f) {
-			assert.Equal(t, c.expect, v)
-		}
+		t.Run(c.f, func(t *testing.T) {
+			v, err := eval(c.f, c.args...)
+			if assert.NoError(t, err, c.f) {
+				assert.Equal(t, c.expect, v)
+			}
+		})
 	}
 
 	for _, c := range []string{"RAND", "PI"} {
-		v, err := eval(c)
-		assert.NoError(t, err)
-		t.Logf("%s: %v\n", c, v)
+		t.Run(c, func(t *testing.T) {
+			v, err := eval(c)
+			assert.NoError(t, err)
+			t.Logf("%s: %v\n", c, v)
+		})
 	}
 }
 
@@ -149,10 +157,12 @@ func TestOtherFunc(t *testing.T) {
 		{"MD5", "9ef9f83efc764b649d5b80a975da48c9", []interface{}{time.Unix(0, 0)}},
 	}
 	for _, c := range cases {
-		v, err := eval(c.f, c.args...)
-		if assert.NoError(t, err, c.f) {
-			assert.Equal(t, c.expect, v)
-		}
+		t.Run(c.f, func(t *testing.T) {
+			v, err := eval(c.f, c.args...)
+			if assert.NoError(t, err, c.f) {
+				assert.Equal(t, c.expect, v)
+			}
+		})
 	}
 }
 
