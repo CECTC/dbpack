@@ -487,6 +487,21 @@ func (conn *BackendConnection) WriteComFieldList(table string, wildcard string) 
 	return nil
 }
 
+// WriteComStmtClose close statement
+func (conn *BackendConnection) WriteComStmtClose(statementID uint32) (err error) {
+	// This is a new command, need to reset the Sequence.
+	conn.ResetSequence()
+
+	data := conn.StartEphemeralPacket(4 + 1)
+	data[0] = constant.ComStmtClose
+	misc.WriteUint32(data, 1, statementID)
+	if err := conn.WriteEphemeralPacket(); err != nil {
+		return err2.NewSQLError(constant.CRServerGone, constant.SSUnknownSQLState, err.Error())
+	}
+
+	return conn.readResultOK()
+}
+
 // ReadQueryResult gets the result from the last written query.
 func (conn *BackendConnection) ReadQueryResult(wantFields bool) (result *mysql.Result, more bool, warnings uint16, err error) {
 	// Get the result.
