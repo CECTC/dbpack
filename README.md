@@ -16,8 +16,8 @@
 + sharding: support query on sharded table, support order by，support limit
 + more features on the road
 
-## Documentation
-[Official Website](https://cectc.github.io/dbpack-doc/)
+## Metrics
+using prometheus metrics, default metric server run at :18888
 
 ## Requirements
 
