@@ -54,7 +54,8 @@ func main() {
 }
 
 var (
-	Version = "0.1.0"
+	Version             = "0.1.0"
+	defaultExporterPort = 18888
 
 	configPath string
 
@@ -74,7 +75,7 @@ var (
 			conf := config.Load(configPath)
 
 			for _, filterConf := range conf.Filters {
-				factory := filter.GetFilterFactory(filterConf.Name)
+				factory := filter.GetFilterFactory(filterConf.Kind)
 				if factory == nil {
 					panic(errors.Errorf("there is no filter factory for filter: %s", filterConf.Name))
 				}
@@ -165,10 +166,8 @@ var (
 				os.Exit(1) // second signal. Exit directly.
 			}()
 
-			dbpack.Start(ctx)
-
 			// init metrics for prometheus server scrape.
-			defaultExporterPort := 18888
+			// default listen at 18888
 			var lis net.Listener
 			var lisErr error
 			if conf.ExporterPort != nil {
@@ -178,9 +177,11 @@ var (
 			}
 
 			if lisErr != nil {
-				panic(lisErr)
+				log.Fatalf("unable init metrics server: %+v", lisErr)
 			}
 			go initMetrics(ctx, lis)
+
+			dbpack.Start(ctx)
 		},
 	}
 )
