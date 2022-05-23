@@ -145,6 +145,10 @@ func (manager MysqlUndoLogManager) Undo(db proto.DB, xid string) ([]string, erro
 		if _, err := tx.Commit(context.Background()); err != nil {
 			return lockKeys, err
 		}
+	} else {
+		if _, err := tx.Commit(context.Background()); err != nil {
+			return lockKeys, err
+		}
 	}
 	return lockKeys, nil
 }
