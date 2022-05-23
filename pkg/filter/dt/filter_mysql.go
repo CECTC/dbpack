@@ -40,8 +40,8 @@ import (
 const (
 	mysqlFilter    = "MysqlDistributedTransaction"
 	beforeImage    = "BeforeImage"
-	XID            = "x_dbpack_xid"
-	BranchID       = "x_dbpack_branch_id"
+	XID            = "x-dbpack-xid"
+	BranchID       = "x-dbpack-branch-id"
 	hintXID        = "XID"
 	hintGlobalLock = "GlobalLock"
 )
@@ -91,7 +91,7 @@ type _mysqlFilter struct {
 	lockRetryTimes    int
 }
 
-func (f *_mysqlFilter) GetName() string {
+func (f *_mysqlFilter) GetKind() string {
 	return mysqlFilter
 }
 

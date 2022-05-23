@@ -83,7 +83,7 @@ var (
 				if err != nil {
 					panic(errors.WithMessagef(err, "failed to create filter: %s", filterConf.Name))
 				}
-				filter.RegisterFilter(f.GetName(), f)
+				filter.RegisterFilter(filterConf.Name, f)
 			}
 
 			resource.InitDBManager(conf.DataSources, func(dbName, dsn string) pools.Factory {
