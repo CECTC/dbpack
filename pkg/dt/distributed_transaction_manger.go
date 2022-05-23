@@ -270,24 +270,29 @@ func (manager *DistributedTransactionManager) processNextGlobalSession(ctx conte
 	defer manager.globalSessionQueue.Done(obj)
 
 	gs := obj.(*api.GlobalSession)
-	if gs.Status == api.Begin {
-		if isGlobalSessionTimeout(gs) {
-			_, err := manager.Rollback(context.Background(), gs.XID)
+	newGlobalSession, err := manager.storageDriver.GetGlobalSession(ctx, gs.XID)
+	if err != nil {
+		log.Error(err)
+		return true
+	}
+	if newGlobalSession.Status == api.Begin {
+		if isGlobalSessionTimeout(newGlobalSession) {
+			_, err := manager.Rollback(context.Background(), newGlobalSession.XID)
 			if err != nil {
 				log.Error(err)
 			}
 		}
 	}
-	if gs.Status == api.Committing || gs.Status == api.Rollbacking {
-		bsKeys, err := manager.storageDriver.GetBranchSessionKeys(context.Background(), gs.XID)
+	if newGlobalSession.Status == api.Committing || newGlobalSession.Status == api.Rollbacking {
+		bsKeys, err := manager.storageDriver.GetBranchSessionKeys(context.Background(), newGlobalSession.XID)
 		if err != nil {
 			log.Error(err)
 		}
 		if len(bsKeys) == 0 {
-			if err := manager.storageDriver.DeleteGlobalSession(context.Background(), gs.XID); err != nil {
+			if err := manager.storageDriver.DeleteGlobalSession(context.Background(), newGlobalSession.XID); err != nil {
 				log.Error(err)
 			}
-			log.Debugf("global session finished, key: %s", gs.XID)
+			log.Debugf("global session finished, key: %s", newGlobalSession.XID)
 		}
 	}
 	return true
