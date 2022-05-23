@@ -54,7 +54,8 @@ func main() {
 }
 
 var (
-	Version = "0.1.0"
+	Version             = "0.1.0"
+	defaultExporterPort = 18888
 
 	configPath string
 
@@ -165,14 +166,22 @@ var (
 				os.Exit(1) // second signal. Exit directly.
 			}()
 
-			dbpack.Start(ctx)
+			// init metrics for prometheus server scrape.
+			// default listen at 18888
+			var lis net.Listener
+			var lisErr error
 			if conf.ExporterPort != nil {
-				lis, err := net.Listen("tcp4", fmt.Sprintf(":%d", *conf.ExporterPort))
-				if err != nil {
-					panic(err)
-				}
-				go initMetrics(ctx, lis)
+				lis, lisErr = net.Listen("tcp4", fmt.Sprintf(":%d", *conf.ExporterPort))
+			} else {
+				lis, lisErr = net.Listen("tcp4", fmt.Sprintf(":%d", defaultExporterPort))
 			}
+
+			if lisErr != nil {
+				log.Fatalf("unable init metrics server: %+v", lisErr)
+			}
+			go initMetrics(ctx, lis)
+
+			dbpack.Start(ctx)
 		},
 	}
 )
