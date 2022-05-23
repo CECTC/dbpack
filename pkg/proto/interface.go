@@ -47,7 +47,7 @@ type (
 	}
 
 	Filter interface {
-		GetName() string
+		GetKind() string
 	}
 
 	HttpPreFilter interface {

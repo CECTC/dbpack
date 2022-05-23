@@ -58,7 +58,7 @@ type _connectionMetricFilter struct {
 	timeKey                      string
 }
 
-func (f *_connectionMetricFilter) GetName() string {
+func (f *_connectionMetricFilter) GetKind() string {
 	return connectionMetricFilter
 }
 

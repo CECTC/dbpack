@@ -96,7 +96,7 @@ type _httpFilter struct {
 	tccResources     map[string]*TCCResource
 }
 
-func (f *_httpFilter) GetName() string {
+func (f *_httpFilter) GetKind() string {
 	return httpFilter
 }
 
