@@ -40,6 +40,7 @@ func (f *_httpFilter) handleHttp1GlobalBegin(ctx *fasthttp.RequestCtx, transacti
 			transactionInfo, err)
 	}
 	ctx.SetUserValue(XID, xid)
+	ctx.SetUserValue(TransactionName, transactionInfo.RequestPath)
 	ctx.Request.Header.Add(XID, xid)
 	return true, nil
 }
@@ -47,6 +48,7 @@ func (f *_httpFilter) handleHttp1GlobalBegin(ctx *fasthttp.RequestCtx, transacti
 func (f *_httpFilter) handleHttp1GlobalEnd(ctx *fasthttp.RequestCtx) error {
 	xidParam := ctx.UserValue(XID)
 	xid := xidParam.(string)
+
 	if ctx.Response.StatusCode() == http.StatusOK {
 		err := f.globalCommit(ctx, xid)
 		if err != nil {
@@ -130,7 +132,6 @@ func (f *_httpFilter) globalCommit(ctx context.Context, xid string) error {
 
 	transactionManager := dt.GetDistributedTransactionManager()
 	status, err = transactionManager.Commit(ctx, xid)
-
 	log.Infof("[%s] commit status: %s", xid, status.String())
 	return err
 }
@@ -143,7 +144,6 @@ func (f *_httpFilter) globalRollback(ctx context.Context, xid string) error {
 
 	transactionManager := dt.GetDistributedTransactionManager()
 	status, err = transactionManager.Rollback(ctx, xid)
-
 	log.Infof("[%s] rollback status: %s", xid, status.String())
 	return err
 }

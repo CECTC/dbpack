@@ -37,12 +37,13 @@ import (
 )
 
 const (
-	mysqlFilter    = "MysqlDistributedTransaction"
-	beforeImage    = "BeforeImage"
-	XID            = "x-dbpack-xid"
-	BranchID       = "x-dbpack-branch-id"
-	hintXID        = "XID"
-	hintGlobalLock = "GlobalLock"
+	mysqlFilter     = "MysqlDistributedTransaction"
+	beforeImage     = "BeforeImage"
+	XID             = "x-dbpack-xid"
+	BranchID        = "x-dbpack-branch-id"
+	hintXID         = "XID"
+	hintGlobalLock  = "GlobalLock"
+	TransactionName = "transaction_name"
 )
 
 func init() {
@@ -193,7 +194,7 @@ func (f *_mysqlFilter) registerBranchTransaction(ctx context.Context, xid, resou
 		ApplicationData: nil,
 	}
 	for retryCount := 0; retryCount < f.lockRetryTimes; retryCount++ {
-		_, branchID, err = dt.GetDistributedTransactionManager().BranchRegister(context.Background(), br)
+		_, branchID, err = dt.GetDistributedTransactionManager().BranchRegister(ctx, br)
 		if err == nil {
 			break
 		}

@@ -25,11 +25,13 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/cectc/dbpack/pkg/config"
 	"github.com/cectc/dbpack/pkg/dt/api"
 	"github.com/cectc/dbpack/pkg/dt/storage"
+	"github.com/cectc/dbpack/pkg/filter/metrics"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/misc/uuid"
@@ -57,6 +59,7 @@ func InitDistributedTransactionManager(conf *config.DistributedTransaction, stor
 	if conf.RetryDeadThreshold == 0 {
 		conf.RetryDeadThreshold = DefaultRetryDeadThreshold
 	}
+
 	manager = &DistributedTransactionManager{
 		applicationID:                    conf.ApplicationID,
 		storageDriver:                    storageDriver,
@@ -90,9 +93,15 @@ type DistributedTransactionManager struct {
 	storageDriver                    storage.Driver
 	retryDeadThreshold               int64
 	rollbackRetryTimeoutUnlockEnable bool
+	metricCtl                        prometheus.Counter
 
 	globalSessionQueue workqueue.DelayingInterface
 	branchSessionQueue workqueue.Interface
+}
+
+func (manager *DistributedTransactionManager) recordGlobalTransactionMetric(transactionName string, transactionStatus string) {
+	metrics.GlobalTransactionCounter.WithLabelValues(manager.applicationID, transactionName, metrics.TransactionStatusActive).Desc()
+	metrics.GlobalTransactionCounter.WithLabelValues(manager.applicationID, transactionName, transactionStatus).Inc()
 }
 
 func (manager *DistributedTransactionManager) Begin(ctx context.Context, transactionName string, timeout int32) (string, error) {
@@ -110,6 +119,7 @@ func (manager *DistributedTransactionManager) Begin(ctx context.Context, transac
 	if err := manager.storageDriver.AddGlobalSession(ctx, gt); err != nil {
 		return "", err
 	}
+	metrics.GlobalTransactionCounter.WithLabelValues(manager.applicationID, transactionName, metrics.TransactionStatusActive).Inc()
 	manager.globalSessionQueue.AddAfter(gt, time.Duration(timeout)*time.Millisecond)
 	log.Infof("successfully begin global transaction xid = {%s}", gt.XID)
 	return xid, nil
@@ -144,6 +154,7 @@ func (manager *DistributedTransactionManager) BranchRegister(ctx context.Context
 	if err := manager.storageDriver.AddBranchSession(ctx, bs); err != nil {
 		return "", 0, err
 	}
+	metrics.BranchTransactionCounter.WithLabelValues(manager.applicationID, in.ResourceID, metrics.TransactionStatusActive).Inc()
 	return branchID, branchSessionID, nil
 }
 
@@ -220,14 +231,15 @@ func (manager *DistributedTransactionManager) _branchRollback(bs *api.BranchSess
 }
 
 func (manager *DistributedTransactionManager) processGlobalSessions() error {
-	globalSessions, err := manager.storageDriver.ListGlobalSession(context.Background(), manager.applicationID)
+	ctx := context.Background()
+	globalSessions, err := manager.storageDriver.ListGlobalSession(ctx, manager.applicationID)
 	if err != nil {
 		return err
 	}
 	for _, gs := range globalSessions {
 		if gs.Status == api.Begin {
 			if isGlobalSessionTimeout(gs) {
-				if _, err := manager.Rollback(context.Background(), gs.XID); err != nil {
+				if _, err := manager.Rollback(ctx, gs.XID); err != nil {
 					return err
 				}
 			}
@@ -244,11 +256,18 @@ func (manager *DistributedTransactionManager) processGlobalSessions() error {
 			if err != nil {
 				return err
 			}
+			// branch session has been committed or rollbacked
 			if len(bsKeys) == 0 {
 				if err := manager.storageDriver.DeleteGlobalSession(context.Background(), gs.XID); err != nil {
 					return err
 				}
 				log.Debugf("global session finished, key: %s", gs.XID)
+			}
+			switch gs.Status {
+			case api.Committing:
+				manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusCommitted)
+			case api.Rollbacking:
+				manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusRollback)
 			}
 		}
 	}
@@ -283,7 +302,7 @@ func (manager *DistributedTransactionManager) processNextGlobalSession(ctx conte
 	}
 	if newGlobalSession.Status == api.Begin {
 		if isGlobalSessionTimeout(newGlobalSession) {
-			_, err := manager.Rollback(context.Background(), newGlobalSession.XID)
+			_, err = manager.Rollback(context.Background(), newGlobalSession.XID)
 			if err != nil {
 				log.Error(err)
 			}
@@ -299,6 +318,12 @@ func (manager *DistributedTransactionManager) processNextGlobalSession(ctx conte
 				log.Error(err)
 			}
 			log.Debugf("global session finished, key: %s", newGlobalSession.XID)
+			switch newGlobalSession.Status {
+			case api.Committing:
+				manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusCommitted)
+			case api.Rollbacking:
+				manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusRollback)
+			}
 		}
 	}
 	return true
@@ -356,8 +381,14 @@ func (manager *DistributedTransactionManager) processNextBranchSession(ctx conte
 	defer manager.branchSessionQueue.Done(obj)
 
 	bs := obj.(*api.BranchSession)
+	var (
+		status api.BranchSession_BranchStatus
+		transactionStatus string
+		err error
+	)
 	if bs.Status == api.PhaseTwoCommitting {
-		status, err := manager.branchCommit(bs)
+		transactionStatus = metrics.TransactionStatusCommitted
+		status, err = manager.branchCommit(bs)
 		if err != nil {
 			log.Error(err)
 			manager.branchSessionQueue.Add(obj)
@@ -367,14 +398,15 @@ func (manager *DistributedTransactionManager) processNextBranchSession(ctx conte
 		}
 	}
 	if bs.Status == api.PhaseTwoRollbacking {
+		transactionStatus = metrics.TransactionStatusRollback
 		if manager.IsRollingBackDead(bs) {
 			if manager.rollbackRetryTimeoutUnlockEnable {
-				if _, err := manager.storageDriver.ReleaseLockKeys(context.Background(), bs.ResourceID, []string{bs.LockKey}); err != nil {
+				if _, err := manager.storageDriver.ReleaseLockKeys(ctx, bs.ResourceID, []string{bs.LockKey}); err != nil {
 					log.Error(err)
 				}
 			}
 		} else {
-			status, err := manager.branchRollback(bs)
+			status, err = manager.branchRollback(bs)
 			if err != nil {
 				log.Error(err)
 				manager.branchSessionQueue.Add(obj)
@@ -384,6 +416,14 @@ func (manager *DistributedTransactionManager) processNextBranchSession(ctx conte
 			}
 		}
 	}
+
+	if status == api.Complete {
+		metrics.BranchTransactionTimer.WithLabelValues(manager.applicationID, bs.ResourceID, transactionStatus).Observe(
+			float64(int64(misc.CurrentTimeMillis()) - bs.BeginTime))
+		metrics.BranchTransactionCounter.WithLabelValues(manager.applicationID, bs.ResourceID, metrics.TransactionStatusActive).Desc()
+		metrics.BranchTransactionCounter.WithLabelValues(manager.applicationID, bs.ResourceID, transactionStatus).Inc()
+	}
+
 	return true
 }
 
