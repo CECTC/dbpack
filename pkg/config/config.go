@@ -44,7 +44,7 @@ type Configuration struct {
 
 	TerminationDrainDuration time.Duration `yaml:"termination_drain_duration" json:"termination_drain_duration"`
 
-	ExporterPort *int `yaml:"exporter_port"`
+	HTTPListenPort *int `yaml:"http_listen_port"`
 }
 
 type (

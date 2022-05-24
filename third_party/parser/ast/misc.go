@@ -20,11 +20,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pingcap/errors"
+
 	"github.com/cectc/dbpack/third_party/parser/auth"
 	"github.com/cectc/dbpack/third_party/parser/format"
 	"github.com/cectc/dbpack/third_party/parser/model"
 	"github.com/cectc/dbpack/third_party/parser/mysql"
-	"github.com/pingcap/errors"
 )
 
 var (

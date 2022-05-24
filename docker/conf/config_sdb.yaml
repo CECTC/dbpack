@@ -45,4 +45,4 @@ distributed_transaction:
     endpoints:
       - etcd:2379
 
-exporter_port: 9999
+http_listen_port: 9999

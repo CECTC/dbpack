@@ -26,12 +26,13 @@ import (
 
 	"github.com/pingcap/log"
 
-	"github.com/cectc/dbpack/third_party/parser/mysql"
-	"github.com/cectc/dbpack/third_party/parser/terror"
 	"github.com/pingcap/errors"
 	"github.com/pingcap/tidb/sessionctx/stmtctx"
 	tidbMath "github.com/pingcap/tidb/util/math"
 	"github.com/pingcap/tidb/util/parser"
+
+	"github.com/cectc/dbpack/third_party/parser/mysql"
+	"github.com/cectc/dbpack/third_party/parser/terror"
 )
 
 // Time format without fractional seconds precision.

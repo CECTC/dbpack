@@ -19,6 +19,7 @@ default: fmt errcheck
 ########################################################
 fmt: ## Format the files
 	@gofmt -l -w $(GO_FILES)
+	@goimports -w --local $(PKG) .
 
 ########################################################
 fmtcheck: ## Check and format the files
