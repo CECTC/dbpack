@@ -19,7 +19,6 @@ package executor
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -30,7 +29,6 @@ import (
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/third_party/parser/ast"
-	driver "github.com/cectc/dbpack/third_party/types/parser_driver"
 )
 
 type SingleDBExecutor struct {
@@ -139,9 +137,7 @@ func (executor *SingleDBExecutor) ExecutorComQuery(ctx context.Context, sql stri
 	db = resource.GetDBManager().GetDB(executor.dataSource)
 	switch stmt := queryStmt.(type) {
 	case *ast.SetStmt:
-		if len(stmt.Variables) == 1 &&
-			strings.EqualFold(stmt.Variables[0].Name, "autocommit") &&
-			stmt.Variables[0].Value.(*driver.ValueExpr).GetValue() == int64(0) {
+		if shouldStartTransaction(stmt) {
 			tx, result, err = db.Begin(ctx)
 			if err != nil {
 				return nil, 0, err

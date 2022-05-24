@@ -19,7 +19,6 @@ package executor
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -31,7 +30,6 @@ import (
 	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/third_party/parser/ast"
-	driver "github.com/cectc/dbpack/third_party/types/parser_driver"
 )
 
 type ReadWriteSplittingExecutor struct {
@@ -159,9 +157,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 
 	switch stmt := queryStmt.(type) {
 	case *ast.SetStmt:
-		if len(stmt.Variables) == 1 &&
-			strings.EqualFold(stmt.Variables[0].Name, "autocommit") &&
-			stmt.Variables[0].Value.(*driver.ValueExpr).String() == "0" {
+		if shouldStartTransaction(stmt) {
 			db = executor.masters.Next(proto.WithMaster(ctx)).(*DataSourceBrief)
 			tx, result, err = db.DB.Begin(ctx)
 			if err != nil {
