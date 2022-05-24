@@ -19,7 +19,6 @@ package executor
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -30,10 +29,7 @@ import (
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/third_party/parser/ast"
-	driver "github.com/cectc/dbpack/third_party/types/parser_driver"
 )
-
-const off = "off"
 
 type SingleDBExecutor struct {
 	PreFilters  []proto.DBPreFilter
@@ -141,36 +137,21 @@ func (executor *SingleDBExecutor) ExecutorComQuery(ctx context.Context, sql stri
 	db = resource.GetDBManager().GetDB(executor.dataSource)
 	switch stmt := queryStmt.(type) {
 	case *ast.SetStmt:
-		if len(stmt.Variables) == 1 && strings.EqualFold(stmt.Variables[0].Name, "autocommit") {
-			shouldStartTransaction := false
-			switch exprType := stmt.Variables[0].Value.(type) {
-			case *driver.ValueExpr:
-				if exprType.GetValue() == int64(0) {
-					shouldStartTransaction = true
-				}
-			case *ast.ColumnNameExpr:
-				if strings.EqualFold(exprType.Name.String(), off) {
-					shouldStartTransaction = true
-				}
+		if shouldStartTransaction(stmt) {
+			tx, result, err = db.Begin(ctx)
+			if err != nil {
+				return nil, 0, err
 			}
-
-			if shouldStartTransaction {
-				tx, result, err = db.Begin(ctx)
-				if err != nil {
-					return nil, 0, err
-				}
-				executor.localTransactionMap.Store(connectionID, tx)
-				return result, 0, nil
-			} else {
-				txi, ok := executor.localTransactionMap.Load(connectionID)
-				if ok {
-					tx = txi.(proto.Tx)
-					return tx.Query(ctx, sql)
-				}
-				return db.Query(ctx, sql)
+			executor.localTransactionMap.Store(connectionID, tx)
+			return result, 0, nil
+		} else {
+			txi, ok := executor.localTransactionMap.Load(connectionID)
+			if ok {
+				tx = txi.(proto.Tx)
+				return tx.Query(ctx, sql)
 			}
+			return db.Query(ctx, sql)
 		}
-		return nil, 0, err
 	case *ast.BeginStmt:
 		tx, result, err = db.Begin(ctx)
 		if err != nil {
