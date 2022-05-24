@@ -59,11 +59,13 @@ func (factory *httpFactory) NewFilter(config map[string]interface{}) (proto.Filt
 	}
 
 	for _, ti := range filterConfig.TransactionInfos {
-		f.transactionInfos[ti.RequestPath] = ti
+		f.transactionInfos[strings.ToLower(ti.RequestPath)] = ti
+		log.Debugf("proxy %s, will create global transaction, put xid into request header", ti.RequestPath)
 	}
 
 	for _, r := range filterConfig.TCCResources {
-		f.tccResources[r.PrepareRequestPath] = r
+		f.tccResources[strings.ToLower(r.PrepareRequestPath)] = r
+		log.Debugf("proxy %s, will register branch transaction", r.PrepareRequestPath)
 	}
 	return f, nil
 }
