@@ -48,7 +48,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: dklockdown/dbpack
+          images: cectc/dbpack
 
       - name: Build and push
         uses: docker/build-push-action@v2
