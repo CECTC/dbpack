@@ -14,21 +14,15 @@
  * limitations under the License.
  */
 
-package main
+package http
 
 import (
-	"net/http"
-
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func registerRoutes() (http.Handler, error) {
-	router := mux.NewRouter().SkipClean(true).UseEncodedPath()
-	// Add healthcheck router
-	registerHealthCheckRouter(router)
-
-	// Add server metrics router
-	registerMetricsRouter(router)
-
-	return router, nil
+// registerMetricsRouter - add handler functions for metrics.
+func registerMetricsRouter(router *mux.Router) {
+	// metrics router
+	router.Path("/metrics").Handler(promhttp.Handler())
 }

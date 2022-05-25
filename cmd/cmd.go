@@ -39,6 +39,7 @@ import (
 	"github.com/cectc/dbpack/pkg/filter"
 	_ "github.com/cectc/dbpack/pkg/filter/dt"
 	_ "github.com/cectc/dbpack/pkg/filter/metrics"
+	dbpackHttp "github.com/cectc/dbpack/pkg/http"
 	"github.com/cectc/dbpack/pkg/listener"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/proto"
@@ -196,7 +197,7 @@ func initServer(ctx context.Context, lis net.Listener) {
 		<-ctx.Done()
 		lis.Close()
 	}()
-	handler, err := registerRoutes()
+	handler, err := dbpackHttp.RegisterRoutes()
 	if err != nil {
 		log.Fatalf("failed to init handler: %+v", err)
 		return
