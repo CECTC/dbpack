@@ -17,7 +17,7 @@
 package schema
 
 import (
-	"github.com/pkg/errors"
+	"github.com/cectc/dbpack/pkg/log"
 )
 
 type TableMeta struct {
@@ -38,10 +38,10 @@ func (meta TableMeta) GetPrimaryKeyMap() map[string]ColumnMeta {
 		}
 	}
 	if len(pk) > 1 {
-		panic(errors.Errorf("%s contains multi PK, but current not support.", meta.TableName))
+		log.Panicf("%s contains multi PK, but current not support.", meta.TableName)
 	}
 	if len(pk) < 1 {
-		panic(errors.Errorf("%s needs to contain the primary key.", meta.TableName))
+		log.Panicf("%s needs to contain the primary key.", meta.TableName)
 	}
 	return pk
 }

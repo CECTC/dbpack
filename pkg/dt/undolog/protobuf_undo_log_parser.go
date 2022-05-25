@@ -19,11 +19,11 @@ package undolog
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"reflect"
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/pkg/errors"
 	"vimagination.zapto.org/byteio"
 
 	"github.com/cectc/dbpack/pkg/constant"
@@ -46,7 +46,7 @@ func (parser ProtoBufUndoLogParser) Encode(branchUndoLog *BranchUndoLog) []byte 
 	pbBranchUndoLog := convertBranchSqlUndoLog(branchUndoLog)
 	data, err := proto.Marshal(pbBranchUndoLog)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	return data
 }
@@ -55,7 +55,7 @@ func (parser ProtoBufUndoLogParser) Decode(data []byte) *BranchUndoLog {
 	var pbBranchUndoLog = &PbBranchUndoLog{}
 	err := proto.Unmarshal(data, pbBranchUndoLog)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	return convertPbBranchSqlUndoLog(pbBranchUndoLog)
@@ -65,7 +65,7 @@ func (parser ProtoBufUndoLogParser) EncodeSqlUndoLog(undoLog *SqlUndoLog) []byte
 	pbSqlUndoLog := convertSqlUndoLog(undoLog)
 	data, err := proto.Marshal(pbSqlUndoLog)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	return data
 }
@@ -73,7 +73,7 @@ func (parser ProtoBufUndoLogParser) EncodeSqlUndoLog(undoLog *SqlUndoLog) []byte
 func (parser ProtoBufUndoLogParser) DecodeSqlUndoLog(data []byte) *SqlUndoLog {
 	var pbSqlUndoLog = &PbSqlUndoLog{}
 	if err := proto.Unmarshal(data, pbSqlUndoLog); err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 
 	return convertPbSqlUndoLog(pbSqlUndoLog)
@@ -125,7 +125,7 @@ func convertField(field *schema.Field) *PbField {
 		w.WriteByte(byte(constant.FieldTypeTime))
 		w.Write(b)
 	default:
-		panic(errors.Errorf("unsupported types:%s,%v", reflect.TypeOf(field.Value).String(), field.Value))
+		log.Panicf("unsupported types:%s,%v", reflect.TypeOf(field.Value).String(), field.Value)
 	}
 	pbField.Value = buf.Bytes()
 	return pbField
@@ -162,7 +162,7 @@ func convertPbField(pbField *PbField) *schema.Field {
 			loc,
 		)
 		if err != nil {
-			panic(err)
+			log.Panic(err)
 		}
 		field.Value = t
 		break

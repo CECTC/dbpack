@@ -150,7 +150,7 @@ func (storage Storage) Type() string {
 		storageType = append(storageType, k)
 	}
 	if len(storageType) > 1 {
-		panic("multiple storage drivers specified in distributed transaction config: " + strings.Join(storageType, ", "))
+		log.Panic("multiple storage drivers specified in distributed transaction config: " + strings.Join(storageType, ", "))
 	}
 	if len(storageType) == 1 {
 		return storageType[0]

@@ -16,7 +16,9 @@
 
 package schema
 
-import "github.com/pkg/errors"
+import (
+	"github.com/cectc/dbpack/pkg/log"
+)
 
 type Row struct {
 	Fields []*Field
@@ -30,7 +32,7 @@ func (row *Row) PrimaryKeys() []*Field {
 		}
 	}
 	if len(fields) > 1 {
-		panic(errors.New("Multi-PK"))
+		log.Panicf("Multi-PK")
 	}
 	return fields
 }
