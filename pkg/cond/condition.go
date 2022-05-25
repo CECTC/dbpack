@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/cectc/dbpack/pkg/function"
+	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 	"github.com/cectc/dbpack/third_party/parser/opcode"
@@ -356,7 +357,7 @@ func ParseCompareExpression(expr *ast.BinaryOperationExpr, args ...interface{}) 
 		case opcode.LE:
 			result = compareResult <= 0
 		default:
-			panic(fmt.Sprintf("unsupported binary compare operation %s!", expr.Op))
+			log.Panicf("unsupported binary compare operation %s!", expr.Op)
 		}
 
 		if result {
@@ -394,7 +395,7 @@ func ParseCompareExpression(expr *ast.BinaryOperationExpr, args ...interface{}) 
 		case opcode.GE:
 			op = opcode.LE
 		default:
-			panic(fmt.Sprintf("unsupported binary compare operation %s!", expr.Op))
+			log.Panicf("unsupported binary compare operation %s!", expr.Op)
 		}
 	}
 	return &KeyCondition{

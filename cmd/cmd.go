@@ -77,11 +77,11 @@ var (
 			for _, filterConf := range conf.Filters {
 				factory := filter.GetFilterFactory(filterConf.Kind)
 				if factory == nil {
-					panic(errors.Errorf("there is no filter factory for filter: %s", filterConf.Name))
+					log.Fatalf("there is no filter factory for filter: %s", filterConf.Kind)
 				}
 				f, err := factory.NewFilter(filterConf.Config)
 				if err != nil {
-					panic(errors.WithMessagef(err, "failed to create filter: %s", filterConf.Name))
+					log.Fatal(errors.WithMessagef(err, "failed to create filter: %s", filterConf.Name))
 				}
 				filter.RegisterFilter(filterConf.Name, f)
 			}
@@ -89,7 +89,7 @@ var (
 			resource.InitDBManager(conf.DataSources, func(dbName, dsn string) pools.Factory {
 				collector, err := driver.NewConnector(dbName, dsn)
 				if err != nil {
-					panic(err)
+					log.Fatal(err)
 				}
 				return collector.NewBackendConnection
 			})
@@ -99,21 +99,21 @@ var (
 				if executorConf.Mode == config.SDB {
 					executor, err := executor.NewSingleDBExecutor(executorConf)
 					if err != nil {
-						panic(err)
+						log.Fatal(err)
 					}
 					executors[executorConf.Name] = executor
 				}
 				if executorConf.Mode == config.RWS {
 					executor, err := executor.NewReadWriteSplittingExecutor(executorConf)
 					if err != nil {
-						panic(err)
+						log.Fatal(err)
 					}
 					executors[executorConf.Name] = executor
 				}
 				if executorConf.Mode == config.SHD {
 					executor, err := executor.NewShardingExecutor(executorConf)
 					if err != nil {
-						panic(err)
+						log.Fatal(err)
 					}
 					executors[executorConf.Name] = executor
 				}
