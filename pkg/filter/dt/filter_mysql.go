@@ -99,7 +99,14 @@ func (f *_mysqlFilter) PreHandle(ctx context.Context, conn proto.Connection) err
 	var err error
 	bc := conn.(*driver.BackendConnection)
 	commandType := proto.CommandType(ctx)
-	if commandType == constant.ComStmtExecute {
+	switch commandType {
+	case constant.ComQuery:
+		stmt := proto.QueryStmt(ctx)
+		if stmt == nil {
+			return errors.New("query stmt should not be nil")
+		}
+		// todo process distributed transaction of comQuery request
+	case constant.ComStmtExecute:
 		stmt := proto.PrepareStmt(ctx)
 		if stmt == nil {
 			return errors.New("prepare stmt should not be nil")
@@ -112,6 +119,8 @@ func (f *_mysqlFilter) PreHandle(ctx context.Context, conn proto.Connection) err
 		default:
 			return nil
 		}
+	default:
+		return errors.New("should never happen!")
 	}
 	return err
 }
@@ -120,7 +129,14 @@ func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn
 	var err error
 	bc := conn.(*driver.BackendConnection)
 	commandType := proto.CommandType(ctx)
-	if commandType == constant.ComStmtExecute {
+	switch commandType {
+	case constant.ComQuery:
+		stmt := proto.QueryStmt(ctx)
+		if stmt == nil {
+			return errors.New("query stmt should not be nil")
+		}
+		// todo process distributed transaction of comQuery request
+	case constant.ComStmtExecute:
 		stmt := proto.PrepareStmt(ctx)
 		if stmt == nil {
 			return errors.New("prepare stmt should not be nil")
@@ -139,6 +155,8 @@ func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn
 		default:
 			return nil
 		}
+	default:
+		return errors.New("should never happen!")
 	}
 	return err
 }
