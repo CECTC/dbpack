@@ -62,7 +62,7 @@ version: ## Print git revision info
 
 ########################################################
 unit-test: ## run unit test
-	go test ./pkg/... -coverprofile=coverage.txt -covermode=atomic
+	go test -gcflags=all=-l ./pkg/... -coverprofile=coverage.txt -covermode=atomic
 
 ########################################################
 build-local:  ## build dbpack cli, and put in dist dir

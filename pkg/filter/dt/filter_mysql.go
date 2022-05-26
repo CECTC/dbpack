@@ -28,7 +28,6 @@ import (
 	"github.com/cectc/dbpack/pkg/driver"
 	"github.com/cectc/dbpack/pkg/dt"
 	"github.com/cectc/dbpack/pkg/dt/api"
-	"github.com/cectc/dbpack/pkg/dt/schema"
 	err2 "github.com/cectc/dbpack/pkg/errors"
 	"github.com/cectc/dbpack/pkg/filter"
 	"github.com/cectc/dbpack/pkg/log"
@@ -105,7 +104,14 @@ func (f *_mysqlFilter) PreHandle(ctx context.Context, conn proto.Connection) err
 		if stmt == nil {
 			return errors.New("query stmt should not be nil")
 		}
-		// todo process distributed transaction of comQuery request
+		switch stmtNode := stmt.(type) {
+		case *ast.DeleteStmt:
+			err = f.processBeforeQueryDelete(ctx, bc, stmtNode)
+		case *ast.UpdateStmt:
+			err = f.processBeforeQueryUpdate(ctx, bc, stmtNode)
+		default:
+			return nil
+		}
 	case constant.ComStmtExecute:
 		stmt := proto.PrepareStmt(ctx)
 		if stmt == nil {
@@ -113,9 +119,9 @@ func (f *_mysqlFilter) PreHandle(ctx context.Context, conn proto.Connection) err
 		}
 		switch stmtNode := stmt.StmtNode.(type) {
 		case *ast.DeleteStmt:
-			err = f.processBeforeDelete(ctx, bc, stmt, stmtNode)
+			err = f.processBeforePrepareDelete(ctx, bc, stmt, stmtNode)
 		case *ast.UpdateStmt:
-			err = f.processBeforeUpdate(ctx, bc, stmt, stmtNode)
+			err = f.processBeforePrepareUpdate(ctx, bc, stmt, stmtNode)
 		default:
 			return nil
 		}
@@ -135,7 +141,20 @@ func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn
 		if stmt == nil {
 			return errors.New("query stmt should not be nil")
 		}
-		// todo process distributed transaction of comQuery request
+		switch stmtNode := stmt.(type) {
+		case *ast.DeleteStmt:
+			err = f.processAfterQueryDelete(ctx, bc, stmtNode)
+		case *ast.InsertStmt:
+			err = f.processAfterQueryInsert(ctx, bc, result, stmtNode)
+		case *ast.UpdateStmt:
+			err = f.processAfterQueryUpdate(ctx, bc, stmtNode)
+		case *ast.SelectStmt:
+			if stmtNode.LockInfo != nil && stmtNode.LockInfo.LockType == ast.SelectLockForUpdate {
+				err = f.processSelectForQueryUpdate(ctx, bc, result, stmtNode)
+			}
+		default:
+			return nil
+		}
 	case constant.ComStmtExecute:
 		stmt := proto.PrepareStmt(ctx)
 		if stmt == nil {
@@ -143,14 +162,14 @@ func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn
 		}
 		switch stmtNode := stmt.StmtNode.(type) {
 		case *ast.DeleteStmt:
-			err = f.processAfterDelete(ctx, bc, result, stmt, stmtNode)
+			err = f.processAfterPrepareDelete(ctx, bc, stmt, stmtNode)
 		case *ast.InsertStmt:
-			err = f.processAfterInsert(ctx, bc, result, stmt, stmtNode)
+			err = f.processAfterPrepareInsert(ctx, bc, result, stmt, stmtNode)
 		case *ast.UpdateStmt:
-			err = f.processAfterUpdate(ctx, bc, result, stmt, stmtNode)
+			err = f.processAfterPrepareUpdate(ctx, bc, stmt, stmtNode)
 		case *ast.SelectStmt:
 			if stmtNode.LockInfo != nil && stmtNode.LockInfo.LockType == ast.SelectLockForUpdate {
-				err = f.processSelectForUpdate(ctx, bc, result, stmt, stmtNode)
+				err = f.processSelectForPrepareUpdate(ctx, bc, result, stmt, stmtNode)
 			}
 		default:
 			return nil
@@ -158,198 +177,6 @@ func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn
 	default:
 		return errors.New("should never happen!")
 	}
-	return err
-}
-
-func (f *_mysqlFilter) processBeforeDelete(ctx context.Context, conn *driver.BackendConnection, stmt *proto.Stmt, deleteStmt *ast.DeleteStmt) error {
-	if hasGlobalLockHint(deleteStmt.TableHints) {
-		executor := &globalLockExecutor{
-			conn:       conn,
-			isUpdate:   false,
-			deleteStmt: deleteStmt,
-			updateStmt: nil,
-		}
-		result, err := executor.Executable(ctx, f.lockRetryInterval, f.lockRetryTimes)
-		if err != nil {
-			return err
-		}
-		if !result {
-			return errors.New("resource locked by distributed transaction global lock!")
-		}
-		return nil
-	}
-	if has, _ := hasXIDHint(deleteStmt.TableHints); !has {
-		return nil
-	}
-	executor := &deleteExecutor{
-		conn: conn,
-		stmt: deleteStmt,
-		args: stmt.BindVars,
-	}
-	bi, err := executor.BeforeImage(ctx)
-	if err != nil {
-		return err
-	}
-	if !proto.WithVariable(ctx, beforeImage, bi) {
-		return errors.New("set before image failed")
-	}
-	return nil
-}
-
-func (f *_mysqlFilter) processBeforeUpdate(ctx context.Context, conn *driver.BackendConnection, stmt *proto.Stmt, updateStmt *ast.UpdateStmt) error {
-	if hasGlobalLockHint(updateStmt.TableHints) {
-		executor := &globalLockExecutor{
-			conn:       conn,
-			isUpdate:   true,
-			deleteStmt: nil,
-			updateStmt: updateStmt,
-		}
-		result, err := executor.Executable(ctx, f.lockRetryInterval, f.lockRetryTimes)
-		if err != nil {
-			return err
-		}
-		if !result {
-			return errors.New("resource locked by distributed transaction global lock!")
-		}
-		return nil
-	}
-	if has, _ := hasXIDHint(updateStmt.TableHints); !has {
-		return nil
-	}
-	executor := &updateExecutor{
-		conn: conn,
-		stmt: updateStmt,
-		args: stmt.BindVars,
-	}
-	bi, err := executor.BeforeImage(ctx)
-	if err != nil {
-		return err
-	}
-	if !proto.WithVariable(ctx, beforeImage, bi) {
-		return errors.New("set before image failed")
-	}
-	return nil
-}
-
-func (f *_mysqlFilter) processAfterDelete(ctx context.Context, conn *driver.BackendConnection,
-	result proto.Result, stmt *proto.Stmt, deleteStmt *ast.DeleteStmt) error {
-	has, xid := hasXIDHint(deleteStmt.TableHints)
-	if !has {
-		return nil
-	}
-
-	executor := &deleteExecutor{
-		conn: conn,
-		stmt: deleteStmt,
-		args: stmt.BindVars,
-	}
-	bi := proto.Variable(ctx, beforeImage)
-	if bi == nil {
-		return errors.New("before image should not be nil")
-	}
-	biValue := bi.(*schema.TableRecords)
-	schemaName := proto.Schema(ctx)
-	if schemaName == "" {
-		return errors.New("schema name should not be nil")
-	}
-
-	lockKeys := schema.BuildLockKey(biValue)
-	log.Debugf("delete, lockKey: %s", lockKeys)
-	undoLog := buildUndoItem(constant.SQLType_DELETE, schemaName, executor.GetTableName(), lockKeys, biValue, nil)
-
-	branchID, err := f.registerBranchTransaction(ctx, xid, conn.DataSourceName(), lockKeys)
-	if err != nil {
-		return err
-	}
-	log.Debugf("delete, branch id: %d", branchID)
-	return dt.GetUndoLogManager().InsertUndoLogWithNormal(conn, xid, branchID, undoLog)
-}
-
-func (f *_mysqlFilter) processAfterInsert(ctx context.Context, conn *driver.BackendConnection,
-	result proto.Result, stmt *proto.Stmt, insertStmt *ast.InsertStmt) error {
-	has, xid := hasXIDHint(insertStmt.TableHints)
-	if !has {
-		return nil
-	}
-
-	executor := &insertExecutor{
-		conn: conn,
-		stmt: insertStmt,
-		args: stmt.BindVars,
-	}
-	afterImage, err := executor.AfterImage(ctx, result)
-	if err != nil {
-		return err
-	}
-	schemaName := proto.Schema(ctx)
-	if schemaName == "" {
-		return errors.New("schema name should not be nil")
-	}
-
-	lockKeys := schema.BuildLockKey(afterImage)
-	log.Debugf("insert, lockKey: %s", lockKeys)
-	undoLog := buildUndoItem(constant.SQLType_INSERT, schemaName, executor.GetTableName(), lockKeys, nil, afterImage)
-
-	branchID, err := f.registerBranchTransaction(ctx, xid, conn.DataSourceName(), lockKeys)
-	if err != nil {
-		return err
-	}
-	log.Debugf("insert, branch id: %d", branchID)
-	return dt.GetUndoLogManager().InsertUndoLogWithNormal(conn, xid, branchID, undoLog)
-}
-
-func (f *_mysqlFilter) processAfterUpdate(ctx context.Context, conn *driver.BackendConnection,
-	result proto.Result, stmt *proto.Stmt, updateStmt *ast.UpdateStmt) error {
-	has, xid := hasXIDHint(updateStmt.TableHints)
-	if !has {
-		return nil
-	}
-
-	executor := &updateExecutor{
-		conn: conn,
-		stmt: updateStmt,
-		args: stmt.BindVars,
-	}
-	bi := proto.Variable(ctx, beforeImage)
-	if bi == nil {
-		return errors.New("before image should not be nil")
-	}
-	biValue := bi.(*schema.TableRecords)
-	afterImage, err := executor.AfterImage(ctx, biValue)
-	if err != nil {
-		return err
-	}
-	schemaName := proto.Schema(ctx)
-	if schemaName == "" {
-		return errors.New("schema name should not be nil")
-	}
-
-	lockKeys := schema.BuildLockKey(afterImage)
-	log.Debugf("update, lockKey: %s", lockKeys)
-	undoLog := buildUndoItem(constant.SQLType_UPDATE, schemaName, executor.GetTableName(), lockKeys, biValue, afterImage)
-
-	branchID, err := f.registerBranchTransaction(ctx, xid, conn.DataSourceName(), lockKeys)
-	if err != nil {
-		return err
-	}
-	log.Debugf("update, branch id: %d", branchID)
-	return dt.GetUndoLogManager().InsertUndoLogWithNormal(conn, xid, branchID, undoLog)
-}
-
-func (f *_mysqlFilter) processSelectForUpdate(ctx context.Context, conn *driver.BackendConnection,
-	result proto.Result, stmt *proto.Stmt, selectStmt *ast.SelectStmt) error {
-	has, _ := hasXIDHint(selectStmt.TableHints)
-	if !has {
-		return nil
-	}
-	executor := &selectForUpdateExecutor{
-		conn:              conn,
-		stmt:              selectStmt,
-		args:              stmt.BindVars,
-		lockRetryInterval: f.lockRetryInterval,
-		lockRetryTimes:    f.lockRetryTimes,
-	}
-	_, err := executor.Execute(ctx, result)
 	return err
 }
 
