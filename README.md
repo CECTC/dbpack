@@ -10,7 +10,7 @@
 ## Feature
 
 + support MYSQL protocol
-+ simple and easy distributed transaction solution
++ simple and easy distributed transaction solution inspired by kubernetes
 + support read write splitting，supports custom SQL routing via Hint
 + deployed as a sidecar，support any language
 + sharding: support query on sharded table, support order by，support limit
