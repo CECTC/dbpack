@@ -38,7 +38,7 @@ require (
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/text v0.3.7
 	google.golang.org/grpc v1.40.0
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	gopkg.in/yaml.v3 v3.0.0
 	k8s.io/client-go v0.23.5
 	vimagination.zapto.org/byteio v1.0.1
 )
