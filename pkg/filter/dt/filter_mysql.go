@@ -126,7 +126,7 @@ func (f *_mysqlFilter) PreHandle(ctx context.Context, conn proto.Connection) err
 			return nil
 		}
 	default:
-		return errors.New("should never happen!")
+		return nil
 	}
 	return err
 }
@@ -175,7 +175,7 @@ func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn
 			return nil
 		}
 	default:
-		return errors.New("should never happen!")
+		return nil
 	}
 	return err
 }
