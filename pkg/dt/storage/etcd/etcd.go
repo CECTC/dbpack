@@ -20,10 +20,12 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
+	"google.golang.org/grpc"
 
 	"github.com/cectc/dbpack/pkg/dt/api"
 	"github.com/cectc/dbpack/pkg/dt/storage"
@@ -46,6 +48,10 @@ type store struct {
 }
 
 func NewEtcdStore(config clientv3.Config) *store {
+	if config.DialTimeout == 0 {
+		config.DialTimeout = 5 * time.Second
+	}
+	config.DialOptions = append(config.DialOptions, []grpc.DialOption{grpc.WithBlock()}...)
 	client, err := clientv3.New(config)
 	if err != nil {
 		log.Fatal(err)
