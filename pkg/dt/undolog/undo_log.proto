@@ -22,12 +22,13 @@ import "table_records.proto";
 option go_package=".;undolog";
 
 message PbSqlUndoLog {
-    int32 SqlType = 1;
-    string SchemaName = 2;
-    string TableName = 3;
-    string LockKey = 4;
-    PbTableRecords BeforeImage = 5;
-    PbTableRecords AfterImage = 6;
+    bool IsBinary = 1;
+    int32 SqlType = 2;
+    string SchemaName = 3;
+    string TableName = 4;
+    string LockKey = 5;
+    PbTableRecords BeforeImage = 6;
+    PbTableRecords AfterImage = 7;
 }
 
 message PbBranchUndoLog {

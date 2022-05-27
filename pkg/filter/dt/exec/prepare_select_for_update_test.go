@@ -108,7 +108,7 @@ func getTableMetaPatch() *gomonkey.Patches {
 }
 
 func buildRecordsPatch() *gomonkey.Patches {
-	return gomonkey.ApplyFunc(schema.BuildRecords, func(meta schema.TableMeta, result *mysql.Result) *schema.TableRecords {
+	return gomonkey.ApplyFunc(schema.BuildBinaryRecords, func(meta schema.TableMeta, result *mysql.Result) *schema.TableRecords {
 		return &schema.TableRecords{
 			TableMeta: tableMeta,
 			TableName: "t",

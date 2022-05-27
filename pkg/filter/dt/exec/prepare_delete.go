@@ -66,7 +66,7 @@ func (executor *prepareDeleteExecutor) BeforeImage(ctx context.Context) (*schema
 	if err != nil {
 		return nil, err
 	}
-	return schema.BuildRecords(tableMeta, result), nil
+	return schema.BuildBinaryRecords(tableMeta, result), nil
 }
 
 func (executor *prepareDeleteExecutor) AfterImage(ctx context.Context) (*schema.TableRecords, error) {
@@ -89,26 +89,28 @@ func (executor *prepareDeleteExecutor) GetTableName() string {
 
 func (executor *prepareDeleteExecutor) buildBeforeImageSql(tableMeta schema.TableMeta) string {
 	var b strings.Builder
-	fmt.Fprint(&b, "SELECT ")
+	b.WriteString("SELECT ")
 	var i = 0
 	columnCount := len(tableMeta.Columns)
 	for _, column := range tableMeta.Columns {
-		fmt.Fprint(&b, misc.CheckAndReplace(column))
+		b.WriteString(misc.CheckAndReplace(column))
 		i = i + 1
 		if i < columnCount {
-			fmt.Fprint(&b, ",")
+			b.WriteByte(',')
 		} else {
-			fmt.Fprint(&b, " ")
+			b.WriteByte(' ')
 		}
 	}
-	fmt.Fprintf(&b, " FROM %s WHERE ", executor.GetTableName())
-	fmt.Fprint(&b, executor.GetWhereCondition())
-	fmt.Fprint(&b, " FOR UPDATE")
+	b.WriteString(fmt.Sprintf(" FROM %s WHERE ", executor.GetTableName()))
+	b.WriteString(executor.GetWhereCondition())
+	b.WriteString(" FOR UPDATE")
 	return b.String()
 }
 
 func (executor *prepareDeleteExecutor) GetWhereCondition() string {
 	var sb strings.Builder
-	executor.stmt.Where.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb))
+	if err := executor.stmt.Where.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+		log.Panic(err)
+	}
 	return sb.String()
 }

@@ -32,6 +32,7 @@ func getBranchUndoLog() *BranchUndoLog {
 		BranchID: 2000042936,
 		SqlUndoLogs: []*SqlUndoLog{
 			{
+				IsBinary:    true,
 				SqlType:     constant.SQLType_INSERT,
 				TableName:   "user",
 				BeforeImage: nil,

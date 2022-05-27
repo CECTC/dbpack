@@ -63,20 +63,20 @@ func BuildLockKey(lockKeyRecords *TableRecords) string {
 	}
 
 	var sb strings.Builder
-	fmt.Fprintf(&sb, lockKeyRecords.TableName)
-	fmt.Fprint(&sb, ":")
+	sb.WriteString(lockKeyRecords.TableName)
+	sb.WriteByte(':')
 	fields := lockKeyRecords.PKFields()
 	length := len(fields)
 	for i, field := range fields {
-		fmt.Fprint(&sb, field.Value)
+		sb.WriteString(fmt.Sprintf("%s", field.Value))
 		if i < length-1 {
-			fmt.Fprint(&sb, ",")
+			sb.WriteByte(',')
 		}
 	}
 	return sb.String()
 }
 
-func BuildRecords(meta TableMeta, result *mysql.Result) *TableRecords {
+func BuildBinaryRecords(meta TableMeta, result *mysql.Result) *TableRecords {
 	records := NewTableRecords(meta)
 	rs := make([]*Row, 0)
 
@@ -88,6 +88,45 @@ func BuildRecords(meta TableMeta, result *mysql.Result) *TableRecords {
 
 		binaryRow := mysql.BinaryRow{Row: row}
 		values, err := binaryRow.Decode()
+		if err != nil {
+			break
+		}
+		fields := make([]*Field, 0, len(result.Fields))
+		for i, col := range result.Fields {
+			field := &Field{
+				Name: col.FiledName(),
+				Type: meta.AllColumns[col.FiledName()].DataType,
+			}
+			if values[i] != nil {
+				field.Value = values[i].Val
+			}
+			if strings.EqualFold(col.FiledName(), meta.GetPKName()) {
+				field.KeyType = PrimaryKey
+			}
+			fields = append(fields, field)
+		}
+		r := &Row{Fields: fields}
+		rs = append(rs, r)
+	}
+	if len(rs) == 0 {
+		return nil
+	}
+	records.Rows = rs
+	return records
+}
+
+func BuildTextRecords(meta TableMeta, result *mysql.Result) *TableRecords {
+	records := NewTableRecords(meta)
+	rs := make([]*Row, 0)
+
+	for {
+		row, err := result.Rows.Next()
+		if err != nil {
+			break
+		}
+
+		textRow := mysql.TextRow{Row: row}
+		values, err := textRow.Decode()
 		if err != nil {
 			break
 		}

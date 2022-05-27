@@ -101,27 +101,27 @@ func (executor *prepareInsertExecutor) buildTableRecords(ctx context.Context, pk
 	if err != nil {
 		return nil, err
 	}
-	return schema.BuildRecords(tableMeta, result), nil
+	return schema.BuildBinaryRecords(tableMeta, result), nil
 }
 
 func (executor *prepareInsertExecutor) buildAfterImageSql(tableMeta schema.TableMeta, pkValues []interface{}) string {
-	var sb strings.Builder
-	fmt.Fprint(&sb, "SELECT ")
+	var b strings.Builder
+	b.WriteString("SELECT ")
 	var i = 0
 	columnCount := len(tableMeta.Columns)
 	for _, column := range tableMeta.Columns {
-		fmt.Fprint(&sb, misc.CheckAndReplace(column))
+		b.WriteString(misc.CheckAndReplace(column))
 		i = i + 1
 		if i < columnCount {
-			fmt.Fprint(&sb, ",")
+			b.WriteByte(',')
 		} else {
-			fmt.Fprint(&sb, " ")
+			b.WriteByte(' ')
 		}
 	}
-	fmt.Fprintf(&sb, "FROM %s ", executor.GetTableName())
-	fmt.Fprintf(&sb, " WHERE `%s` IN ", tableMeta.GetPKName())
-	fmt.Fprint(&sb, misc.MysqlAppendInParam(len(pkValues)))
-	return sb.String()
+	b.WriteString(fmt.Sprintf("FROM %s ", executor.GetTableName()))
+	b.WriteString(fmt.Sprintf(" WHERE `%s` IN ", tableMeta.GetPKName()))
+	b.WriteString(misc.MysqlAppendInParam(len(pkValues)))
+	return b.String()
 }
 
 func (executor *prepareInsertExecutor) getPKValuesByColumn(ctx context.Context) ([]interface{}, error) {
