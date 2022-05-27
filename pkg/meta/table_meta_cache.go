@@ -152,6 +152,7 @@ func GetColumns(ctx context.Context, db proto.DB, tableName string) ([]schema.Co
 		"`NUMERIC_PRECISION`, `NUMERIC_SCALE`, `IS_NULLABLE`, `COLUMN_COMMENT`, `COLUMN_DEFAULT`, `CHARACTER_OCTET_LENGTH`, " +
 		"`ORDINAL_POSITION`, `COLUMN_KEY`, `EXTRA`  FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = ? AND `TABLE_NAME` = ?"
 
+	// should use new context, otherwise, some filters will be executed repeatedly.
 	dataTable, _, err := db.ExecuteSql(context.Background(), s, schemaName, tn)
 	if err != nil {
 		return nil, err
@@ -241,6 +242,7 @@ func GetIndexes(ctx context.Context, db proto.DB, tableName string) ([]schema.In
 	s := "SELECT `INDEX_NAME`, `COLUMN_NAME`, `NON_UNIQUE`, `INDEX_TYPE`, `SEQ_IN_INDEX`, `COLLATION`, `CARDINALITY` " +
 		"FROM `INFORMATION_SCHEMA`.`STATISTICS` WHERE `TABLE_SCHEMA` = ? AND `TABLE_NAME` = ?"
 
+	// should use new context, otherwise, some filters will be executed repeatedly.
 	dataTable, _, err := db.ExecuteSql(context.Background(), s, schemaName, tn)
 	if err != nil {
 		return nil, err
