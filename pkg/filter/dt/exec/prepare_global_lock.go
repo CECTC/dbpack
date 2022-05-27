@@ -147,9 +147,13 @@ func (executor *prepareGlobalLockExecutor) buildBeforeImageSql(tableMeta schema.
 func (executor *prepareGlobalLockExecutor) GetWhereCondition() string {
 	var sb strings.Builder
 	if executor.isUpdate {
-		executor.updateStmt.Where.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb))
+		if err := executor.updateStmt.Where.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+			log.Panic(err)
+		}
 	} else {
-		executor.deleteStmt.Where.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb))
+		if err := executor.deleteStmt.Where.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+			log.Panic(err)
+		}
 	}
 	return sb.String()
 }

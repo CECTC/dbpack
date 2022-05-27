@@ -36,16 +36,20 @@ import (
 
 func TestSelectForUpdate(t *testing.T) {
 	testCases := []*struct {
-		sql          string
-		lockInterval time.Duration
-		lockTimes    int
-		expectedErr  error
+		sql                    string
+		lockInterval           time.Duration
+		lockTimes              int
+		expectedTableName      string
+		expectedWhereCondition string
+		expectedErr            error
 	}{
 		{
-			sql:          "select /*+ GlobalLock() */ * from T where id = ? for update",
-			lockInterval: 5 * time.Millisecond,
-			lockTimes:    3,
-			expectedErr:  err,
+			sql:                    "select /*+ GlobalLock() */ * from T where id = ? for update",
+			lockInterval:           5 * time.Millisecond,
+			lockTimes:              3,
+			expectedTableName:      "`T`",
+			expectedWhereCondition: "`id`=?",
+			expectedErr:            err,
 		},
 	}
 
@@ -86,6 +90,10 @@ func TestSelectForUpdate(t *testing.T) {
 
 			selectForUpdateStmt := stmt.(*ast.SelectStmt)
 			executor := NewPrepareSelectForUpdateExecutor(&driver.BackendConnection{}, selectForUpdateStmt, protoStmt.BindVars, &mysql.Result{})
+			tableName := executor.GetTableName()
+			assert.Equal(t, c.expectedTableName, tableName)
+			whereCondition := executor.(*prepareSelectForUpdateExecutor).GetWhereCondition()
+			assert.Equal(t, c.expectedWhereCondition, whereCondition)
 			_, executeErr := executor.Executable(ctx, c.lockInterval, c.lockTimes)
 			assert.Equal(t, c.expectedErr, executeErr)
 		})

@@ -124,39 +124,54 @@ var (
 
 func TestGlobalLock(t *testing.T) {
 	testCases := []*struct {
-		sql          string
-		isUpdate     bool
-		lockInterval time.Duration
-		lockTimes    int
-		expectedErr  error
+		sql                    string
+		isUpdate               bool
+		lockInterval           time.Duration
+		lockTimes              int
+		expectedTableName      string
+		expectedWhereCondition string
+		expectedBeforeImageSql string
+		expectedErr            error
 	}{
 		{
-			sql:          "delete /*+ GlobalLock() */ from T where id = ?",
-			isUpdate:     false,
-			lockInterval: 5 * time.Millisecond,
-			lockTimes:    3,
-			expectedErr:  err,
+			sql:                    "delete /*+ GlobalLock() */ from T where id = ?",
+			isUpdate:               false,
+			lockInterval:           5 * time.Millisecond,
+			lockTimes:              3,
+			expectedTableName:      "`T`",
+			expectedWhereCondition: "`id`=?",
+			expectedBeforeImageSql: "SELECT id,age  FROM `T` WHERE `id`=?",
+			expectedErr:            err,
 		},
 		{
-			sql:          "delete /*+ GlobalLock() */ from T where id = ?",
-			isUpdate:     false,
-			lockInterval: 5 * time.Millisecond,
-			lockTimes:    10,
-			expectedErr:  nil,
+			sql:                    "delete /*+ GlobalLock() */ from T where id = ?",
+			isUpdate:               false,
+			lockInterval:           5 * time.Millisecond,
+			lockTimes:              10,
+			expectedTableName:      "`T`",
+			expectedWhereCondition: "`id`=?",
+			expectedBeforeImageSql: "SELECT id,age  FROM `T` WHERE `id`=?",
+			expectedErr:            nil,
 		},
 		{
-			sql:          "update /*+ GlobalLock() */ T set age = 18 and id = ?",
-			isUpdate:     true,
-			lockInterval: 5 * time.Millisecond,
-			lockTimes:    3,
-			expectedErr:  err,
+			sql:                    "update /*+ GlobalLock() */ T set age = 18 where id = ?",
+			isUpdate:               true,
+			lockInterval:           5 * time.Millisecond,
+			lockTimes:              3,
+			expectedTableName:      "`T`",
+			expectedWhereCondition: "`id`=?",
+			expectedBeforeImageSql: "SELECT id,age  FROM `T` WHERE `id`=?",
+			expectedErr:            err,
 		},
 		{
-			sql:          "update /*+ GlobalLock() */ T set age = 18 and id = ?",
-			isUpdate:     true,
-			lockInterval: 5 * time.Millisecond,
-			lockTimes:    10,
-			expectedErr:  nil,
+			sql:                    "update /*+ GlobalLock() */ T set age = 18 where id = ?",
+			isUpdate:               true,
+			lockInterval:           5 * time.Millisecond,
+			lockTimes:              10,
+			expectedTableName:      "`T`",
+			expectedWhereCondition: "`id`=?",
+			expectedBeforeImageSql: "SELECT id,age  FROM `T` WHERE `id`=?",
+			expectedErr:            nil,
 		},
 	}
 
@@ -192,12 +207,22 @@ func TestGlobalLock(t *testing.T) {
 			}
 			ctx = proto.WithPrepareStmt(ctx, protoStmt)
 
+			var executor Executable
 			if c.isUpdate {
 				updateStmt := stmt.(*ast.UpdateStmt)
-				executor := NewPrepareGlobalLockExecutor(&driver.BackendConnection{}, c.isUpdate, nil, updateStmt, protoStmt.BindVars)
-				_, executeErr := executor.Executable(ctx, c.lockInterval, c.lockTimes)
-				assert.Equal(t, c.expectedErr, executeErr)
+				executor = NewPrepareGlobalLockExecutor(&driver.BackendConnection{}, c.isUpdate, nil, updateStmt, protoStmt.BindVars)
+			} else {
+				deleteStmt := stmt.(*ast.DeleteStmt)
+				executor = NewPrepareGlobalLockExecutor(&driver.BackendConnection{}, c.isUpdate, deleteStmt, nil, protoStmt.BindVars)
 			}
+			tableName := executor.GetTableName()
+			assert.Equal(t, c.expectedTableName, tableName)
+			whereCondition := executor.(*prepareGlobalLockExecutor).GetWhereCondition()
+			assert.Equal(t, c.expectedWhereCondition, whereCondition)
+			beforeImageSql := executor.(*prepareGlobalLockExecutor).buildBeforeImageSql(tableMeta)
+			assert.Equal(t, c.expectedBeforeImageSql, beforeImageSql)
+			_, executeErr := executor.Executable(ctx, c.lockInterval, c.lockTimes)
+			assert.Equal(t, c.expectedErr, executeErr)
 		})
 	}
 }
