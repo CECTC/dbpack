@@ -102,7 +102,7 @@ func (f *_mysqlFilter) processAfterQueryDelete(ctx context.Context, conn *driver
 
 	lockKeys := schema.BuildLockKey(biValue)
 	log.Debugf("delete, lockKey: %s", lockKeys)
-	undoLog := exec.BuildUndoItem(constant.SQLType_DELETE, schemaName, executor.GetTableName(), lockKeys, biValue, nil)
+	undoLog := exec.BuildUndoItem(false, constant.SQLType_DELETE, schemaName, executor.GetTableName(), lockKeys, biValue, nil)
 
 	branchID, err := f.registerBranchTransaction(ctx, xid, conn.DataSourceName(), lockKeys)
 	if err != nil {
@@ -131,7 +131,7 @@ func (f *_mysqlFilter) processAfterQueryInsert(ctx context.Context, conn *driver
 
 	lockKeys := schema.BuildLockKey(afterImage)
 	log.Debugf("insert, lockKey: %s", lockKeys)
-	undoLog := exec.BuildUndoItem(constant.SQLType_INSERT, schemaName, executor.GetTableName(), lockKeys, nil, afterImage)
+	undoLog := exec.BuildUndoItem(false, constant.SQLType_INSERT, schemaName, executor.GetTableName(), lockKeys, nil, afterImage)
 
 	branchID, err := f.registerBranchTransaction(ctx, xid, conn.DataSourceName(), lockKeys)
 	if err != nil {
@@ -163,7 +163,7 @@ func (f *_mysqlFilter) processAfterQueryUpdate(ctx context.Context, conn *driver
 
 	lockKeys := schema.BuildLockKey(afterImage)
 	log.Debugf("update, lockKey: %s", lockKeys)
-	undoLog := exec.BuildUndoItem(constant.SQLType_UPDATE, schemaName, executor.GetTableName(), lockKeys, beforeImage, afterImage)
+	undoLog := exec.BuildUndoItem(false, constant.SQLType_UPDATE, schemaName, executor.GetTableName(), lockKeys, beforeImage, afterImage)
 
 	branchID, err := f.registerBranchTransaction(ctx, xid, conn.DataSourceName(), lockKeys)
 	if err != nil {

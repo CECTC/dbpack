@@ -22,6 +22,11 @@ import (
 )
 
 type SqlUndoLog struct {
+	// IsBinary binary protocol or text protocol, com_stmt_execute corresponds to
+	// binary protocol (prepared statement), com_query corresponds to text protocol
+	// (text statement).
+	IsBinary bool
+	// SqlType insert、delete、update
 	SqlType     constant.SQLType
 	SchemaName  string
 	TableName   string

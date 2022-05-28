@@ -122,25 +122,25 @@ func (executor *prepareGlobalLockExecutor) BeforeImage(ctx context.Context) (*sc
 	if err != nil {
 		return nil, err
 	}
-	return schema.BuildRecords(tableMeta, result), nil
+	return schema.BuildBinaryRecords(tableMeta, result), nil
 }
 
 func (executor *prepareGlobalLockExecutor) buildBeforeImageSql(tableMeta schema.TableMeta) string {
 	var b strings.Builder
-	fmt.Fprint(&b, "SELECT ")
+	b.WriteString("SELECT ")
 	var i = 0
 	columnCount := len(tableMeta.Columns)
 	for _, column := range tableMeta.Columns {
-		fmt.Fprint(&b, misc.CheckAndReplace(column))
+		b.WriteString(misc.CheckAndReplace(column))
 		i = i + 1
 		if i < columnCount {
-			fmt.Fprint(&b, ",")
+			b.WriteByte(',')
 		} else {
-			fmt.Fprint(&b, " ")
+			b.WriteByte(' ')
 		}
 	}
-	fmt.Fprintf(&b, " FROM %s WHERE ", executor.GetTableName())
-	fmt.Fprint(&b, executor.GetWhereCondition())
+	b.WriteString(fmt.Sprintf(" FROM %s WHERE ", executor.GetTableName()))
+	b.WriteString(executor.GetWhereCondition())
 	return b.String()
 }
 

@@ -43,7 +43,7 @@ const (
 
 type BuildUndoSql func(undoLog undolog.SqlUndoLog) string
 
-func DeleteBuildUndoSql(undoLog *undolog.SqlUndoLog) string {
+func BuildDeleteUndoSql(undoLog *undolog.SqlUndoLog) string {
 	beforeImage := undoLog.BeforeImage
 	beforeImageRows := beforeImage.Rows
 
@@ -60,11 +60,11 @@ func DeleteBuildUndoSql(undoLog *undolog.SqlUndoLog) string {
 	var sbCols, sbVals strings.Builder
 	var size = len(fields)
 	for i, field := range fields {
-		fmt.Fprintf(&sbCols, "`%s`", field.Name)
-		fmt.Fprint(&sbVals, "?")
+		sbCols.WriteString(fmt.Sprintf("`%s`", field.Name))
+		sbVals.WriteByte('?')
 		if i < size-1 {
-			fmt.Fprint(&sbCols, ", ")
-			fmt.Fprint(&sbVals, ", ")
+			sbCols.WriteString(", ")
+			sbVals.WriteString(", ")
 		}
 	}
 	insertColumns := sbCols.String()
@@ -73,7 +73,7 @@ func DeleteBuildUndoSql(undoLog *undolog.SqlUndoLog) string {
 	return fmt.Sprintf(InsertSqlTemplate, undoLog.TableName, insertColumns, insertValues)
 }
 
-func InsertBuildUndoSql(undoLog *undolog.SqlUndoLog) string {
+func BuildInsertUndoSql(undoLog *undolog.SqlUndoLog) string {
 	afterImage := undoLog.AfterImage
 	afterImageRows := afterImage.Rows
 	if len(afterImageRows) == 0 {
@@ -84,7 +84,7 @@ func InsertBuildUndoSql(undoLog *undolog.SqlUndoLog) string {
 	return fmt.Sprintf(DeleteSqlTemplate, undoLog.TableName, pkField.Name)
 }
 
-func UpdateBuildUndoSql(undoLog *undolog.SqlUndoLog) string {
+func BuildUpdateUndoSql(undoLog *undolog.SqlUndoLog) string {
 	beforeImage := undoLog.BeforeImage
 	beforeImageRows := beforeImage.Rows
 
@@ -135,15 +135,15 @@ func (executor MysqlUndoExecutor) Execute(tx proto.Tx) error {
 	// DELETE FROM a WHERE pk = ?
 	switch executor.sqlUndoLog.SqlType {
 	case constant.SQLType_INSERT:
-		undoSql = InsertBuildUndoSql(executor.sqlUndoLog)
+		undoSql = BuildInsertUndoSql(executor.sqlUndoLog)
 		undoRows = *executor.sqlUndoLog.AfterImage
 
 	case constant.SQLType_DELETE:
-		undoSql = DeleteBuildUndoSql(executor.sqlUndoLog)
+		undoSql = BuildDeleteUndoSql(executor.sqlUndoLog)
 		undoRows = *executor.sqlUndoLog.BeforeImage
 
 	case constant.SQLType_UPDATE:
-		undoSql = UpdateBuildUndoSql(executor.sqlUndoLog)
+		undoSql = BuildUpdateUndoSql(executor.sqlUndoLog)
 		undoRows = *executor.sqlUndoLog.BeforeImage
 
 	default:
@@ -224,25 +224,64 @@ func (executor MysqlUndoExecutor) queryCurrentRecords(tx proto.Tx) (*schema.Tabl
 		pkValues = append(pkValues, field.Value)
 	}
 
+	if executor.sqlUndoLog.IsBinary {
+		selectSql := executor.buildCurrentRecordsForPrepareSql(tableMeta, pkName, pkValues)
+		dataTable, _, err := tx.ExecuteSql(context.Background(), selectSql, pkValues...)
+		if err != nil {
+			return nil, err
+		}
+		dt := dataTable.(*mysql.Result)
+		return schema.BuildBinaryRecords(tableMeta, dt), nil
+	} else {
+		selectSql := executor.buildCurrentRecordsForQuerySql(tableMeta, pkName, pkValues)
+		dataTable, _, err := tx.Query(context.Background(), selectSql)
+		if err != nil {
+			return nil, err
+		}
+		dt := dataTable.(*mysql.Result)
+		return schema.BuildTextRecords(tableMeta, dt), nil
+	}
+}
+
+func (executor MysqlUndoExecutor) buildCurrentRecordsForPrepareSql(tableMeta schema.TableMeta, pkColumn string, pkValues []interface{}) string {
 	var b strings.Builder
 	var i = 0
 	columnCount := len(tableMeta.Columns)
 	for _, columnName := range tableMeta.Columns {
-		fmt.Fprint(&b, misc.CheckAndReplace(columnName))
+		b.WriteString(misc.CheckAndReplace(columnName))
 		i = i + 1
 		if i < columnCount {
-			fmt.Fprint(&b, ",")
+			b.WriteByte(',')
 		} else {
-			fmt.Fprint(&b, " ")
+			b.WriteByte(' ')
 		}
 	}
-
 	inCondition := misc.MysqlAppendInParam(len(pkValues))
-	selectSql := fmt.Sprintf(SelectSqlTemplate, b.String(), tableMeta.TableName, pkName, inCondition)
-	dataTable, _, err := tx.ExecuteSql(context.Background(), selectSql, pkValues...)
-	if err != nil {
-		return nil, err
+	return fmt.Sprintf(SelectSqlTemplate, b.String(), tableMeta.TableName, pkColumn, inCondition)
+}
+
+func (executor MysqlUndoExecutor) buildCurrentRecordsForQuerySql(tableMeta schema.TableMeta, pkColumn string, pkValues []interface{}) string {
+	var columns strings.Builder
+	var inCondition strings.Builder
+	var i = 0
+	columnCount := len(tableMeta.Columns)
+	for _, columnName := range tableMeta.Columns {
+		columns.WriteString(misc.CheckAndReplace(columnName))
+		i = i + 1
+		if i < columnCount {
+			columns.WriteByte(',')
+		} else {
+			columns.WriteByte(' ')
+		}
 	}
-	dt := dataTable.(*mysql.Result)
-	return schema.BuildRecords(tableMeta, dt), nil
+	inCondition.WriteByte('(')
+	for i, pk := range pkValues {
+		if i < len(pkValues)-1 {
+			inCondition.WriteString(fmt.Sprintf("'%s',", pk))
+		} else {
+			inCondition.WriteString(fmt.Sprintf("'%s'", pk))
+		}
+	}
+	inCondition.WriteByte(')')
+	return fmt.Sprintf(SelectSqlTemplate, columns.String(), tableMeta.TableName, pkColumn, inCondition.String())
 }

@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	"vimagination.zapto.org/byteio"
 
 	"github.com/cectc/dbpack/pkg/constant"
@@ -223,6 +223,7 @@ func convertPbTableRecords(pbRecords *PbTableRecords) *schema.TableRecords {
 
 func convertSqlUndoLog(undoLog *SqlUndoLog) *PbSqlUndoLog {
 	pbSqlUndoLog := &PbSqlUndoLog{
+		IsBinary:   undoLog.IsBinary,
 		SqlType:    int32(undoLog.SqlType),
 		SchemaName: undoLog.SchemaName,
 		TableName:  undoLog.TableName,
@@ -242,6 +243,7 @@ func convertSqlUndoLog(undoLog *SqlUndoLog) *PbSqlUndoLog {
 
 func convertPbSqlUndoLog(pbSqlUndoLog *PbSqlUndoLog) *SqlUndoLog {
 	sqlUndoLog := &SqlUndoLog{
+		IsBinary:   pbSqlUndoLog.IsBinary,
 		SqlType:    constant.SQLType(pbSqlUndoLog.SqlType),
 		SchemaName: pbSqlUndoLog.SchemaName,
 		TableName:  pbSqlUndoLog.TableName,

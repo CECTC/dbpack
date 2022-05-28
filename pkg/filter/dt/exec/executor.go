@@ -38,8 +38,14 @@ type Executable interface {
 	GetTableName() string
 }
 
-func BuildUndoItem(sqlType constant.SQLType, schemaName, tableName, lockKey string, beforeImage, afterImage *schema.TableRecords) *undolog.SqlUndoLog {
+func BuildUndoItem(
+	isBinary bool,
+	sqlType constant.SQLType,
+	schemaName, tableName,
+	lockKey string, beforeImage,
+	afterImage *schema.TableRecords) *undolog.SqlUndoLog {
 	sqlUndoLog := &undolog.SqlUndoLog{
+		IsBinary:    isBinary,
 		SqlType:     sqlType,
 		SchemaName:  schemaName,
 		TableName:   tableName,
