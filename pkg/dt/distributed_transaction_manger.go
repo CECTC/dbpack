@@ -382,9 +382,9 @@ func (manager *DistributedTransactionManager) processNextBranchSession(ctx conte
 
 	bs := obj.(*api.BranchSession)
 	var (
-		status api.BranchSession_BranchStatus
+		status            api.BranchSession_BranchStatus
 		transactionStatus string
-		err error
+		err               error
 	)
 	if bs.Status == api.PhaseTwoCommitting {
 		transactionStatus = metrics.TransactionStatusCommitted
