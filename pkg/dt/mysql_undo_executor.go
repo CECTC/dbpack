@@ -43,7 +43,7 @@ const (
 
 type BuildUndoSql func(undoLog undolog.SqlUndoLog) string
 
-func DeleteBuildUndoSql(undoLog *undolog.SqlUndoLog) string {
+func BuildDeleteUndoSql(undoLog *undolog.SqlUndoLog) string {
 	beforeImage := undoLog.BeforeImage
 	beforeImageRows := beforeImage.Rows
 
@@ -73,7 +73,7 @@ func DeleteBuildUndoSql(undoLog *undolog.SqlUndoLog) string {
 	return fmt.Sprintf(InsertSqlTemplate, undoLog.TableName, insertColumns, insertValues)
 }
 
-func InsertBuildUndoSql(undoLog *undolog.SqlUndoLog) string {
+func BuildInsertUndoSql(undoLog *undolog.SqlUndoLog) string {
 	afterImage := undoLog.AfterImage
 	afterImageRows := afterImage.Rows
 	if len(afterImageRows) == 0 {
@@ -84,7 +84,7 @@ func InsertBuildUndoSql(undoLog *undolog.SqlUndoLog) string {
 	return fmt.Sprintf(DeleteSqlTemplate, undoLog.TableName, pkField.Name)
 }
 
-func UpdateBuildUndoSql(undoLog *undolog.SqlUndoLog) string {
+func BuildUpdateUndoSql(undoLog *undolog.SqlUndoLog) string {
 	beforeImage := undoLog.BeforeImage
 	beforeImageRows := beforeImage.Rows
 
@@ -135,15 +135,15 @@ func (executor MysqlUndoExecutor) Execute(tx proto.Tx) error {
 	// DELETE FROM a WHERE pk = ?
 	switch executor.sqlUndoLog.SqlType {
 	case constant.SQLType_INSERT:
-		undoSql = InsertBuildUndoSql(executor.sqlUndoLog)
+		undoSql = BuildInsertUndoSql(executor.sqlUndoLog)
 		undoRows = *executor.sqlUndoLog.AfterImage
 
 	case constant.SQLType_DELETE:
-		undoSql = DeleteBuildUndoSql(executor.sqlUndoLog)
+		undoSql = BuildDeleteUndoSql(executor.sqlUndoLog)
 		undoRows = *executor.sqlUndoLog.BeforeImage
 
 	case constant.SQLType_UPDATE:
-		undoSql = UpdateBuildUndoSql(executor.sqlUndoLog)
+		undoSql = BuildUpdateUndoSql(executor.sqlUndoLog)
 		undoRows = *executor.sqlUndoLog.BeforeImage
 
 	default:
@@ -225,7 +225,7 @@ func (executor MysqlUndoExecutor) queryCurrentRecords(tx proto.Tx) (*schema.Tabl
 	}
 
 	if executor.sqlUndoLog.IsBinary {
-		selectSql := executor.buildCurrentRecordsPrepareSql(tableMeta, pkName, pkValues)
+		selectSql := executor.buildCurrentRecordsForPrepareSql(tableMeta, pkName, pkValues)
 		dataTable, _, err := tx.ExecuteSql(context.Background(), selectSql, pkValues...)
 		if err != nil {
 			return nil, err
@@ -233,7 +233,7 @@ func (executor MysqlUndoExecutor) queryCurrentRecords(tx proto.Tx) (*schema.Tabl
 		dt := dataTable.(*mysql.Result)
 		return schema.BuildBinaryRecords(tableMeta, dt), nil
 	} else {
-		selectSql := executor.buildCurrentRecordsQuerySql(tableMeta, pkName, pkValues)
+		selectSql := executor.buildCurrentRecordsForQuerySql(tableMeta, pkName, pkValues)
 		dataTable, _, err := tx.Query(context.Background(), selectSql)
 		if err != nil {
 			return nil, err
@@ -243,7 +243,7 @@ func (executor MysqlUndoExecutor) queryCurrentRecords(tx proto.Tx) (*schema.Tabl
 	}
 }
 
-func (executor MysqlUndoExecutor) buildCurrentRecordsPrepareSql(tableMeta schema.TableMeta, pkColumn string, pkValues []interface{}) string {
+func (executor MysqlUndoExecutor) buildCurrentRecordsForPrepareSql(tableMeta schema.TableMeta, pkColumn string, pkValues []interface{}) string {
 	var b strings.Builder
 	var i = 0
 	columnCount := len(tableMeta.Columns)
@@ -260,7 +260,7 @@ func (executor MysqlUndoExecutor) buildCurrentRecordsPrepareSql(tableMeta schema
 	return fmt.Sprintf(SelectSqlTemplate, b.String(), tableMeta.TableName, pkColumn, inCondition)
 }
 
-func (executor MysqlUndoExecutor) buildCurrentRecordsQuerySql(tableMeta schema.TableMeta, pkColumn string, pkValues []interface{}) string {
+func (executor MysqlUndoExecutor) buildCurrentRecordsForQuerySql(tableMeta schema.TableMeta, pkColumn string, pkValues []interface{}) string {
 	var columns strings.Builder
 	var inCondition strings.Builder
 	var i = 0
