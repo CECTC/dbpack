@@ -25,13 +25,12 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/cectc/dbpack/pkg/config"
 	"github.com/cectc/dbpack/pkg/dt/api"
+	"github.com/cectc/dbpack/pkg/dt/metrics"
 	"github.com/cectc/dbpack/pkg/dt/storage"
-	"github.com/cectc/dbpack/pkg/filter/metrics"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/misc/uuid"
@@ -93,15 +92,9 @@ type DistributedTransactionManager struct {
 	storageDriver                    storage.Driver
 	retryDeadThreshold               int64
 	rollbackRetryTimeoutUnlockEnable bool
-	metricCtl                        prometheus.Counter
 
 	globalSessionQueue workqueue.DelayingInterface
 	branchSessionQueue workqueue.Interface
-}
-
-func (manager *DistributedTransactionManager) recordGlobalTransactionMetric(transactionName string, transactionStatus string) {
-	metrics.GlobalTransactionCounter.WithLabelValues(manager.applicationID, transactionName, metrics.TransactionStatusActive).Desc()
-	metrics.GlobalTransactionCounter.WithLabelValues(manager.applicationID, transactionName, transactionStatus).Inc()
 }
 
 func (manager *DistributedTransactionManager) Begin(ctx context.Context, transactionName string, timeout int32) (string, error) {
@@ -262,12 +255,12 @@ func (manager *DistributedTransactionManager) processGlobalSessions() error {
 					return err
 				}
 				log.Debugf("global session finished, key: %s", gs.XID)
-			}
-			switch gs.Status {
-			case api.Committing:
-				manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusCommitted)
-			case api.Rollbacking:
-				manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusRollback)
+				switch gs.Status {
+				case api.Committing:
+					manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusCommitted)
+				case api.Rollbacking:
+					manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusRollbacked)
+				}
 			}
 		}
 	}
@@ -322,7 +315,7 @@ func (manager *DistributedTransactionManager) processNextGlobalSession(ctx conte
 			case api.Committing:
 				manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusCommitted)
 			case api.Rollbacking:
-				manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusRollback)
+				manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusRollbacked)
 			}
 		}
 	}
@@ -398,7 +391,7 @@ func (manager *DistributedTransactionManager) processNextBranchSession(ctx conte
 		}
 	}
 	if bs.Status == api.PhaseTwoRollbacking {
-		transactionStatus = metrics.TransactionStatusRollback
+		transactionStatus = metrics.TransactionStatusRollbacked
 		if manager.IsRollingBackDead(bs) {
 			if manager.rollbackRetryTimeoutUnlockEnable {
 				if _, err := manager.storageDriver.ReleaseLockKeys(ctx, bs.ResourceID, []string{bs.LockKey}); err != nil {
@@ -433,6 +426,11 @@ func (manager *DistributedTransactionManager) watchBranchSession() {
 		bs := <-watcher.ResultChan()
 		manager.branchSessionQueue.Add(bs)
 	}
+}
+
+func (manager *DistributedTransactionManager) recordGlobalTransactionMetric(transactionName string, transactionStatus string) {
+	metrics.GlobalTransactionCounter.WithLabelValues(manager.applicationID, transactionName, metrics.TransactionStatusActive).Desc()
+	metrics.GlobalTransactionCounter.WithLabelValues(manager.applicationID, transactionName, transactionStatus).Inc()
 }
 
 func isGlobalSessionTimeout(gs *api.GlobalSession) bool {

@@ -37,13 +37,12 @@ import (
 )
 
 const (
-	mysqlFilter     = "MysqlDistributedTransaction"
-	beforeImage     = "BeforeImage"
-	XID             = "x-dbpack-xid"
-	BranchID        = "x-dbpack-branch-id"
-	hintXID         = "XID"
-	hintGlobalLock  = "GlobalLock"
-	TransactionName = "transaction_name"
+	mysqlFilter    = "MysqlDistributedTransaction"
+	beforeImage    = "BeforeImage"
+	XID            = "x-dbpack-xid"
+	BranchID       = "x-dbpack-branch-id"
+	hintXID        = "XID"
+	hintGlobalLock = "GlobalLock"
 )
 
 func init() {

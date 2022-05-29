@@ -40,7 +40,6 @@ func (f *_httpFilter) handleHttp1GlobalBegin(ctx *fasthttp.RequestCtx, transacti
 			transactionInfo, err)
 	}
 	ctx.SetUserValue(XID, xid)
-	ctx.SetUserValue(TransactionName, transactionInfo.RequestPath)
 	ctx.Request.Header.Add(XID, xid)
 	return true, nil
 }
