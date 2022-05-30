@@ -261,6 +261,9 @@ func (manager *DistributedTransactionManager) processGlobalSessions() error {
 				case api.Rollbacking:
 					manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusRollbacked)
 				}
+			} else {
+				// global transaction timeout
+				manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusTimeout)
 			}
 		}
 	}
@@ -317,6 +320,9 @@ func (manager *DistributedTransactionManager) processNextGlobalSession(ctx conte
 			case api.Rollbacking:
 				manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusRollbacked)
 			}
+		} else {
+			// global transaction timeout.
+			manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusRollbacked)
 		}
 	}
 	return true
@@ -338,6 +344,7 @@ func (manager *DistributedTransactionManager) processBranchSessions() error {
 			manager.branchSessionQueue.Add(bs)
 		case api.PhaseTwoRollbacking:
 			if manager.IsRollingBackDead(bs) {
+				metrics.BranchTransactionCounter.WithLabelValues(bs.ApplicationID, bs.ResourceID, metrics.TransactionStatusTimeout)
 				log.Debugf("branch session rollback dead, key: %s, lock key: %s", bs.BranchID, bs.LockKey)
 				if manager.rollbackRetryTimeoutUnlockEnable {
 					log.Debugf("branch id: %d, lock key: %s released", bs.BranchID, bs.LockKey)
@@ -393,6 +400,7 @@ func (manager *DistributedTransactionManager) processNextBranchSession(ctx conte
 	if bs.Status == api.PhaseTwoRollbacking {
 		transactionStatus = metrics.TransactionStatusRollbacked
 		if manager.IsRollingBackDead(bs) {
+			metrics.BranchTransactionCounter.WithLabelValues(bs.ApplicationID, bs.ResourceID, metrics.TransactionStatusTimeout)
 			if manager.rollbackRetryTimeoutUnlockEnable {
 				if _, err := manager.storageDriver.ReleaseLockKeys(ctx, bs.ResourceID, []string{bs.LockKey}); err != nil {
 					log.Error(err)

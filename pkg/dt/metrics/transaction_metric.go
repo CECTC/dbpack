@@ -22,6 +22,7 @@ const (
 	TransactionStatusActive     = "active"
 	TransactionStatusCommitted  = "committed"
 	TransactionStatusRollbacked = "rollbacked"
+	TransactionStatusTimeout    = "timeout"
 )
 
 var (
