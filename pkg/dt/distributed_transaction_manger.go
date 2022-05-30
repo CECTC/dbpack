@@ -231,7 +231,13 @@ func (manager *DistributedTransactionManager) processGlobalSessions() error {
 					return err
 				}
 			}
-			manager.globalSessionQueue.AddAfter(gs, time.Duration(misc.CurrentTimeMillis()-uint64(gs.BeginTime))*time.Millisecond)
+
+			delayAt := uint64(gs.Timeout) - (misc.CurrentTimeMillis() - uint64(gs.BeginTime))
+			if delayAt > 0 {
+				manager.globalSessionQueue.AddAfter(gs, time.Duration(delayAt))
+			} else {
+				manager.globalSessionQueue.Add(gs)
+			}
 		}
 		if gs.Status == api.Committing || gs.Status == api.Rollbacking {
 			bsKeys, err := manager.storageDriver.GetBranchSessionKeys(context.Background(), gs.XID)
