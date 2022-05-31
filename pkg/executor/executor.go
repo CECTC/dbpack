@@ -36,7 +36,7 @@ func (ex *DBGroupExecutor) Begin(ctx context.Context) (proto.Tx, proto.Result, e
 
 func (ex *DBGroupExecutor) Query(ctx context.Context, query string) (proto.Result, uint16, error) {
 	db := ex.reads.Next(proto.WithSlave(ctx)).(*DataSourceBrief)
-	return db.DB.Query(proto.WithMaster(ctx), query)
+	return db.DB.Query(proto.WithSlave(ctx), query)
 }
 
 func (ex *DBGroupExecutor) Execute(ctx context.Context, query string) (proto.Result, uint16, error) {
@@ -46,7 +46,7 @@ func (ex *DBGroupExecutor) Execute(ctx context.Context, query string) (proto.Res
 
 func (ex *DBGroupExecutor) PrepareQuery(ctx context.Context, query string, args ...interface{}) (proto.Result, uint16, error) {
 	db := ex.reads.Next(proto.WithSlave(ctx)).(*DataSourceBrief)
-	return db.DB.ExecuteSql(proto.WithMaster(ctx), query, args...)
+	return db.DB.ExecuteSql(proto.WithSlave(ctx), query, args...)
 }
 
 func (ex *DBGroupExecutor) PrepareExecute(ctx context.Context, query string, args ...interface{}) (proto.Result, uint16, error) {
