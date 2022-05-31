@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/pingcap/errors"
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/cectc/dbpack/pkg/config"
@@ -164,9 +165,28 @@ func (manager *DistributedTransactionManager) IsLockable(ctx context.Context, re
 }
 
 func (manager *DistributedTransactionManager) branchCommit(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
-	if bs.Type == api.TCC {
-		return manager.tccBranchCommit(bs)
+	var (
+		status api.BranchSession_BranchStatus
+		err    error
+	)
+	switch bs.Type {
+	case api.TCC:
+		status, err = manager.tccBranchCommit(bs)
+	case api.AT:
+		status, err = manager._branchCommit(bs)
+	default:
+		return bs.Status, errors.New("should never happen!")
 	}
+	if status == api.Complete {
+		if err := manager.storageDriver.DeleteBranchSession(context.Background(), bs.BranchID); err != nil {
+			log.Error(err)
+		}
+		log.Debugf("branch session committed, branch id: %s, lock key: %s", bs.BranchID, bs.LockKey)
+	}
+	return status, err
+}
+
+func (manager *DistributedTransactionManager) _branchCommit(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
 	db := resource.GetDBManager().GetDB(bs.ResourceID)
 	if db == nil {
 		return 0, fmt.Errorf("DB resource is not exist, db name: %s", bs.ResourceID)
@@ -175,18 +195,23 @@ func (manager *DistributedTransactionManager) branchCommit(bs *api.BranchSession
 	if err := GetUndoLogManager().DeleteUndoLogByXID(db, bs.XID); err != nil {
 		return api.PhaseTwoCommitting, err
 	}
-	if err := manager.storageDriver.DeleteBranchSession(context.Background(), bs.BranchID); err != nil {
-		log.Error(err)
-	}
-	log.Debugf("branch session committed, branch id: %s, lock key: %s", bs.BranchID, bs.LockKey)
 	return api.Complete, nil
 }
 
 func (manager *DistributedTransactionManager) branchRollback(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
-	if bs.Type == api.TCC {
-		return manager.tccBranchRollback(bs)
+	var (
+		status   api.BranchSession_BranchStatus
+		lockKeys []string
+		err      error
+	)
+	switch bs.Type {
+	case api.TCC:
+		status, err = manager.tccBranchRollback(bs)
+	case api.AT:
+		status, lockKeys, err = manager._branchRollback(bs)
+	default:
+		return bs.Status, errors.New("should never happen!")
 	}
-	status, lockKeys, err := manager._branchRollback(bs)
 	if len(lockKeys) > 0 {
 		if _, err := manager.storageDriver.ReleaseLockKeys(context.Background(), bs.ResourceID, lockKeys); err != nil {
 			log.Errorf("release lock and remove branch session failed, xid = %s, resource_id = %s, lockKeys = %s",
@@ -197,6 +222,7 @@ func (manager *DistributedTransactionManager) branchRollback(bs *api.BranchSessi
 		if err := manager.storageDriver.DeleteBranchSession(context.Background(), bs.BranchID); err != nil {
 			log.Error(err)
 		}
+		log.Debugf("branch session rollbacked, branch id: %s, lock key: %s", bs.BranchID, bs.LockKey)
 	}
 	return status, err
 }
@@ -219,7 +245,6 @@ func (manager *DistributedTransactionManager) _branchRollback(bs *api.BranchSess
 			return bs.Status, nil, err
 		}
 	}
-	log.Debugf("branch session rollbacked, branch id: %s, lock key: %s", bs.BranchID, bs.LockKey)
 	return api.Complete, lockKeys, nil
 }
 
