@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/pingcap/errors"
+	"github.com/pkg/errors"
 	"k8s.io/client-go/util/workqueue"
 
 	"github.com/cectc/dbpack/pkg/config"

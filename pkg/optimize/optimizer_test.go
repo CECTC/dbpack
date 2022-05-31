@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/cectc/dbpack/pkg/cond"
+	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/dt/schema"
 	"github.com/cectc/dbpack/pkg/meta"
 	"github.com/cectc/dbpack/pkg/plan"
@@ -76,6 +77,50 @@ func TestOptimizeQueryOnMultiDB(t *testing.T) {
 	assert.Equal(t, 1, len(queryPlan.Plans[1].Tables))
 	assert.Equal(t, "school_1", queryPlan.Plans[1].Database)
 	assert.Equal(t, "student_15", queryPlan.Plans[1].Tables[0])
+}
+
+func TestOptimizeDeleteOnSingleDB(t *testing.T) {
+	o := mockOptimizer()
+	sql := "delete from student where id = ?"
+	args := []interface{}{1}
+	p := parser.New()
+	stmt, err := p.ParseOneStmt(sql, "", "")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	stmt.Accept(&visitor.ParamVisitor{})
+	pl, err := o.Optimize(context.Background(), stmt, args...)
+	assert.Equal(t, nil, err)
+	deletePlan, ok := pl.(*plan.DeleteOnSingleDBPlan)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, 1, len(deletePlan.Tables))
+	assert.Equal(t, "school_0", deletePlan.Database)
+	assert.Equal(t, "student_1", deletePlan.Tables[0])
+}
+
+func TestOptimizeDeleteOnMultiDB(t *testing.T) {
+	o := mockOptimizer()
+	sql := "delete from student where id in (?, ?)"
+	args := []interface{}{1, 15}
+	p := parser.New()
+	stmt, err := p.ParseOneStmt(sql, "", "")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	stmt.Accept(&visitor.ParamVisitor{})
+	pl, err := o.Optimize(context.Background(), stmt, args...)
+	assert.Equal(t, nil, err)
+	deletePlan, ok := pl.(*plan.DeleteOnMultiDBPlan)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, 1, len(deletePlan.Plans[0].Tables))
+	assert.Contains(t, []string{"school_0", "school_1"}, deletePlan.Plans[0].Database)
+	assert.Contains(t, []string{"student_1", "student_15"}, deletePlan.Plans[0].Tables[0])
+
+	assert.Equal(t, 1, len(deletePlan.Plans[1].Tables))
+	assert.Contains(t, []string{"school_0", "school_1"}, deletePlan.Plans[1].Database)
+	assert.Contains(t, []string{"student_1", "student_15"}, deletePlan.Plans[1].Tables[0])
 }
 
 func TestOptimizeInsert(t *testing.T) {
@@ -178,7 +223,8 @@ func TestOptimizeInsert(t *testing.T) {
 	})
 	defer patches.Reset()
 
-	pl, err := o.Optimize(context.Background(), stmt, args...)
+	ctx := proto.WithCommandType(context.Background(), constant.ComStmtExecute)
+	pl, err := o.Optimize(ctx, stmt, args...)
 	assert.Equal(t, nil, err)
 	insertPlan, ok := pl.(*plan.InsertPlan)
 	assert.Equal(t, true, ok)

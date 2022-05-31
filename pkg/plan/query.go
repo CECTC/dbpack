@@ -56,28 +56,21 @@ func (p *QueryOnSingleDBPlan) Execute(ctx context.Context) (proto.Result, uint16
 		args []interface{}
 		err  error
 	)
-	p.castLimit(p.Stmt.Limit)
+	p.castLimit()
 	if err = p.generate(&sb, &args); err != nil {
-		return nil, 0, errors.Wrap(err, "failed to generate sql")
+		return nil, 0, errors.WithStack(err)
 	}
 	sql := sb.String()
 	log.Debugf("query on single db, db name: %s, sql: %s", p.Database, sql)
 	commandType := proto.CommandType(ctx)
 	switch commandType {
 	case constant.ComQuery:
-		result, warnings, err := p.Executor.Query(ctx, sql)
-		if err != nil {
-			return nil, 0, errors.WithStack(err)
-		}
-		return result, warnings, nil
+		return p.Executor.Query(ctx, sql)
 	case constant.ComStmtExecute:
-		result, warnings, err := p.Executor.PrepareQuery(ctx, sql, args...)
-		if err != nil {
-			return nil, 0, errors.WithStack(err)
-		}
-		return result, warnings, nil
+		return p.Executor.PrepareQuery(ctx, sql, args...)
+	default:
+		return nil, 0, nil
 	}
-	return nil, 0, nil
 }
 
 func (p *QueryOnSingleDBPlan) generate(sb *strings.Builder, args *[]interface{}) (err error) {
@@ -121,7 +114,7 @@ func (p *QueryOnSingleDBPlan) generate(sb *strings.Builder, args *[]interface{})
 	return
 }
 
-func (p *QueryOnSingleDBPlan) castLimit(limit *ast.Limit) {
+func (p *QueryOnSingleDBPlan) castLimit() {
 	if p.Stmt.Limit != nil {
 		var (
 			offset, count  int64
@@ -204,47 +197,61 @@ func (p *QueryOnMultiDBPlan) Execute(ctx context.Context) (proto.Result, uint16,
 }
 
 func generateSelect(table string, stmt *ast.SelectStmt, sb *strings.Builder, limit *Limit) error {
-	sb.WriteString("SELECT ")
+	ctx := format.NewRestoreCtx(format.DefaultRestoreFlags, sb)
+	ctx.WriteKeyWord(stmt.Kind.String())
+	ctx.WritePlain(" ")
 
-	restoreCtx := format.NewRestoreCtx(format.DefaultRestoreFlags, sb)
-	if err := stmt.Fields.Restore(restoreCtx); err != nil {
-		return errors.WithStack(err)
+	if stmt.Distinct {
+		ctx.WriteKeyWord("DISTINCT ")
+	} else if stmt.SelectStmtOpts.ExplicitAll {
+		ctx.WriteKeyWord("ALL ")
+	}
+
+	if stmt.Fields != nil {
+		for i, field := range stmt.Fields.Fields {
+			if i != 0 {
+				ctx.WritePlain(",")
+			}
+			if err := field.Restore(ctx); err != nil {
+				return errors.Wrapf(err, "An error occurred while restore SelectStmt.Fields[%d]", i)
+			}
+		}
 	}
 
 	if len(table) > 0 {
-		sb.WriteString(" FROM ")
+		ctx.WriteKeyWord(" FROM ")
 		handleFrom(sb, table, stmt.From)
 	} else {
-		if err := stmt.From.Restore(restoreCtx); err != nil {
+		if err := stmt.From.Restore(ctx); err != nil {
 			return errors.WithStack(err)
 		}
 	}
 
 	if stmt.Where != nil {
-		sb.WriteString(" WHERE ")
-		if err := stmt.Where.Restore(restoreCtx); err != nil {
-			return errors.WithStack(err)
+		ctx.WriteKeyWord(" WHERE ")
+		if err := stmt.Where.Restore(ctx); err != nil {
+			return errors.Wrapf(err, "An error occurred while restore SelectStmt.Where")
 		}
 	}
 
 	if stmt.GroupBy != nil {
-		sb.WriteByte(' ')
-		if err := stmt.GroupBy.Restore(restoreCtx); err != nil {
-			return errors.WithStack(err)
+		ctx.WritePlain(" ")
+		if err := stmt.GroupBy.Restore(ctx); err != nil {
+			return errors.Wrapf(err, "An error occurred while restore SelectStmt.GroupBy")
 		}
 	}
 
 	if stmt.Having != nil {
-		sb.WriteByte(' ')
-		if err := stmt.Having.Restore(restoreCtx); err != nil {
-			return errors.WithStack(err)
+		ctx.WritePlain(" ")
+		if err := stmt.Having.Restore(ctx); err != nil {
+			return errors.Wrapf(err, "An error occurred while restore SelectStmt.Having")
 		}
 	}
 
 	if stmt.OrderBy != nil {
-		sb.WriteByte(' ')
-		if err := stmt.OrderBy.Restore(restoreCtx); err != nil {
-			return errors.WithStack(err)
+		ctx.WritePlain(" ")
+		if err := stmt.OrderBy.Restore(ctx); err != nil {
+			return errors.Wrapf(err, "An error occurred while restore SelectStmt.OrderBy")
 		}
 	}
 
