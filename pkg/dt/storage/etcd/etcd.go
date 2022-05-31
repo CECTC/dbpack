@@ -167,22 +167,29 @@ func (s *store) GlobalCommit(ctx context.Context, xid string) (api.GlobalSession
 	if err != nil {
 		return gs.Status, err
 	}
-	_, err = s.client.Put(ctx, xid, string(data))
+
+	var ops []clientv3.Op
+	ops = append(ops, clientv3.OpPut(xid, string(data)))
+
+	branchKeys, err := s.GetBranchSessionKeys(ctx, xid)
 	if err != nil {
-		return api.Begin, err
+		return gs.Status, err
+	}
+	err = s.commitBranchSessions(ctx, branchKeys, &ops)
+	if err != nil {
+		return gs.Status, err
 	}
 
-	go func() {
-		branchKeys, err := s.GetBranchSessionKeys(ctx, xid)
-		if err != nil {
-			log.Error(err)
-		}
+	txn := s.client.Txn(ctx)
+	txn.Then(ops...)
+	txnResp, err := txn.Commit()
+	if err != nil {
+		return gs.Status, err
+	}
+	if !txnResp.Succeeded {
+		return gs.Status, errors.Errorf("update status to committing failed, xid %s", xid)
+	}
 
-		err = s.commitBranchSessions(ctx, branchKeys)
-		if err != nil {
-			log.Error(err)
-		}
-	}()
 	return api.Committing, nil
 }
 
@@ -202,19 +209,27 @@ func (s *store) GlobalRollback(ctx context.Context, xid string) (api.GlobalSessi
 	if err != nil {
 		return gs.Status, err
 	}
-	_, err = s.client.Put(ctx, xid, string(data))
-	if err != nil {
-		return api.Begin, err
-	}
+
+	var ops []clientv3.Op
+	ops = append(ops, clientv3.OpPut(xid, string(data)))
 
 	branchKeys, err := s.GetBranchSessionKeys(ctx, xid)
 	if err != nil {
-		log.Error(err)
+		return gs.Status, err
+	}
+	err = s.rollbackBranchSessions(ctx, branchKeys, &ops)
+	if err != nil {
+		return gs.Status, err
 	}
 
-	err = s.rollbackBranchSessions(ctx, branchKeys)
+	txn := s.client.Txn(ctx)
+	txn.Then(ops...)
+	txnResp, err := txn.Commit()
 	if err != nil {
-		log.Error(err)
+		return gs.Status, err
+	}
+	if !txnResp.Succeeded {
+		return gs.Status, errors.Errorf("update status to rollbacking failed, xid %s", xid)
 	}
 
 	return api.Rollbacking, nil
@@ -377,7 +392,7 @@ func (s *store) releaseGlobalLocks(ctx context.Context, xid string) (bool, error
 	return true, nil
 }
 
-func (s *store) commitBranchSessions(ctx context.Context, branchSessionKeys []string) error {
+func (s *store) commitBranchSessions(ctx context.Context, branchSessionKeys []string, ops *[]clientv3.Op) error {
 	for _, key := range branchSessionKeys {
 		bs, err := s.GetBranchSession(ctx, key)
 		if err != nil {
@@ -389,16 +404,13 @@ func (s *store) commitBranchSessions(ctx context.Context, branchSessionKeys []st
 			if err != nil {
 				return err
 			}
-			_, err = s.client.Put(ctx, key, string(data))
-			if err != nil {
-				return err
-			}
+			*ops = append(*ops, clientv3.OpPut(key, string(data)))
 		}
 	}
 	return nil
 }
 
-func (s *store) rollbackBranchSessions(ctx context.Context, branchSessionKeys []string) error {
+func (s *store) rollbackBranchSessions(ctx context.Context, branchSessionKeys []string, ops *[]clientv3.Op) error {
 	for _, key := range branchSessionKeys {
 		bs, err := s.GetBranchSession(ctx, key)
 		if err != nil {
@@ -410,10 +422,7 @@ func (s *store) rollbackBranchSessions(ctx context.Context, branchSessionKeys []
 			if err != nil {
 				return err
 			}
-			_, err = s.client.Put(ctx, key, string(data))
-			if err != nil {
-				return err
-			}
+			*ops = append(*ops, clientv3.OpPut(key, string(data)))
 		}
 	}
 	return nil
