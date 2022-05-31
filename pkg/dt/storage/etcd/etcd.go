@@ -111,7 +111,7 @@ func (s *store) AddBranchSession(ctx context.Context, branchSession *api.BranchS
 		}
 		txn = txn.If(cmpSlice...)
 
-		var ops []clientv3.Op
+		ops := make([]clientv3.Op, 0, 2*len(rowKeys))
 		for _, rowKey := range rowKeys {
 			lockKey := fmt.Sprintf("lk/%s/%s", branchSession.XID, rowKey)
 			ops = append(ops, clientv3.OpPut(lockKey, rowKey))

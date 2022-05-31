@@ -159,6 +159,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 	case *ast.SetStmt:
 		if shouldStartTransaction(stmt) {
 			db = executor.masters.Next(proto.WithMaster(ctx)).(*DataSourceBrief)
+			// TODO add metrics
 			tx, result, err = db.DB.Begin(ctx)
 			if err != nil {
 				return nil, 0, err
@@ -186,6 +187,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 		}
 	case *ast.BeginStmt:
 		db = executor.masters.Next(proto.WithMaster(ctx)).(*DataSourceBrief)
+		// TODO add metrics
 		tx, result, err = db.DB.Begin(ctx)
 		if err != nil {
 			return nil, 0, err
@@ -199,6 +201,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 		}
 		defer executor.localTransactionMap.Delete(connectionID)
 		tx = txi.(proto.Tx)
+		// TODO add metrics
 		if result, err = tx.Commit(ctx); err != nil {
 			return nil, 0, err
 		}
@@ -210,6 +213,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 		}
 		defer executor.localTransactionMap.Delete(connectionID)
 		tx = txi.(proto.Tx)
+		// TODO add metrics
 		if result, err = tx.Rollback(ctx); err != nil {
 			return nil, 0, err
 		}

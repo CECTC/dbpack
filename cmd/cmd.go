@@ -126,7 +126,6 @@ var (
 			}
 
 			dbpack := server.NewServer()
-
 			for _, listenerConf := range conf.Listeners {
 				switch listenerConf.ProtocolType {
 				case config.Mysql:
