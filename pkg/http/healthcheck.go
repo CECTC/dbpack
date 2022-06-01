@@ -40,7 +40,7 @@ func readinessHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
-	err := dbm.(*resource.DBManager).GetResoucePoolStatus()
+	err := dbm.(*resource.DBManager).GetResourcePoolStatus()
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return

@@ -87,7 +87,7 @@ func (manager *DBManager) GetDB(name string) proto.DB {
 	return manager.resourcePools[name]
 }
 
-func (manager *DBManager) GetResoucePoolStatus() error {
+func (manager *DBManager) GetResourcePoolStatus() error {
 	for _, dataSource := range manager.resourcePools {
 		db := dataSource.(*sql.DB)
 		if err := db.TestConn(); err != nil {

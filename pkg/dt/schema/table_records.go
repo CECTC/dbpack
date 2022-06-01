@@ -68,7 +68,7 @@ func BuildLockKey(lockKeyRecords *TableRecords) string {
 	fields := lockKeyRecords.PKFields()
 	length := len(fields)
 	for i, field := range fields {
-		sb.WriteString(fmt.Sprintf("%s", field.Value))
+		sb.WriteString(fmt.Sprintf("%v", field.Value))
 		if i < length-1 {
 			sb.WriteByte(',')
 		}
