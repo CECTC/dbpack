@@ -103,4 +103,3 @@ func (executor *queryDeleteExecutor) GetWhereCondition() string {
 	}
 	return sb.String()
 }
-

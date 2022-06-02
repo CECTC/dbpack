@@ -40,11 +40,11 @@ const (
 	insertDeptEmpForDT    = `INSERT INTO dept_emp ( id, emp_no, dept_no, from_date, to_date ) VALUES (?, ?, ?, ?, ?)`
 	insertSalariesForDT   = `INSERT INTO salaries ( id, emp_no, salary, from_date, to_date ) VALUES (?, ?, ?, ?, ?)`
 
-	deleteEmployeeForDT   = `DELETE FROM employees WHERE id = ?`
-	deleteDepartmentForDT = `DELETE FROM departments WHERE id = ?`
-	deleteDeptEmpForDT    = `DELETE FROM dept_emp WHERE id = ?`
-	deleteSalariesForDT   = `DELETE FROM salaries WHERE id = ?`
+	deleteEmployeeForDT    = `DELETE FROM employees WHERE id = ?`
+	deleteDepartmentForDT  = `DELETE FROM departments WHERE id = ?`
+	deleteDeptEmpForDT     = `DELETE FROM dept_emp WHERE id = ?`
 	deleteDeptManagerForDT = `DELETE FROM dept_manager WHERE id=?`
+	deleteSalariesForDT    = `DELETE FROM salaries WHERE id = ?`
 )
 
 type _DistributedTransactionSuite struct {
