@@ -39,7 +39,7 @@ type queryDeleteExecutor struct {
 func NewQueryDeleteExecutor(
 	conn *driver.BackendConnection,
 	stmt *ast.DeleteStmt) Executor {
-	return &prepareDeleteExecutor{
+	return &queryDeleteExecutor{
 		conn: conn,
 		stmt: stmt,
 	}
