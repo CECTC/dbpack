@@ -245,6 +245,6 @@ func (shard *YearMod) Shard(value interface{}) (int, error) {
 	if dateTime.IsInvalid() {
 		return 0, dateTime.Error
 	}
-	month := dateTime.Year()
-	return month % shard.ShardNum, nil
+	year := dateTime.Year()
+	return year % shard.ShardNum, nil
 }
