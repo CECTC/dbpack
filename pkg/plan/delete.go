@@ -38,7 +38,7 @@ func (p *DeleteOnSingleDBPlan) Execute(ctx context.Context) (proto.Result, uint1
 	for _, table := range p.Tables {
 		sb.Reset()
 		if err = p.generate(&sb, table); err != nil {
-			return nil, 0, errors.Wrap(err, "failed to generate sql")
+			return nil, 0, errors.Wrap(err, "failed to generate sql for delete")
 		}
 		sql := sb.String()
 		log.Debugf("delete, db name: %s, sql: %s", p.Database, sql)
