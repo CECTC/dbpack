@@ -52,7 +52,7 @@ func (o Optimizer) optimizeInsert(ctx context.Context, stmt *ast.InsertStmt, arg
 	}
 	pk := tableMeta.GetPKName()
 	index := findPkIndex(stmt, pk)
-	// todo if index == -1, automatic generate a pk
+	// todo if index == -1, automatically generate a primary key
 	pkValue := getPkValue(ctx, stmt, index, args)
 
 	cd := &cond.KeyCondition{
