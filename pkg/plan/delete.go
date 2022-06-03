@@ -87,7 +87,7 @@ func (p *DeleteOnSingleDBPlan) generate(sb *strings.Builder, table string) error
 	if p.Stmt.Order != nil {
 		ctx.WritePlain(" ")
 		if err := p.Stmt.Order.Restore(ctx); err != nil {
-			return errors.Wrap(err, "An error occurred while restore DeleteStmt.Order")
+			return errors.Wrap(err, "An error occurred while restoring DeleteStmt.Order")
 		}
 	}
 
