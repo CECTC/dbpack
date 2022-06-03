@@ -89,7 +89,7 @@ func (p *InsertPlan) generate(sb *strings.Builder) (err error) {
 					ctx.WritePlain(",")
 				}
 				if err := v.Restore(ctx); err != nil {
-					return errors.Wrapf(err, "An error occurred while restore InsertStmt.Lists[%d][%d]", i, j)
+					return errors.Wrapf(err, "An error occurred while restoring InsertStmt.Lists[%d][%d]", i, j)
 				}
 			}
 			ctx.WritePlain(")")
