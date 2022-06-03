@@ -80,7 +80,7 @@ func (p *DeleteOnSingleDBPlan) generate(sb *strings.Builder, table string) error
 	if p.Stmt.Where != nil {
 		ctx.WriteKeyWord(" WHERE ")
 		if err := p.Stmt.Where.Restore(ctx); err != nil {
-			return errors.Wrap(err, "An error occurred while restore DeleteStmt.Where")
+			return errors.Wrap(err, "An error occurred while restoring DeleteStmt.Where")
 		}
 	}
 
