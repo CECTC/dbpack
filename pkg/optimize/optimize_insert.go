@@ -53,6 +53,9 @@ func (o Optimizer) optimizeInsert(ctx context.Context, stmt *ast.InsertStmt, arg
 	pk := tableMeta.GetPKName()
 	index := findPkIndex(stmt, pk)
 	// todo if index == -1, automatically generate a primary key
+	if index == -1 {
+		return nil, errors.New("the inserted columns should contain the primary key")
+	}
 	pkValue := getPkValue(ctx, stmt, index, args)
 
 	cd := &cond.KeyCondition{
