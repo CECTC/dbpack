@@ -18,12 +18,14 @@ package exec
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/cectc/dbpack/pkg/driver"
 	"github.com/cectc/dbpack/pkg/dt/schema"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/meta"
+	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 	"github.com/cectc/dbpack/third_party/parser/format"
@@ -37,15 +39,23 @@ type queryDeleteExecutor struct {
 func NewQueryDeleteExecutor(
 	conn *driver.BackendConnection,
 	stmt *ast.DeleteStmt) Executor {
-	return &prepareDeleteExecutor{
+	return &queryDeleteExecutor{
 		conn: conn,
 		stmt: stmt,
 	}
 }
 
 func (executor *queryDeleteExecutor) BeforeImage(ctx context.Context) (*schema.TableRecords, error) {
-	// todo
-	return nil, nil
+	tableMeta, err := executor.GetTableMeta(ctx)
+	if err != nil {
+		return nil, err
+	}
+	sql := executor.buildBeforeImageSql(tableMeta)
+	result, _, err := executor.conn.ExecuteWithWarningCount(sql, true)
+	if err != nil {
+		return nil, err
+	}
+	return schema.BuildTextRecords(tableMeta, result), nil
 }
 
 func (executor *queryDeleteExecutor) AfterImage(ctx context.Context) (*schema.TableRecords, error) {
@@ -61,6 +71,34 @@ func (executor *queryDeleteExecutor) GetTableMeta(ctx context.Context) (schema.T
 func (executor *queryDeleteExecutor) GetTableName() string {
 	var sb strings.Builder
 	if err := executor.stmt.TableRefs.TableRefs.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+		log.Panic(err)
+	}
+	return sb.String()
+}
+
+func (executor *queryDeleteExecutor) buildBeforeImageSql(tableMeta schema.TableMeta) string {
+	var b strings.Builder
+	b.WriteString("SELECT ")
+	var i = 0
+	columnCount := len(tableMeta.Columns)
+	for _, column := range tableMeta.Columns {
+		b.WriteString(misc.CheckAndReplace(column))
+		i = i + 1
+		if i != columnCount {
+			b.WriteByte(',')
+		} else {
+			b.WriteByte(' ')
+		}
+	}
+	b.WriteString(fmt.Sprintf(" FROM %s WHERE ", executor.GetTableName()))
+	b.WriteString(executor.GetWhereCondition())
+	b.WriteString(" FOR UPDATE")
+	return b.String()
+}
+
+func (executor *queryDeleteExecutor) GetWhereCondition() string {
+	var sb strings.Builder
+	if err := executor.stmt.Where.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
 		log.Panic(err)
 	}
 	return sb.String()
