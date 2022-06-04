@@ -22,9 +22,11 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/third_party/parser/ast"
+	"github.com/cectc/dbpack/third_party/parser/format"
 )
 
 type InsertPlan struct {
@@ -42,36 +44,56 @@ func (p *InsertPlan) Execute(ctx context.Context) (proto.Result, uint16, error) 
 		err error
 	)
 	if err = p.generate(&sb); err != nil {
-		return nil, 0, errors.Wrap(err, "failed to generate sql")
+		return nil, 0, errors.WithStack(err)
 	}
 	sql := sb.String()
 	log.Debugf("insert, db name: %s, sql: %s", p.Database, sql)
-	result, warnings, err := p.Executor.PrepareQuery(ctx, sql, p.Args...)
-	if err != nil {
-		return nil, 0, errors.WithStack(err)
+	commandType := proto.CommandType(ctx)
+	switch commandType {
+	case constant.ComQuery:
+		return p.Executor.Query(ctx, sql)
+	case constant.ComStmtExecute:
+		return p.Executor.PrepareQuery(ctx, sql, p.Args...)
+	default:
+		return nil, 0, nil
 	}
-	return result, warnings, nil
 }
 
 func (p *InsertPlan) generate(sb *strings.Builder) (err error) {
-	sb.WriteString("INSERT INTO ")
-	sb.WriteString(p.Table)
-	sb.WriteByte('(')
+	ctx := format.NewRestoreCtx(format.DefaultRestoreFlags, sb)
+
+	ctx.WriteKeyWord("INSERT ")
+	ctx.WriteKeyWord("INTO ")
+
+	ctx.WritePlain(p.Table)
+
+	ctx.WritePlain("(")
 	columnLen := len(p.Columns)
 	for i, column := range p.Columns {
-		sb.WriteString(column)
+		ctx.WritePlain(column)
 		if i != columnLen-1 {
-			sb.WriteByte(',')
+			ctx.WritePlain(",")
 		}
 	}
-	sb.WriteByte(')')
-	sb.WriteString(" VALUES (")
-	for i, _ := range p.Columns {
-		sb.WriteByte('?')
-		if i != columnLen-1 {
-			sb.WriteByte(',')
+	ctx.WritePlain(")")
+
+	if p.Stmt.Lists != nil {
+		ctx.WriteKeyWord(" VALUES ")
+		for i, row := range p.Stmt.Lists {
+			if i != 0 {
+				ctx.WritePlain(",")
+			}
+			ctx.WritePlain("(")
+			for j, v := range row {
+				if j != 0 {
+					ctx.WritePlain(",")
+				}
+				if err := v.Restore(ctx); err != nil {
+					return errors.Wrapf(err, "An error occurred while restoring InsertStmt.Lists[%d][%d]", i, j)
+				}
+			}
+			ctx.WritePlain(")")
 		}
 	}
-	sb.WriteByte(')')
 	return nil
 }

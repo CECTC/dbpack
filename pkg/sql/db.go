@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/pingcap/errors"
+	"github.com/pkg/errors"
 	"github.com/uber-go/atomic"
 
 	"github.com/cectc/dbpack/pkg/driver"

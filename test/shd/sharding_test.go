@@ -26,11 +26,22 @@ import (
 
 const (
 	driverName                            = "mysql"
-	dataSourceName                        = "dksl:123456@tcp(127.0.0.1:13306)/employees?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
+	dataSourceName                        = "dksl:123456@tcp(127.0.0.1:13306)/drug?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
 	selectDrugResource                    = "select id, drug_res_type_id, base_type from drug_resource where id between ? and ?"
 	selectDrugResourceOrderByIDDesc       = "select id, drug_res_type_id, base_type from drug_resource where id between ? and ? order by id desc"
 	selectDrugResourceOrderByIDDescLimit  = "select id, drug_res_type_id, base_type from drug_resource where id between ? and ? order by id desc limit ?, ?"
 	selectDrugResourceOrderByIDDescLimit2 = "select id, drug_res_type_id, base_type from drug_resource where id between ? and ? order by id desc limit ?"
+
+	deleteDrugResource = "delete from drug_resource where id = ?"
+	insertDrugResource = "INSERT INTO `drug_resource`(`id`, `drug_res_type_id`, `base_type`, `status`, `type_id`, " +
+		"`dict_dosage_id`, `code`, `pym`, `name`, `manufacturer_id`, `approval_no`, `med_type`, `admin_code`, " +
+		"`pack_unit_id`, `min_unit_id`, `pack_quantity`, `dosage_unit_id`, `dosage_quantity`, `pack_spec`, `take_method_id`, " +
+		"`take_quantity`, `take_unit_id`, `take_unit_name`, `take_frequency`, `common_unit_type`, `purchase_price`, " +
+		"`sale_price`, `cost_category_id`, `invoice_item_id`, `expensive_flag`, `psy_flag_i`, `psy_flag_ii`, `otc_flag`, " +
+		"`nar_flag`, `inventory_upper`, `inventory_lower`, `create_time`, `modify_time`, `del_flag`, `consumable_type`, `tips`)" +
+		" VALUES (20, 'hclb_kqkcl', 2, 1, 'hclb_kqkcl', '', 'ZKW00000898', 'xczj', '吸潮纸尖', 'sccj_tjjfylqxyxgs', " +
+		"'天津械备20160055号', 3, '', 'jjdw_h', '', 1, '', 0.00, '15#', '', 0.0000, '', 'ml', '', 1, 0.0000, 0.0000, " +
+		"'fylb_clf', 'fpxm_clf', 1, 0, 0, 0, 0, 0, 0, NULL, '2018-06-05 09:53:10', 0, 0, NULL);"
 )
 
 type _ShardingSuite struct {
@@ -103,6 +114,22 @@ func (suite *_ShardingSuite) TestSelectOrderByAndLimit2() {
 			suite.T().Logf("id: %d, drug resource type id: %s, base type: %d", id, drugResTypeId, baseType)
 		}
 	}
+}
+
+func (suite *_ShardingSuite) TestDeleteDrugResource() {
+	result, err := suite.db.Exec(deleteDrugResource, 20)
+	suite.Assert().Nil(err)
+	affectedRows, err := result.RowsAffected()
+	suite.Assert().Nil(err)
+	suite.Assert().Equal(int64(1), affectedRows)
+}
+
+func (suite *_ShardingSuite) TestInsertDrugResource() {
+	result, err := suite.db.Exec(insertDrugResource)
+	suite.Assert().Nil(err)
+	affectedRows, err := result.RowsAffected()
+	suite.Assert().Nil(err)
+	suite.Assert().Equal(int64(1), affectedRows)
 }
 
 func (suite *_ShardingSuite) TearDownSuite() {
