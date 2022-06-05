@@ -52,7 +52,7 @@ func MysqlAppendInParamWithValue(values []interface{}) string {
 	fmt.Fprintf(&sb, "(")
 	for i, value := range values {
 		fmt.Fprintf(&sb, "'%v'", value)
-		if i < len(values) - 1 {
+		if i < len(values)-1 {
 			fmt.Fprint(&sb, ",")
 		}
 	}
