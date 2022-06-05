@@ -46,3 +46,16 @@ func PgsqlAppendInParam(size int) string {
 	fmt.Fprintf(&sb, ")")
 	return sb.String()
 }
+
+func MysqlAppendInParamWithValue(values []interface{}) string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "(")
+	for i, value := range values{
+		fmt.Fprintf(&sb, "'%v'", value)
+		if i < len(values) - 1 {
+			fmt.Fprint(&sb, ",")
+		}
+	}
+	fmt.Fprintf(&sb, ")")
+	return sb.String()
+}

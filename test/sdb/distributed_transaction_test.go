@@ -161,17 +161,17 @@ func (suite *_DistributedTransactionSuite) TestDistributedTransactionQueryReques
 	if suite.NoErrorf(err, "begin global transaction error: %v", err) {
 		tx, err := suite.db2.Begin()
 		if suite.NoErrorf(err, "begin tx error: %v", err) {
-			//insertSql := fmt.Sprintf(`INSERT /*+ XID('%s') */ INTO dept_manager ( id, emp_no, dept_no, from_date, to_date ) VALUES (?, ?, ?, ?, ?)`, xid)
-			//result, err := tx.Exec(insertSql, 1, 100002, 1002, "2022-01-01", "2024-01-01")
-			//if suite.NoErrorf(err, "insert row error: %v", err) {
-			//	affected, err := result.RowsAffected()
-			//	if suite.NoErrorf(err, "insert row error: %v", err) {
-			//		suite.Equal(int64(1), affected)
-			//	}
-			//}
-			//
+			insertSql := fmt.Sprintf(`INSERT /*+ XID('%s') */ INTO dept_manager ( id, emp_no, dept_no, from_date, to_date ) VALUES (?, ?, ?, ?, ?)`, xid)
+			result, err := tx.Exec(insertSql, 2, 100002, 1002, "2022-01-01", "2024-01-01")
+			if suite.NoErrorf(err, "insert row error: %v", err) {
+				affected, err := result.RowsAffected()
+				if suite.NoErrorf(err, "insert row error: %v", err) {
+					suite.Equal(int64(1), affected)
+				}
+			}
+
 			deleteSql := fmt.Sprintf(`DELETE /*+ XID('%s') */ FROM dept_emp WHERE emp_no = ? and dept_no = ?`, xid)
-			result, err := tx.Exec(deleteSql, 100002, 1002)
+			result, err = tx.Exec(deleteSql, 100002, 1002)
 			if suite.NoErrorf(err, "delete row error: %v", err) {
 				affected, err := result.RowsAffected()
 				if suite.NoErrorf(err, "delete row error: %v", err) {
