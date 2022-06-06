@@ -85,7 +85,7 @@ func (s *store) LeaderElection(applicationID string) bool {
 	e := concurrency.NewElection(s.session, fmt.Sprintf("%s/leader-election/", applicationID))
 	ctx := context.Background()
 	// Elect a leader (or wait that the leader resign)
-	if err := e.Campaign(ctx, "e"); err != nil {
+	if err := e.Campaign(ctx, applicationID); err != nil {
 		log.Fatal(err)
 	}
 	return true
