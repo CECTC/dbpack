@@ -71,3 +71,33 @@ func TestPgsqlAppendInParam(t *testing.T) {
 		})
 	}
 }
+
+func TestMysqlAppendInParamWithValue(t *testing.T) {
+	cases := map[string]struct {
+		in  []interface{}
+		out string
+	}{
+		"1": {
+			in:  []interface{}{"abc", "xyz"},
+			out: "('abc','xyz')",
+		},
+		"2": {
+			in:  []interface{}{[]byte("abc"), []byte("xyz")},
+			out: "('abc','xyz')",
+		},
+		"3": {
+			in:  []interface{}{1, 2, 3},
+			out: "(1,2,3)",
+		},
+		"4": {
+			in:  []interface{}{int64(1), int64(2), int64(3)},
+			out: "(1,2,3)",
+		},
+	}
+	for caseTitle, tc := range cases {
+		t.Run(caseTitle, func(t *testing.T) {
+			result := MysqlAppendInParamWithValue(tc.in)
+			assert.Equal(t, tc.out, result)
+		})
+	}
+}

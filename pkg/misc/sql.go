@@ -23,39 +23,46 @@ import (
 
 func MysqlAppendInParam(size int) string {
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "(")
+	sb.WriteByte('(')
 	for i := 0; i < size; i++ {
-		fmt.Fprintf(&sb, "?")
+		sb.WriteByte('?')
 		if i < size-1 {
-			fmt.Fprint(&sb, ",")
+			sb.WriteByte(',')
 		}
 	}
-	fmt.Fprintf(&sb, ")")
+	sb.WriteByte(')')
 	return sb.String()
 }
 
 func PgsqlAppendInParam(size int) string {
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "(")
+	sb.WriteByte('(')
 	for i := 0; i < size; i++ {
-		fmt.Fprintf(&sb, "$%d", i+1)
+		sb.WriteString(fmt.Sprintf("$%d", i+1))
 		if i < size-1 {
-			fmt.Fprint(&sb, ",")
+			sb.WriteByte(',')
 		}
 	}
-	fmt.Fprintf(&sb, ")")
+	sb.WriteByte(')')
 	return sb.String()
 }
 
 func MysqlAppendInParamWithValue(values []interface{}) string {
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "(")
+	sb.WriteByte('(')
 	for i, value := range values {
-		fmt.Fprintf(&sb, "'%v'", value)
+		switch val := value.(type) {
+		case string:
+			sb.WriteString(fmt.Sprintf("'%s'", val))
+		case []byte:
+			sb.WriteString(fmt.Sprintf("'%s'", val))
+		default:
+			sb.WriteString(fmt.Sprintf("%v", val))
+		}
 		if i < len(values)-1 {
-			fmt.Fprint(&sb, ",")
+			sb.WriteByte(',')
 		}
 	}
-	fmt.Fprintf(&sb, ")")
+	sb.WriteByte(')')
 	return sb.String()
 }

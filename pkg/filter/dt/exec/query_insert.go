@@ -54,9 +54,12 @@ func (executor *queryInsertExecutor) BeforeImage(ctx context.Context) (*schema.T
 }
 
 func (executor *queryInsertExecutor) AfterImage(ctx context.Context) (*schema.TableRecords, error) {
-	var afterImage *schema.TableRecords
-	var err error
-	pkValues, err := executor.getPKValuesByColumn(ctx)
+	var (
+		afterImage *schema.TableRecords
+		pkValues   []interface{}
+		err        error
+	)
+	pkValues, err = executor.getPKValuesByColumn(ctx)
 	if err != nil {
 		return nil, err
 	}
