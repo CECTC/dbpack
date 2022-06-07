@@ -93,7 +93,7 @@ func (executor *queryInsertExecutor) buildAfterImageSql(tableMeta schema.TableMe
 	columnCount := len(tableMeta.Columns)
 	for _, column := range tableMeta.Columns {
 		b.WriteString(misc.CheckAndReplace(column))
-		if i < columnCount {
+		if i < columnCount-1 {
 			b.WriteByte(',')
 		} else {
 			b.WriteByte(' ')
