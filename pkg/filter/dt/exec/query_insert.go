@@ -144,18 +144,16 @@ func (executor *queryInsertExecutor) getPKIndex(ctx context.Context) int {
 	insertColumns := executor.GetInsertColumns()
 	tableMeta, _ := executor.GetTableMeta(ctx)
 
-	if len(insertColumns) > 0 {
-		for i, columnName := range insertColumns {
-			if strings.EqualFold(tableMeta.GetPKName(), columnName) {
-				return i
-			}
+	for i, columnName := range insertColumns {
+		if strings.EqualFold(tableMeta.GetPKName(), columnName) {
+			return i
 		}
-	} else {
-		allColumns := tableMeta.Columns
-		for i, column := range allColumns {
-			if strings.EqualFold(tableMeta.GetPKName(), column) {
-				return i
-			}
+	}
+
+	allColumns := tableMeta.Columns
+	for i, column := range allColumns {
+		if strings.EqualFold(tableMeta.GetPKName(), column) {
+			return i
 		}
 	}
 	return -1
