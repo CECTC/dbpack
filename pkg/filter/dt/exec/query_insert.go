@@ -156,7 +156,6 @@ func (executor *queryInsertExecutor) getPKIndex(ctx context.Context) int {
 			if strings.EqualFold(tableMeta.GetPKName(), column) {
 				return i
 			}
-			idx = idx + 1
 		}
 	}
 	return -1
