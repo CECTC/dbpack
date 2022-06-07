@@ -275,8 +275,9 @@ func (executor MysqlUndoExecutor) buildCurrentRecordsForQuerySql(tableMeta schem
 		}
 	}
 	inCondition.WriteByte('(')
+	pkValuesCount := len(pkValues)
 	for i, pk := range pkValues {
-		if i < len(pkValues)-1 {
+		if i < pkValuesCount - 1 {
 			inCondition.WriteString(fmt.Sprintf("'%s',", pk))
 		} else {
 			inCondition.WriteString(fmt.Sprintf("'%s'", pk))
