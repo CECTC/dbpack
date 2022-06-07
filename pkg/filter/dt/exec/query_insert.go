@@ -89,7 +89,6 @@ func (executor *queryInsertExecutor) buildTableRecords(ctx context.Context, pkVa
 func (executor *queryInsertExecutor) buildAfterImageSql(tableMeta schema.TableMeta, pkValues []interface{}) string {
 	var b strings.Builder
 	b.WriteString("SELECT ")
-	var i = 0
 	columnCount := len(tableMeta.Columns)
 	for i, column := range tableMeta.Columns {
 		b.WriteString(misc.CheckAndReplace(column))
