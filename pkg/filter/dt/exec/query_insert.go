@@ -54,9 +54,12 @@ func (executor *queryInsertExecutor) BeforeImage(ctx context.Context) (*schema.T
 }
 
 func (executor *queryInsertExecutor) AfterImage(ctx context.Context) (*schema.TableRecords, error) {
-	var afterImage *schema.TableRecords
-	var err error
-	pkValues, err := executor.getPKValuesByColumn(ctx)
+	var (
+		afterImage *schema.TableRecords
+		pkValues   []interface{}
+		err        error
+	)
+	pkValues, err = executor.getPKValuesByColumn(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -141,18 +144,16 @@ func (executor *queryInsertExecutor) getPKIndex(ctx context.Context) int {
 	insertColumns := executor.GetInsertColumns()
 	tableMeta, _ := executor.GetTableMeta(ctx)
 
-	if len(insertColumns) > 0 {
-		for i, columnName := range insertColumns {
-			if strings.EqualFold(tableMeta.GetPKName(), columnName) {
-				return i
-			}
+	for i, columnName := range insertColumns {
+		if strings.EqualFold(tableMeta.GetPKName(), columnName) {
+			return i
 		}
-	} else {
-		allColumns := tableMeta.Columns
-		for i, column := range allColumns {
-			if strings.EqualFold(tableMeta.GetPKName(), column) {
-				return i
-			}
+	}
+
+	allColumns := tableMeta.Columns
+	for i, column := range allColumns {
+		if strings.EqualFold(tableMeta.GetPKName(), column) {
+			return i
 		}
 	}
 	return -1

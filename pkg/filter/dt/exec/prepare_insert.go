@@ -107,12 +107,10 @@ func (executor *prepareInsertExecutor) buildTableRecords(ctx context.Context, pk
 func (executor *prepareInsertExecutor) buildAfterImageSql(tableMeta schema.TableMeta, pkValues []interface{}) string {
 	var b strings.Builder
 	b.WriteString("SELECT ")
-	var i = 0
 	columnCount := len(tableMeta.Columns)
-	for _, column := range tableMeta.Columns {
+	for i, column := range tableMeta.Columns {
 		b.WriteString(misc.CheckAndReplace(column))
-		i = i + 1
-		if i < columnCount {
+		if i < columnCount-1 {
 			b.WriteByte(',')
 		} else {
 			b.WriteByte(' ')
@@ -144,20 +142,16 @@ func (executor *prepareInsertExecutor) getPKIndex(ctx context.Context) int {
 	insertColumns := executor.GetInsertColumns()
 	tableMeta, _ := executor.GetTableMeta(ctx)
 
-	if insertColumns != nil && len(insertColumns) > 0 {
-		for i, columnName := range insertColumns {
-			if strings.EqualFold(tableMeta.GetPKName(), columnName) {
-				return i
-			}
+	for i, columnName := range insertColumns {
+		if strings.EqualFold(tableMeta.GetPKName(), columnName) {
+			return i
 		}
-	} else {
-		allColumns := tableMeta.Columns
-		var idx = 0
-		for _, column := range allColumns {
-			if strings.EqualFold(tableMeta.GetPKName(), column) {
-				return idx
-			}
-			idx = idx + 1
+	}
+
+	allColumns := tableMeta.Columns
+	for i, column := range allColumns {
+		if strings.EqualFold(tableMeta.GetPKName(), column) {
+			return i
 		}
 	}
 	return -1
