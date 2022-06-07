@@ -151,7 +151,6 @@ func (executor *queryInsertExecutor) getPKIndex(ctx context.Context) int {
 		}
 	} else {
 		allColumns := tableMeta.Columns
-		var idx = 0
 		for i, column := range allColumns {
 			if strings.EqualFold(tableMeta.GetPKName(), column) {
 				return i
