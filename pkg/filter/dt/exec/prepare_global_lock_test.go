@@ -41,7 +41,7 @@ var (
 	tableMeta = schema.TableMeta{
 		SchemaName: "db",
 		TableName:  "t",
-		Columns:    []string{"id", "age"},
+		Columns:    []string{"id", "name", "age"},
 		AllColumns: map[string]schema.ColumnMeta{
 			"id": {
 				TableCat:        "def",
@@ -63,6 +63,26 @@ var (
 				IsNullable:      "NO",
 				IsAutoIncrement: "auto_increment",
 			},
+			"name": {
+				TableCat:        "def",
+				TableSchemeName: "table",
+				TableName:       "t",
+				ColumnName:      "name",
+				DataType:        -9,
+				DataTypeName:    "nvarchar",
+				ColumnSize:      0,
+				DecimalDigits:   0,
+				NumPrecRadix:    0,
+				Nullable:        0,
+				Remarks:         "",
+				ColumnDef:       "",
+				SqlDataType:     0,
+				SqlDatetimeSub:  0,
+				CharOctetLength: 0,
+				OrdinalPosition: 2,
+				IsNullable:      "NO",
+				IsAutoIncrement: "",
+			},
 			"age": {
 				TableCat:        "def",
 				TableSchemeName: "table",
@@ -79,7 +99,7 @@ var (
 				SqlDataType:     0,
 				SqlDatetimeSub:  0,
 				CharOctetLength: 0,
-				OrdinalPosition: 2,
+				OrdinalPosition: 3,
 				IsNullable:      "NO",
 				IsAutoIncrement: "",
 			},
@@ -140,7 +160,7 @@ func TestGlobalLock(t *testing.T) {
 			lockTimes:              3,
 			expectedTableName:      "`T`",
 			expectedWhereCondition: "`id`=?",
-			expectedBeforeImageSql: "SELECT id,age  FROM `T` WHERE `id`=?",
+			expectedBeforeImageSql: "SELECT id,name,age  FROM `T` WHERE `id`=?",
 			expectedErr:            err,
 		},
 		{
@@ -150,7 +170,7 @@ func TestGlobalLock(t *testing.T) {
 			lockTimes:              10,
 			expectedTableName:      "`T`",
 			expectedWhereCondition: "`id`=?",
-			expectedBeforeImageSql: "SELECT id,age  FROM `T` WHERE `id`=?",
+			expectedBeforeImageSql: "SELECT id,name,age  FROM `T` WHERE `id`=?",
 			expectedErr:            nil,
 		},
 		{
@@ -160,7 +180,7 @@ func TestGlobalLock(t *testing.T) {
 			lockTimes:              3,
 			expectedTableName:      "`T`",
 			expectedWhereCondition: "`id`=?",
-			expectedBeforeImageSql: "SELECT id,age  FROM `T` WHERE `id`=?",
+			expectedBeforeImageSql: "SELECT id,name,age  FROM `T` WHERE `id`=?",
 			expectedErr:            err,
 		},
 		{
@@ -170,7 +190,7 @@ func TestGlobalLock(t *testing.T) {
 			lockTimes:              10,
 			expectedTableName:      "`T`",
 			expectedWhereCondition: "`id`=?",
-			expectedBeforeImageSql: "SELECT id,age  FROM `T` WHERE `id`=?",
+			expectedBeforeImageSql: "SELECT id,name,age  FROM `T` WHERE `id`=?",
 			expectedErr:            nil,
 		},
 	}
