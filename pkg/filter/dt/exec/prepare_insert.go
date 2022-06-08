@@ -117,7 +117,7 @@ func (executor *prepareInsertExecutor) buildAfterImageSql(tableMeta schema.Table
 		}
 	}
 	b.WriteString(fmt.Sprintf("FROM %s ", executor.GetTableName()))
-	b.WriteString(fmt.Sprintf(" WHERE `%s` IN ", tableMeta.GetPKName()))
+	b.WriteString(fmt.Sprintf("WHERE `%s` IN ", tableMeta.GetPKName()))
 	b.WriteString(misc.MysqlAppendInParam(len(pkValues)))
 	return b.String()
 }

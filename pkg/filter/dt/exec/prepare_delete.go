@@ -99,7 +99,7 @@ func (executor *prepareDeleteExecutor) buildBeforeImageSql(tableMeta schema.Tabl
 			b.WriteByte(' ')
 		}
 	}
-	b.WriteString(fmt.Sprintf(" FROM %s WHERE ", executor.GetTableName()))
+	b.WriteString(fmt.Sprintf("FROM %s WHERE ", executor.GetTableName()))
 	b.WriteString(executor.GetWhereCondition())
 	b.WriteString(" FOR UPDATE")
 	return b.String()

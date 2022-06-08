@@ -71,7 +71,7 @@ func (executor *queryUpdateExecutor) AfterImage(ctx context.Context) (*schema.Ta
 		return nil, err
 	}
 
-	afterImageSql := executor.buildAfterImageSql(tableMeta, executor.beforeImage)
+	afterImageSql := executor.buildAfterImageSql(tableMeta)
 	result, _, err := executor.conn.ExecuteWithWarningCount(afterImageSql, true)
 	if err != nil {
 		return nil, err
@@ -105,13 +105,13 @@ func (executor *queryUpdateExecutor) buildBeforeImageSql(tableMeta schema.TableM
 			b.WriteByte(' ')
 		}
 	}
-	b.WriteString(fmt.Sprintf(" FROM %s WHERE ", executor.GetTableName()))
+	b.WriteString(fmt.Sprintf("FROM %s WHERE ", executor.GetTableName()))
 	b.WriteString(executor.GetWhereCondition())
 	b.WriteString(" FOR UPDATE")
 	return b.String()
 }
 
-func (executor *queryUpdateExecutor) buildAfterImageSql(tableMeta schema.TableMeta, beforeImage *schema.TableRecords) string {
+func (executor *queryUpdateExecutor) buildAfterImageSql(tableMeta schema.TableMeta) string {
 	var b strings.Builder
 	b.WriteString("SELECT ")
 	columnCount := len(tableMeta.Columns)
@@ -123,9 +123,9 @@ func (executor *queryUpdateExecutor) buildAfterImageSql(tableMeta schema.TableMe
 			b.WriteByte(' ')
 		}
 	}
-	b.WriteString(fmt.Sprintf(" FROM %s ", executor.GetTableName()))
-	b.WriteString(fmt.Sprintf(" WHERE `%s` IN (", tableMeta.GetPKName()))
-	pkFields := beforeImage.PKFields()
+	b.WriteString(fmt.Sprintf("FROM %s ", executor.GetTableName()))
+	b.WriteString(fmt.Sprintf("WHERE `%s` IN (", tableMeta.GetPKName()))
+	pkFields := executor.beforeImage.PKFields()
 	for i, field := range pkFields {
 		switch val := field.Value.(type) {
 		case string:
