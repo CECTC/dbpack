@@ -142,7 +142,7 @@ var (
 	}
 )
 
-func TestGlobalLock(t *testing.T) {
+func TestPrepareGlobalLock(t *testing.T) {
 	testCases := []*struct {
 		sql                    string
 		isUpdate               bool
@@ -160,7 +160,7 @@ func TestGlobalLock(t *testing.T) {
 			lockTimes:              3,
 			expectedTableName:      "`T`",
 			expectedWhereCondition: "`id`=?",
-			expectedBeforeImageSql: "SELECT id,name,age  FROM `T` WHERE `id`=?",
+			expectedBeforeImageSql: "SELECT id,name,age FROM `T` WHERE `id`=?",
 			expectedErr:            err,
 		},
 		{
@@ -170,7 +170,7 @@ func TestGlobalLock(t *testing.T) {
 			lockTimes:              10,
 			expectedTableName:      "`T`",
 			expectedWhereCondition: "`id`=?",
-			expectedBeforeImageSql: "SELECT id,name,age  FROM `T` WHERE `id`=?",
+			expectedBeforeImageSql: "SELECT id,name,age FROM `T` WHERE `id`=?",
 			expectedErr:            nil,
 		},
 		{
@@ -180,7 +180,7 @@ func TestGlobalLock(t *testing.T) {
 			lockTimes:              3,
 			expectedTableName:      "`T`",
 			expectedWhereCondition: "`id`=?",
-			expectedBeforeImageSql: "SELECT id,name,age  FROM `T` WHERE `id`=?",
+			expectedBeforeImageSql: "SELECT id,name,age FROM `T` WHERE `id`=?",
 			expectedErr:            err,
 		},
 		{
@@ -190,7 +190,7 @@ func TestGlobalLock(t *testing.T) {
 			lockTimes:              10,
 			expectedTableName:      "`T`",
 			expectedWhereCondition: "`id`=?",
-			expectedBeforeImageSql: "SELECT id,name,age  FROM `T` WHERE `id`=?",
+			expectedBeforeImageSql: "SELECT id,name,age FROM `T` WHERE `id`=?",
 			expectedErr:            nil,
 		},
 	}
@@ -272,6 +272,12 @@ func beforeImagePatch() *gomonkey.Patches {
 							KeyType: schema.PrimaryKey,
 							Type:    0,
 							Value:   "10",
+						},
+						{
+							Name:    "name",
+							KeyType: schema.Null,
+							Type:    0,
+							Value:   "scott",
 						},
 						{
 							Name:    "age",

@@ -18,6 +18,7 @@ package exec
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/cectc/dbpack/pkg/dt/schema"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/meta"
+	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 	"github.com/cectc/dbpack/third_party/parser/format"
@@ -100,6 +102,46 @@ func (executor *queryGlobalLockExecutor) GetTableName() string {
 }
 
 func (executor *queryGlobalLockExecutor) BeforeImage(ctx context.Context) (*schema.TableRecords, error) {
-	// todo
-	return nil, nil
+	tableMeta, err := executor.GetTableMeta(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	sql := executor.buildBeforeImageSql(tableMeta)
+	result, _, err := executor.conn.ExecuteWithWarningCount(sql, true)
+	if err != nil {
+		return nil, err
+	}
+	return schema.BuildTextRecords(tableMeta, result), nil
+}
+
+func (executor *queryGlobalLockExecutor) buildBeforeImageSql(tableMeta schema.TableMeta) string {
+	var b strings.Builder
+	b.WriteString("SELECT ")
+	columnCount := len(tableMeta.Columns)
+	for i, column := range tableMeta.Columns {
+		b.WriteString(misc.CheckAndReplace(column))
+		if i < columnCount-1 {
+			b.WriteByte(',')
+		} else {
+			b.WriteByte(' ')
+		}
+	}
+	b.WriteString(fmt.Sprintf("FROM %s WHERE ", executor.GetTableName()))
+	b.WriteString(executor.GetWhereCondition())
+	return b.String()
+}
+
+func (executor *queryGlobalLockExecutor) GetWhereCondition() string {
+	var sb strings.Builder
+	if executor.isUpdate {
+		if err := executor.updateStmt.Where.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+			log.Panic(err)
+		}
+	} else {
+		if err := executor.deleteStmt.Where.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+			log.Panic(err)
+		}
+	}
+	return sb.String()
 }

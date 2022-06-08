@@ -137,7 +137,7 @@ func (executor *prepareGlobalLockExecutor) buildBeforeImageSql(tableMeta schema.
 			b.WriteByte(' ')
 		}
 	}
-	b.WriteString(fmt.Sprintf(" FROM %s WHERE ", executor.GetTableName()))
+	b.WriteString(fmt.Sprintf("FROM %s WHERE ", executor.GetTableName()))
 	b.WriteString(executor.GetWhereCondition())
 	return b.String()
 }
