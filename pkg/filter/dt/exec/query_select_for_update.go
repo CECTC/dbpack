@@ -57,7 +57,7 @@ func (executor *querySelectForUpdateExecutor) Executable(ctx context.Context, lo
 	}
 
 	rlt := executor.result.(*mysql.Result)
-	selectPKRows := schema.BuildBinaryRecords(tableMeta, rlt)
+	selectPKRows := schema.BuildTextRecords(tableMeta, rlt)
 	lockKeys := schema.BuildLockKey(selectPKRows)
 	if lockKeys == "" {
 		return true, nil
@@ -93,5 +93,11 @@ func (executor *querySelectForUpdateExecutor) GetTableName() string {
 	if err := table.Source.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
 		log.Panic(err)
 	}
+	return sb.String()
+}
+
+func (executor *querySelectForUpdateExecutor) GetWhereCondition() string {
+	var sb strings.Builder
+	executor.stmt.Where.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb))
 	return sb.String()
 }

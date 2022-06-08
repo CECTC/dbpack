@@ -34,7 +34,7 @@ import (
 	"github.com/cectc/dbpack/third_party/parser/ast"
 )
 
-func TestPrepareSelectForUpdate(t *testing.T) {
+func TestQuerySelectForUpdate(t *testing.T) {
 	testCases := []*struct {
 		sql                    string
 		lockInterval           time.Duration
@@ -44,11 +44,11 @@ func TestPrepareSelectForUpdate(t *testing.T) {
 		expectedErr            error
 	}{
 		{
-			sql:                    "select /*+ GlobalLock() */ * from T where id = ? for update",
+			sql:                    "select /*+ GlobalLock() */ * from T where id = 10 for update",
 			lockInterval:           5 * time.Millisecond,
 			lockTimes:              3,
 			expectedTableName:      "`T`",
-			expectedWhereCondition: "`id`=?",
+			expectedWhereCondition: "`id`=10",
 			expectedErr:            err,
 		},
 	}
@@ -56,10 +56,10 @@ func TestPrepareSelectForUpdate(t *testing.T) {
 	patches1 := isLockablePatch()
 	defer patches1.Reset()
 
-	patches2 := getPrepareTableMetaPatch()
+	patches2 := getQueryTableMetaPatch()
 	defer patches2.Reset()
 
-	patches3 := buildBinaryRecordsPatch()
+	patches3 := buildTextRecordsPatch()
 	defer patches3.Reset()
 
 	for _, c := range testCases {
@@ -89,26 +89,24 @@ func TestPrepareSelectForUpdate(t *testing.T) {
 			ctx = proto.WithPrepareStmt(ctx, protoStmt)
 
 			selectForUpdateStmt := stmt.(*ast.SelectStmt)
-			executor := NewPrepareSelectForUpdateExecutor(&driver.BackendConnection{}, selectForUpdateStmt, protoStmt.BindVars, &mysql.Result{})
+			executor := NewQuerySelectForUpdateExecutor(&driver.BackendConnection{}, selectForUpdateStmt, &mysql.Result{})
 			tableName := executor.GetTableName()
 			assert.Equal(t, c.expectedTableName, tableName)
-			whereCondition := executor.(*prepareSelectForUpdateExecutor).GetWhereCondition()
-			assert.Equal(t, c.expectedWhereCondition, whereCondition)
 			_, executeErr := executor.Executable(ctx, c.lockInterval, c.lockTimes)
 			assert.Equal(t, c.expectedErr, executeErr)
 		})
 	}
 }
 
-func getPrepareTableMetaPatch() *gomonkey.Patches {
-	var executor *prepareSelectForUpdateExecutor
+func getQueryTableMetaPatch() *gomonkey.Patches {
+	var executor *querySelectForUpdateExecutor
 	return gomonkey.ApplyMethodFunc(executor, "GetTableMeta", func(ctx context.Context) (schema.TableMeta, error) {
 		return tableMeta, nil
 	})
 }
 
-func buildBinaryRecordsPatch() *gomonkey.Patches {
-	return gomonkey.ApplyFunc(schema.BuildBinaryRecords, func(meta schema.TableMeta, result *mysql.Result) *schema.TableRecords {
+func buildTextRecordsPatch() *gomonkey.Patches {
+	return gomonkey.ApplyFunc(schema.BuildTextRecords, func(meta schema.TableMeta, result *mysql.Result) *schema.TableRecords {
 		return &schema.TableRecords{
 			TableMeta: tableMeta,
 			TableName: "t",
@@ -119,19 +117,19 @@ func buildBinaryRecordsPatch() *gomonkey.Patches {
 							Name:    "id",
 							KeyType: schema.PrimaryKey,
 							Type:    0,
-							Value:   int64(10),
+							Value:   "10",
 						},
 						{
 							Name:    "name",
 							KeyType: schema.Null,
 							Type:    0,
-							Value:   []byte("scott"),
+							Value:   "scott",
 						},
 						{
 							Name:    "age",
 							KeyType: schema.Null,
 							Type:    0,
-							Value:   int64(20),
+							Value:   "20",
 						},
 					},
 				},
