@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"fmt"
-
 	"net"
 	"net/http"
 	"os"
@@ -121,10 +120,12 @@ var (
 			}
 
 			if conf.DistributedTransaction != nil {
+				dbpackHttp.DistributedTransactionEnabled = true
 				driver := etcd.NewEtcdStore(conf.DistributedTransaction.EtcdConfig)
 				dt.InitDistributedTransactionManager(conf.DistributedTransaction, driver)
 			}
 
+			dbpackHttp.Listeners = conf.Listeners
 			dbpack := server.NewServer()
 			for _, listenerConf := range conf.Listeners {
 				switch listenerConf.ProtocolType {

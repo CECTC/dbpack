@@ -32,6 +32,7 @@ import (
 	"github.com/cectc/dbpack/pkg/dt/api"
 	"github.com/cectc/dbpack/pkg/dt/metrics"
 	"github.com/cectc/dbpack/pkg/dt/storage"
+	dbpackHttp "github.com/cectc/dbpack/pkg/http"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/misc/uuid"
@@ -71,6 +72,7 @@ func InitDistributedTransactionManager(conf *config.DistributedTransaction, stor
 	}
 	go func() {
 		if storageDriver.LeaderElection(manager.applicationID) {
+			dbpackHttp.IsMaster = true
 			if err := manager.processGlobalSessions(); err != nil {
 				log.Fatal(err)
 			}

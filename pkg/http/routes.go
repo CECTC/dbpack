@@ -30,5 +30,8 @@ func RegisterRoutes() (http.Handler, error) {
 	// Add server metrics router
 	registerMetricsRouter(router)
 
+	// Add status router
+	registerStatusRouter(router)
+
 	return router, nil
 }
