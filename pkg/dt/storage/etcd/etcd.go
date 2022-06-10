@@ -101,46 +101,55 @@ func (s *store) AddGlobalSession(ctx context.Context, globalSession *api.GlobalS
 }
 
 func (s *store) AddBranchSession(ctx context.Context, branchSession *api.BranchSession) error {
+	data, err := branchSession.Marshal()
+	if err != nil {
+		return err
+	}
+
+	gs, err := s.GetGlobalSession(ctx, branchSession.XID)
+	if err != nil {
+		if errors.Is(err, err2.CouldNotFoundGlobalTransaction) {
+			return err2.GlobalTransactionFinished
+		}
+		return err
+	}
+	if gs.Status > api.Begin {
+		return err2.GlobalTransactionFinished
+	}
+
+	txn := s.client.Txn(ctx)
+	ops := make([]clientv3.Op, 0)
+	ops = append(ops, clientv3.OpPut(branchSession.BranchID, string(data)))
+	// 全局事务关联的事务分支
+	globalBranchKey := fmt.Sprintf("bs/%s/%d", branchSession.XID, branchSession.BranchSessionID)
+	ops = append(ops, clientv3.OpPut(globalBranchKey, branchSession.BranchID))
+
 	if branchSession.Type == api.AT && branchSession.LockKey != "" {
 		rowKeys := misc.CollectRowKeys(branchSession.LockKey, branchSession.ResourceID)
 
-		txn := s.client.Txn(ctx)
 		var cmpSlice []clientv3.Cmp
 		for _, rowKey := range rowKeys {
 			cmpSlice = append(cmpSlice, notFound(rowKey))
 		}
 		txn = txn.If(cmpSlice...)
 
-		ops := make([]clientv3.Op, 0, 2*len(rowKeys))
 		for _, rowKey := range rowKeys {
 			lockKey := fmt.Sprintf("lk/%s/%s", branchSession.XID, rowKey)
 			ops = append(ops, clientv3.OpPut(lockKey, rowKey))
 			ops = append(ops, clientv3.OpPut(rowKey, lockKey))
 		}
-		txn.Then(ops...)
-
-		txnResp, err := txn.Commit()
-		if err != nil {
-			return err
-		}
-		if !txnResp.Succeeded {
-			return err2.BranchLockAcquireFailed
-		}
 	}
 
-	data, err := branchSession.Marshal()
+	txn.Then(ops...)
+
+	txnResp, err := txn.Commit()
 	if err != nil {
 		return err
 	}
-	_, err = s.client.Put(ctx, branchSession.BranchID, string(data))
-	if err != nil {
-		return err
+	if !txnResp.Succeeded {
+		return errors.Errorf("register branch session failed, xid: %s, resource id: %s", branchSession.XID, branchSession.ResourceID)
 	}
-
-	// 全局事务关联的事务分支
-	globalBranchKey := fmt.Sprintf("bs/%s/%d", branchSession.XID, branchSession.BranchSessionID)
-	_, err = s.client.Put(ctx, globalBranchKey, branchSession.BranchID)
-	return err
+	return nil
 }
 
 func (s *store) GlobalCommit(ctx context.Context, xid string) (api.GlobalSession_GlobalStatus, error) {
@@ -155,12 +164,12 @@ func (s *store) GlobalCommit(ctx context.Context, xid string) (api.GlobalSession
 	gs, err := s.GetGlobalSession(ctx, xid)
 	if err != nil {
 		if errors.Is(err, err2.CouldNotFoundGlobalTransaction) {
-			return api.Finished, nil
+			return api.Finished, err2.GlobalTransactionFinished
 		}
 		return api.Begin, err
 	}
 	if gs.Status > api.Begin {
-		return gs.Status, nil
+		return gs.Status, err2.GlobalTransactionFinished
 	}
 	gs.Status = api.Committing
 	data, err := gs.Marshal()
@@ -197,12 +206,12 @@ func (s *store) GlobalRollback(ctx context.Context, xid string) (api.GlobalSessi
 	gs, err := s.GetGlobalSession(ctx, xid)
 	if err != nil {
 		if errors.Is(err, err2.CouldNotFoundGlobalTransaction) {
-			return api.Finished, nil
+			return api.Finished, err2.GlobalTransactionFinished
 		}
 		return api.Begin, err
 	}
 	if gs.Status > api.Begin {
-		return gs.Status, nil
+		return gs.Status, err2.GlobalTransactionFinished
 	}
 	gs.Status = api.Rollbacking
 	data, err := gs.Marshal()

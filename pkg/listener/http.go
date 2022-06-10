@@ -104,6 +104,11 @@ func (l *HttpListener) Listen() {
 		}
 		if err := l.doPostFilter(ctx); err != nil {
 			log.Error(err)
+			ctx.Response.Reset()
+			ctx.SetStatusCode(500)
+			if _, err = ctx.WriteString(fmt.Sprintf(`{"success":false,"message":"%s"}`, err.Error())); err != nil {
+				log.Error(err)
+			}
 		}
 	}); err != nil {
 		log.Error(err)
