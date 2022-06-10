@@ -31,8 +31,9 @@
 
 package parser
 
+import __yyfmt__ "fmt"
+
 import (
-	__yyfmt__ "fmt"
 	"strconv"
 
 	"github.com/cectc/dbpack/third_party/parser/ast"
@@ -94,7 +95,7 @@ const (
 	hintSingleAtIdentifier  = 57348
 	hintSkipScan            = 57368
 	hintStringLit           = 57349
-	hintTraceID             = 57379
+	hintTraceParent         = 57379
 	hintUseDB               = 57378
 	hintXID                 = 57376
 
@@ -134,7 +135,7 @@ var (
 		57370: 25, // hintSemijoin (88x)
 		57373: 26, // hintSetVar (88x)
 		57368: 27, // hintSkipScan (88x)
-		57379: 28, // hintTraceID (88x)
+		57379: 28, // hintTraceParent (88x)
 		57378: 29, // hintUseDB (88x)
 		57376: 30, // hintXID (88x)
 		44:    31, // ',' (79x)
@@ -208,7 +209,7 @@ var (
 		"hintSemijoin",
 		"hintSetVar",
 		"hintSkipScan",
-		"hintTraceID",
+		"hintTraceParent",
 		"hintUseDB",
 		"hintXID",
 		"','",
@@ -281,7 +282,7 @@ var (
 		57370: "SEMIJOIN",
 		57373: "SET_VAR",
 		57368: "SKIP_SCAN",
-		57379: "TRACEID",
+		57379: "TRACEPARENT",
 		57378: "USEDB",
 		57376: "XID",
 		57381: "DUPSWEEDOUT",
