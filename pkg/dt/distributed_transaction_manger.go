@@ -324,12 +324,11 @@ func (manager *DistributedTransactionManager) processNextGlobalSession(ctx conte
 		return true
 	}
 	if newGlobalSession.Status == api.Begin {
-		if isGlobalSessionTimeout(newGlobalSession) {
-			_, err = manager.Rollback(context.Background(), newGlobalSession.XID)
-			if err != nil {
-				log.Error(err)
-			}
+		_, err = manager.Rollback(context.Background(), newGlobalSession.XID)
+		if err != nil {
+			log.Error(err)
 		}
+		manager.globalSessionQueue.AddAfter(gs, time.Duration(gs.Timeout)*time.Millisecond)
 	}
 	if newGlobalSession.Status == api.Committing || newGlobalSession.Status == api.Rollbacking {
 		bsKeys, err := manager.storageDriver.GetBranchSessionKeys(context.Background(), newGlobalSession.XID)
@@ -469,7 +468,7 @@ func (manager *DistributedTransactionManager) recordGlobalTransactionMetric(tran
 }
 
 func isGlobalSessionTimeout(gs *api.GlobalSession) bool {
-	return (misc.CurrentTimeMillis() - uint64(gs.BeginTime)) > uint64(gs.Timeout)
+	return misc.CurrentTimeMillis()-uint64(gs.BeginTime) > uint64(gs.Timeout)
 }
 
 func (manager *DistributedTransactionManager) IsRollingBackDead(bs *api.BranchSession) bool {

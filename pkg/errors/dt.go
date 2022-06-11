@@ -20,6 +20,7 @@ import "errors"
 
 var (
 	GlobalTransactionNotActive     = errors.New("global session not active")
+	GlobalTransactionFinished      = errors.New("global session finished")
 	CouldNotFoundGlobalTransaction = errors.New("could not found global transaction")
 	CouldNotFoundBranchTransaction = errors.New("could not found branch transaction")
 	BranchLockAcquireFailed        = errors.New("branch lock acquire failed")
