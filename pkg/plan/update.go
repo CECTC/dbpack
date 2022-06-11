@@ -30,15 +30,15 @@ import (
 	"github.com/cectc/dbpack/third_party/parser/format"
 )
 
-type DeleteOnSingleDBPlan struct {
+type UpdateOnSingleDBPlan struct {
 	Database string
 	Tables   []string
-	Stmt     *ast.DeleteStmt
+	Stmt     *ast.UpdateStmt
 	Args     []interface{}
 	Executor proto.DBGroupExecutor
 }
 
-func (p *DeleteOnSingleDBPlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
+func (p *UpdateOnSingleDBPlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
 	var (
 		sb                     strings.Builder
 		tx                     proto.Tx
@@ -54,10 +54,10 @@ func (p *DeleteOnSingleDBPlan) Execute(ctx context.Context) (proto.Result, uint1
 	for _, table := range p.Tables {
 		sb.Reset()
 		if err = p.generate(&sb, table); err != nil {
-			return nil, 0, errors.Wrap(err, "failed to generate sql for delete")
+			return nil, 0, errors.Wrap(err, "failed to generate sql")
 		}
 		sql := sb.String()
-		log.Debugf("delete, db name: %s, sql: %s", p.Database, sql)
+		log.Debugf("update, db name: %s, sql: %s", p.Database, sql)
 
 		commandType := proto.CommandType(ctx)
 		switch commandType {
@@ -87,47 +87,57 @@ func (p *DeleteOnSingleDBPlan) Execute(ctx context.Context) (proto.Result, uint1
 	return mysqlResult, warnings, nil
 }
 
-func (p *DeleteOnSingleDBPlan) generate(sb *strings.Builder, table string) error {
+func (p *UpdateOnSingleDBPlan) generate(sb *strings.Builder, table string) error {
 	ctx := format.NewRestoreCtx(format.DefaultRestoreFlags, sb)
-	ctx.WriteKeyWord("DELETE ")
-	ctx.WriteKeyWord("FROM ")
+	ctx.WriteKeyWord("UPDATE ")
 	// todo add xid hint for distributed transaction
 	ctx.WritePlain(table)
+	ctx.WriteKeyWord(" SET ")
+	for i, assignment := range p.Stmt.List {
+		if i != 0 {
+			ctx.WritePlain(", ")
+		}
+
+		if err := assignment.Column.Restore(ctx); err != nil {
+			return errors.Wrapf(err, "An error occur while restoring UpdateStmt.List[%d].Column", i)
+		}
+
+		ctx.WritePlain("=")
+
+		if err := assignment.Expr.Restore(ctx); err != nil {
+			return errors.Wrapf(err, "An error occur while restoring UpdateStmt.List[%d].Expr", i)
+		}
+	}
+
 	if p.Stmt.Where != nil {
 		ctx.WriteKeyWord(" WHERE ")
 		if err := p.Stmt.Where.Restore(ctx); err != nil {
-			return errors.Wrap(err, "An error occurred while restoring DeleteStmt.Where")
+			return errors.Wrap(err, "An error occur while restoring UpdateStmt.Where")
 		}
 	}
 
 	if p.Stmt.Order != nil {
 		ctx.WritePlain(" ")
 		if err := p.Stmt.Order.Restore(ctx); err != nil {
-			return errors.Wrap(err, "An error occurred while restoring DeleteStmt.Order")
-		}
-	}
-	if p.Stmt.Order != nil {
-		ctx.WritePlain(" ")
-		if err := p.Stmt.Order.Restore(ctx); err != nil {
-			return errors.Wrap(err, "An error occurred while restore DeleteStmt.Order")
+			return errors.Wrap(err, "An error occur while restoring UpdateStmt.Order")
 		}
 	}
 
 	//if p.Stmt.Limit != nil {
 	//	ctx.WritePlain(" ")
 	//	if err := p.Stmt.Limit.Restore(ctx); err != nil {
-	//		return errors.Wrap(err, "An error occurred while restoring DeleteStmt.Limit")
+	//		return errors.Wrap(err, "An error occur while restoring UpdateStmt.Limit")
 	//	}
 	//}
 	return nil
 }
 
-type DeleteOnMultiDBPlan struct {
-	Stmt  *ast.DeleteStmt
-	Plans []*DeleteOnSingleDBPlan
+type UpdateOnMultiDBPlan struct {
+	Stmt  *ast.UpdateStmt
+	Plans []*UpdateOnSingleDBPlan
 }
 
-func (p *DeleteOnMultiDBPlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
+func (p *UpdateOnMultiDBPlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
 	var (
 		affectedRows uint64
 		warnings     uint16

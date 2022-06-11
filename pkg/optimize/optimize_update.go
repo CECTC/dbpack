@@ -18,7 +18,6 @@ package optimize
 
 import (
 	"context"
-	"sort"
 
 	"github.com/pkg/errors"
 
@@ -29,14 +28,13 @@ import (
 	"github.com/cectc/dbpack/third_party/parser/ast"
 )
 
-func (o Optimizer) optimizeSelect(ctx context.Context, stmt *ast.SelectStmt, args []interface{}) (proto.Plan, error) {
+func (o Optimizer) optimizeUpdate(ctx context.Context, stmt *ast.UpdateStmt, args []interface{}) (proto.Plan, error) {
 	var (
 		alg      cond.ShardingAlgorithm
 		topology *topo.Topology
 		exists   bool
 	)
-	tableName := stmt.From.TableRefs.Left.(*ast.TableSource).Source.(*ast.TableName).Name.String()
-
+	tableName := stmt.TableRefs.TableRefs.Left.(*ast.TableSource).Source.(*ast.TableName).Name.String()
 	if alg, exists = o.algorithms[tableName]; !exists {
 		return nil, errors.New("sharding algorithm should not be nil")
 	}
@@ -66,7 +64,7 @@ func (o Optimizer) optimizeSelect(ctx context.Context, stmt *ast.SelectStmt, arg
 				return nil, errors.Errorf("db group %s should not be nil", k)
 			}
 
-			return &plan.QueryOnSingleDBPlan{
+			return &plan.UpdateOnSingleDBPlan{
 				Database: k,
 				Tables:   v,
 				Stmt:     stmt,
@@ -76,29 +74,24 @@ func (o Optimizer) optimizeSelect(ctx context.Context, stmt *ast.SelectStmt, arg
 		}
 	}
 
-	plans := make([]*plan.QueryOnSingleDBPlan, 0, len(shards))
+	plans := make([]*plan.UpdateOnSingleDBPlan, 0, len(shards))
 
-	keys := make([]string, 0)
-	for k := range shardMap {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
+	for k, v := range shardMap {
 		executor, exists := o.dbGroupExecutors[k]
 		if !exists {
 			return nil, errors.Errorf("db group %s should not be nil", k)
 		}
 
-		plans = append(plans, &plan.QueryOnSingleDBPlan{
+		plans = append(plans, &plan.UpdateOnSingleDBPlan{
 			Database: k,
-			Tables:   shardMap[k],
+			Tables:   v,
 			Stmt:     stmt,
 			Args:     args,
 			Executor: executor,
 		})
 	}
 
-	multiPlan := &plan.QueryOnMultiDBPlan{
+	multiPlan := &plan.UpdateOnMultiDBPlan{
 		Stmt:  stmt,
 		Plans: plans,
 	}

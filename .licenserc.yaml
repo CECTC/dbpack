@@ -19,12 +19,15 @@ header: # `header` section is configurations for source codes license header.
     # `pattern` is optional regexp if all the file headers are the same as `license` or the license of `spdx-id` and `copyright-owner`.
     pattern:
   paths: # `paths` are the path list that will be checked (and fixed) by license-eye, default is ['**'].
-    - './cmd/**.go'
-    - './pkg/**.go'
-    - './test/**.go'
-    - './testdata/**.go'
+    - 'cmd/*'
+    - 'pkg/*'
+    - 'test/*'
+    - 'testdata/*'
 
   paths-ignore: # `paths-ignore` are the path list that will be ignored by license-eye.
+    - 'test/cmd/test_read_write_splitting.sh'
+    - 'test/cmd/test_sharding.sh'
+    - 'test/cmd/test_single_db.sh'
 
   comment: on-failure # on what condition license-eye will comment on the pull request, `on-failure`, `always`, `never`.
 

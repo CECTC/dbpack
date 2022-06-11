@@ -27,25 +27,25 @@ import (
 	"github.com/cectc/dbpack/third_party/parser/ast"
 )
 
-func TestDeleteOnSingleDBPlan(t *testing.T) {
+func TestUpdateOnSingleDBPlan(t *testing.T) {
 	testCases := []struct {
 		deleteSql            string
 		tables               []string
 		expectedGenerateSqls []string
 	}{
 		{
-			deleteSql: "delete from student where id in (?,?)",
+			deleteSql: "update student set name = ?, age = ? where id in (?,?)",
 			tables:    []string{"student_1", "student_5"},
 			expectedGenerateSqls: []string{
-				"DELETE FROM student_1 WHERE `id` IN (?,?)",
-				"DELETE FROM student_5 WHERE `id` IN (?,?)",
+				"UPDATE student_1 SET `name`=?, `age`=? WHERE `id` IN (?,?)",
+				"UPDATE student_5 SET `name`=?, `age`=? WHERE `id` IN (?,?)",
 			},
 		},
 		{
-			deleteSql: "delete from student where id = 9",
+			deleteSql: "update student set name = ?, age = ? where id = 9",
 			tables:    []string{"student_9"},
 			expectedGenerateSqls: []string{
-				"DELETE FROM student_9 WHERE `id`=9",
+				"UPDATE student_9 SET `name`=?, `age`=? WHERE `id`=9",
 			},
 		},
 	}
@@ -58,11 +58,11 @@ func TestDeleteOnSingleDBPlan(t *testing.T) {
 				return
 			}
 			stmt.Accept(&visitor.ParamVisitor{})
-			deleteStmt := stmt.(*ast.DeleteStmt)
-			plan := &DeleteOnSingleDBPlan{
+			updateStmt := stmt.(*ast.UpdateStmt)
+			plan := &UpdateOnSingleDBPlan{
 				Database: "school_0",
 				Tables:   c.tables,
-				Stmt:     deleteStmt,
+				Stmt:     updateStmt,
 				Args:     nil,
 				Executor: nil,
 			}

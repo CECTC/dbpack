@@ -53,6 +53,7 @@ func (o Optimizer) Optimize(ctx context.Context, stmt ast.StmtNode, args ...inte
 	case *ast.DeleteStmt:
 		return o.optimizeDelete(ctx, t, args)
 	case *ast.UpdateStmt:
+		return o.optimizeUpdate(ctx, t, args)
 	}
 
 	//TODO implement all statements
