@@ -95,10 +95,10 @@ import (
 	hintQBName              "QB_NAME"
 
 	/* DBPack hint names */
-	hintXID        "XID"
-	hintGlobalLock "GLOBALLOCK"
-	hintUseDB      "USEDB"
-	hintTraceID    "TRACEID"
+	hintXID         "XID"
+	hintGlobalLock  "GLOBALLOCK"
+	hintUseDB       "USEDB"
+	hintTraceParent "TRACEPARENT"
 
 	/* Other keywords */
 	hintPartition       "PARTITION"
@@ -251,7 +251,7 @@ TableOptimizerHintOpt:
             HintData: model.NewCIStr($3),
         }
     }
-|   "TRACEID" '(' Value ')'
+|   "TRACEPARENT" '(' Value ')'
     {
     	$$ = &ast.TableOptimizerHint{
             HintName: model.NewCIStr($1),
@@ -480,7 +480,7 @@ Identifier:
 |   "XID"
 |   "GLOBALLOCK"
 |   "USEDB"
-|   "TRACEID"
+|   "TRACEPARENT"
 /* other keywords */
 |	"DUPSWEEDOUT"
 |	"FIRSTMATCH"

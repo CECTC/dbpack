@@ -900,10 +900,10 @@ var hintTokenMap = map[string]int{
 	"QB_NAME":               hintQBName,
 
 	// DBPack hint names
-	"XID":        hintXID,
-	"GLOBALLOCK": hintGlobalLock,
-	"USEDB":      hintUseDB,
-	"TRACEID":    hintTraceID,
+	"XID":         hintXID,
+	"GLOBALLOCK":  hintGlobalLock,
+	"USEDB":       hintUseDB,
+	"TRACEPARENT": hintTraceParent,
 
 	// TiDB hint aliases
 	"TIDB_HJ": hintHashJoin,
