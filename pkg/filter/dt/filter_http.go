@@ -141,7 +141,6 @@ type _httpFilter struct {
 
 	transactionInfoMap map[string]*TransactionInfo
 	transactionInfos   []*TransactionInfo
-
 	tccResourceInfoMap map[string]*TccResourceInfo
 }
 
