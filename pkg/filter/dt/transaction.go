@@ -66,7 +66,7 @@ func (f *_httpFilter) handleHttp1GlobalEnd(ctx *fasthttp.RequestCtx) error {
 }
 
 // handleHttp1BranchRegister return bool, represent whether continue
-func (f *_httpFilter) handleHttp1BranchRegister(ctx *fasthttp.RequestCtx, tccResource *TCCResource) (bool, error) {
+func (f *_httpFilter) handleHttp1BranchRegister(ctx *fasthttp.RequestCtx, tccResource *TccResourceInfo) (bool, error) {
 	xid := ctx.Request.Header.Peek(XID)
 	if string(xid) == "" {
 		ctx.Response.Reset()
