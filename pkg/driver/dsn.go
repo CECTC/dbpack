@@ -100,7 +100,7 @@ func (cfg *Config) Clone() *Config {
 
 func (cfg *Config) normalize() error {
 	if cfg.InterpolateParams && constant.UnsafeCollations[cfg.Collation] {
-		return errors.New("interpolateParams can not be used with unsafe collations")
+		return err2.ErrInvalidDSNUnsafeCollation
 	}
 
 	// Set default network if empty
