@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
 
 	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
@@ -105,10 +106,8 @@ func (l *HttpListener) Listen() {
 		if err := l.doPostFilter(ctx); err != nil {
 			log.Error(err)
 			ctx.Response.Reset()
-			ctx.SetStatusCode(500)
-			if _, err = ctx.WriteString(fmt.Sprintf(`{"success":false,"message":"%s"}`, err.Error())); err != nil {
-				log.Error(err)
-			}
+			ctx.SetStatusCode(http.StatusInternalServerError)
+			ctx.SetBodyString(fmt.Sprintf(`{"success":false,"error":"%s"}`, err.Error()))
 		}
 	}); err != nil {
 		log.Error(err)
