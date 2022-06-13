@@ -17,7 +17,10 @@
 package dt
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -29,6 +32,38 @@ import (
 )
 
 const httpFilter = "HttpDistributedTransaction"
+
+type MatchType byte
+
+const (
+	Exact MatchType = iota
+	Prefix
+	Regex
+)
+
+func (t *MatchType) UnmarshalText(text []byte) error {
+	if t == nil {
+		return errors.New("can't unmarshal a nil *MatchType")
+	}
+	if !t.unmarshalText(bytes.ToLower(text)) {
+		return fmt.Errorf("unrecognized match type: %q", text)
+	}
+	return nil
+}
+
+func (t *MatchType) unmarshalText(text []byte) bool {
+	switch string(text) {
+	case "exact":
+		*t = Exact
+	case "prefix":
+		*t = Prefix
+	case "regex":
+		*t = Regex
+	default:
+		return false
+	}
+	return true
+}
 
 func init() {
 	filter.RegistryFilterFactory(httpFilter, &httpFactory{})
@@ -53,18 +88,26 @@ func (factory *httpFactory) NewFilter(config map[string]interface{}) (proto.Filt
 	}
 
 	f := &_httpFilter{
-		conf:             filterConfig,
-		transactionInfos: make(map[string]*TransactionInfo),
-		tccResources:     make(map[string]*TCCResource),
+		conf:               filterConfig,
+		transactionInfoMap: make(map[string]*TransactionInfo),
+		transactionInfos:   make([]*TransactionInfo, 0),
+		tccResourceInfoMap: make(map[string]*TccResourceInfo),
 	}
 
 	for _, ti := range filterConfig.TransactionInfos {
-		f.transactionInfos[strings.ToLower(ti.RequestPath)] = ti
+		switch ti.MatchType {
+		case Exact:
+			f.transactionInfoMap[strings.ToLower(ti.RequestPath)] = ti
+		case Prefix, Regex:
+			f.transactionInfos = append(f.transactionInfos, ti)
+		default:
+			log.Warnf("unsupported match type, %s, request path: %s", ti.MatchType, ti.RequestPath)
+		}
 		log.Debugf("proxy %s, will create global transaction, put xid into request header", ti.RequestPath)
 	}
 
-	for _, r := range filterConfig.TCCResources {
-		f.tccResources[strings.ToLower(r.PrepareRequestPath)] = r
+	for _, r := range filterConfig.TCCResourceInfos {
+		f.tccResourceInfoMap[strings.ToLower(r.PrepareRequestPath)] = r
 		log.Debugf("proxy %s, will register branch transaction", r.PrepareRequestPath)
 	}
 	return f, nil
@@ -72,12 +115,13 @@ func (factory *httpFactory) NewFilter(config map[string]interface{}) (proto.Filt
 
 // TransactionInfo transaction info config
 type TransactionInfo struct {
-	RequestPath string `yaml:"request_path" json:"request_path"`
-	Timeout     int32  `yaml:"timeout" json:"timeout"`
+	RequestPath string    `yaml:"request_path" json:"request_path"`
+	Timeout     int32     `yaml:"timeout" json:"timeout"`
+	MatchType   MatchType `yaml:"match_type" json:"match_type"`
 }
 
-// TCCResource tcc resource config
-type TCCResource struct {
+// TccResourceInfo tcc resource config
+type TccResourceInfo struct {
 	PrepareRequestPath  string `yaml:"prepare_request_path" json:"prepare_request_path"`
 	CommitRequestPath   string `yaml:"commit_request_path" json:"commit_request_path"`
 	RollbackRequestPath string `yaml:"rollback_request_path" json:"rollback_request_path"`
@@ -89,13 +133,16 @@ type HttpFilterConfig struct {
 	BackendHost   string `yaml:"backend_host" json:"backend_host"`
 
 	TransactionInfos []*TransactionInfo `yaml:"transaction_infos" json:"transaction_infos"`
-	TCCResources     []*TCCResource     `yaml:"tcc_resources" json:"tcc_resources"`
+	TCCResourceInfos []*TccResourceInfo `yaml:"tcc_resource_infos" json:"tcc_resource_infos"`
 }
 
 type _httpFilter struct {
-	conf             *HttpFilterConfig
-	transactionInfos map[string]*TransactionInfo
-	tccResources     map[string]*TCCResource
+	conf *HttpFilterConfig
+
+	transactionInfoMap map[string]*TransactionInfo
+	transactionInfos   []*TransactionInfo
+
+	tccResourceInfoMap map[string]*TccResourceInfo
 }
 
 func (f *_httpFilter) GetKind() string {
@@ -110,7 +157,7 @@ func (f _httpFilter) PreHandle(ctx *fasthttp.RequestCtx) error {
 		return nil
 	}
 
-	transactionInfo, found := f.transactionInfos[strings.ToLower(string(path))]
+	transactionInfo, found := f.matchTransactionInfo(string(path))
 	if found {
 		result, err := f.handleHttp1GlobalBegin(ctx, transactionInfo)
 		if !result {
@@ -121,7 +168,7 @@ func (f _httpFilter) PreHandle(ctx *fasthttp.RequestCtx) error {
 		return err
 	}
 
-	tccResource, exists := f.tccResources[strings.ToLower(string(path))]
+	tccResource, exists := f.tccResourceInfoMap[strings.ToLower(string(path))]
 	if exists {
 		result, err := f.handleHttp1BranchRegister(ctx, tccResource)
 		if !result {
@@ -142,18 +189,46 @@ func (f _httpFilter) PostHandle(ctx *fasthttp.RequestCtx) error {
 		return nil
 	}
 
-	_, found := f.transactionInfos[strings.ToLower(string(path))]
+	_, found := f.transactionInfoMap[strings.ToLower(string(path))]
 	if found {
 		if err := f.handleHttp1GlobalEnd(ctx); err != nil {
 			return err
 		}
 	}
 
-	_, exists := f.tccResources[strings.ToLower(string(path))]
+	_, exists := f.tccResourceInfoMap[strings.ToLower(string(path))]
 	if exists {
 		if err := f.handleHttp1BranchEnd(ctx); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (f _httpFilter) matchTransactionInfo(requestPath string) (*TransactionInfo, bool) {
+	path := strings.ToLower(requestPath)
+	transactionInfo, found := f.transactionInfoMap[path]
+	if found {
+		return transactionInfo, found
+	}
+	for _, ti := range f.transactionInfos {
+		switch ti.MatchType {
+		case Prefix:
+			if strings.HasPrefix(path, strings.ToLower(ti.RequestPath)) {
+				return ti, true
+			}
+		case Regex:
+			matched, err := regexp.Match(strings.ToLower(ti.RequestPath), []byte(path))
+			if err != nil {
+				log.Warnf("regular expression match error, regex string: %s, error: %s", ti.RequestPath, err)
+				continue
+			}
+			if matched {
+				return ti, true
+			}
+		default:
+			continue
+		}
+	}
+	return nil, false
 }
