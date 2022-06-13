@@ -207,10 +207,11 @@ func (conn *BackendConnection) parseInitialHandshakePacket(data []byte) (uint32,
 	}
 
 	// Read the connection id.
-	conn.ConnectionID, pos, ok = misc.ReadUint32(data, pos)
+	connectionID, pos, ok := misc.ReadUint32(data, pos)
 	if !ok {
 		return 0, nil, "", err2.NewSQLError(constant.CRMalformedPacket, constant.SSUnknownSQLState, "parseInitialHandshakePacket: packet has no connection id")
 	}
+	conn.SetConnectionID(connectionID)
 
 	// Read the first part of the auth-plugin-Content
 	authPluginData, pos, ok := misc.ReadBytes(data, pos, 8)

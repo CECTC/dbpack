@@ -30,6 +30,7 @@ const (
 type (
 	keyFlag         struct{}
 	keyConnectionID struct{}
+	keyUserName     struct{}
 	keySchema       struct{}
 	keyCommandType  struct{}
 	keyQueryStmt    struct{}
@@ -71,6 +72,20 @@ func ConnectionID(ctx context.Context) uint32 {
 		return connectionID
 	}
 	return 0
+}
+
+// WithUserName binds user name
+func WithUserName(ctx context.Context, userName string) context.Context {
+	return context.WithValue(ctx, keyUserName{}, userName)
+}
+
+// UserName extracts user name
+func UserName(ctx context.Context) string {
+	userID, ok := ctx.Value(keyUserName{}).(string)
+	if ok {
+		return userID
+	}
+	return ""
 }
 
 // WithSchema binds schema

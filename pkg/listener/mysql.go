@@ -151,7 +151,7 @@ func (l *MysqlListener) Close() {
 
 func (l *MysqlListener) handle(conn net.Conn, connectionID uint32) {
 	c := mysql.NewConn(conn)
-	c.ConnectionID = connectionID
+	c.SetConnectionID(connectionID)
 
 	// Catch panics, and close the connection in any case.
 	defer func() {
@@ -159,7 +159,9 @@ func (l *MysqlListener) handle(conn net.Conn, connectionID uint32) {
 			log.Errorf("mysql_server caught panic:\n%v", x)
 		}
 
-		conn.Close()
+		if err := conn.Close(); err != nil {
+			log.Errorf("connection close error, connection id: %v, error: %s", l.connectionID, err)
+		}
 		l.executor.ConnectionClose(proto.WithConnectionID(context.Background(), l.connectionID))
 	}()
 
@@ -192,6 +194,7 @@ func (l *MysqlListener) handle(conn net.Conn, connectionID uint32) {
 		copy(content, data)
 		ctx := proto.WithVariableMap(context.Background())
 		ctx = proto.WithConnectionID(ctx, connectionID)
+		ctx = proto.WithUserName(ctx, c.UserName())
 		ctx = proto.WithSchema(ctx, l.schemaName)
 		err = l.ExecuteCommand(ctx, c, content)
 		if err != nil {
@@ -238,6 +241,7 @@ func (l *MysqlListener) handshake(c *mysql.Conn) error {
 		log.Errorf("Error authenticating user using MySQL native password: %v", err)
 		return err
 	}
+	c.SetUserName(user)
 	return nil
 }
 
@@ -286,7 +290,7 @@ func (l *MysqlListener) writeHandshakeV10(c *mysql.Conn, enableTLS bool, salt []
 	pos = misc.WriteNullString(data, pos, l.conf.ServerVersion)
 
 	// Add connectionID in.
-	pos = misc.WriteUint32(data, pos, c.ConnectionID)
+	pos = misc.WriteUint32(data, pos, c.ID())
 
 	pos += copy(data[pos:], salt[:8])
 
