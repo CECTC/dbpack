@@ -46,7 +46,7 @@ func (t *MatchType) UnmarshalText(text []byte) error {
 		return errors.New("can't unmarshal a nil *MatchType")
 	}
 	if !t.unmarshalText(bytes.ToLower(text)) {
-		return fmt.Errorf("unrecognized match type: %q", text)
+		return fmt.Errorf("unsupported match type: %q", text)
 	}
 	return nil
 }
