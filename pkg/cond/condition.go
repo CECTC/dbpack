@@ -71,17 +71,13 @@ func (cond *KeyCondition) And(cond2 Condition) Condition {
 			}
 			return result
 		case opcode.Or:
-			// a and (b or c) => (a and b) or c
+			// a and (b or c) => (a and b) or (a and c)
 			var result = &ComplexCondition{
 				Op:         opcode.Or,
 				Conditions: make([]Condition, 0),
 			}
-			for i, cd := range c.Conditions {
-				if i == 0 {
-					result.Conditions = append(result.Conditions, cond.And(cd))
-				} else {
-					result.Conditions = append(result.Conditions, cd)
-				}
+			for _, cd := range c.Conditions {
+				result.Conditions = append(result.Conditions, cond.And(cd))
 			}
 			return result
 		}
@@ -127,8 +123,13 @@ func (cond *ComplexCondition) And(cond2 Condition) Condition {
 		switch c := cond2.(type) {
 		case *KeyCondition:
 			// (a and b) and c => a and b and c
-			cond.Conditions = append(cond.Conditions, cond2)
-			return cond
+			var result = &ComplexCondition{
+				Op:         opcode.And,
+				Conditions: make([]Condition, 0),
+			}
+			result.Conditions = append(result.Conditions, cond.Conditions...)
+			result.Conditions = append(result.Conditions, cond2)
+			return result
 		case *ComplexCondition:
 			switch c.Op {
 			case opcode.And:
@@ -205,15 +206,11 @@ func (cond *ComplexCondition) Or(cond2 Condition) Condition {
 		case *ComplexCondition:
 			switch c.Op {
 			case opcode.And:
-				// (a and b) or (c and d) => (a and b and c) or (a and b and d)
-				var result = &ComplexCondition{
+				// (a and b) or (c and d) => (a and b) or (c and d)
+				return &ComplexCondition{
 					Op:         opcode.Or,
-					Conditions: make([]Condition, 0),
+					Conditions: []Condition{cond, c},
 				}
-				for _, cd := range c.Conditions {
-					result.Conditions = append(result.Conditions, cond.And(cd))
-				}
-				return result
 			case opcode.Or:
 				// (a and b) or (c or d) => (a and b) or c or d
 				var result = &ComplexCondition{
@@ -231,8 +228,13 @@ func (cond *ComplexCondition) Or(cond2 Condition) Condition {
 		switch c := cond2.(type) {
 		case *KeyCondition:
 			// (a or b) or c => a or b or c
-			cond.Conditions = append(cond.Conditions, c)
-			return cond
+			var result = &ComplexCondition{
+				Op:         opcode.Or,
+				Conditions: make([]Condition, 0),
+			}
+			result.Conditions = append(result.Conditions, cond.Conditions...)
+			result.Conditions = append(result.Conditions, cond2)
+			return result
 		case *ComplexCondition:
 			switch c.Op {
 			case opcode.And:
