@@ -58,3 +58,15 @@
 ### Changes
 
 * refactor: update global session status, branch session status in txn ([120](https://github.com/CECTC/dbpack/pull/120)) ([9829387](https://github.com/cectc/dbpack/commit/9829387cd519551e9d8c16f1c373712c20a41e6e))
+
+## v0.1.2
+
+### Bug Fixes
+
+* rollback when global session timeout ([145](https://github.com/CECTC/dbpack/pull/145])) ([1798cd1](https://github.com/cectc/dbpack/commit/1798cd1070d7b44e8ad69de70cc71c8f749d5034))
+* when register branch session, global session can not change ([146](https://github.com/CECTC/dbpack/issues/146])) ([11ea3dd](https://github.com/cectc/dbpack/commit/11ea3dd1a0e1b40bb195c843b667378816236177))
+
+### Features
+
+* HttpDistributedTransaction filter support prefix matching ([148](https://github.com/CECTC/dbpack/pull/148])) ([cdb757a](https://github.com/cectc/dbpack/commit/cdb757ad70ccd3dc5f07fa7ff22a2c523adc0e6a))
+* HttpDistributedTransaction filter support regular matching ([149](https://github.com/CECTC/dbpack/pull/149])) ([cdb757a](https://github.com/cectc/dbpack/commit/cdb757ad70ccd3dc5f07fa7ff22a2c523adc0e6a))
