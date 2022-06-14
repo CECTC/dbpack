@@ -197,6 +197,7 @@ func (l *MysqlListener) handle(conn net.Conn, connectionID uint32) {
 		ctx := proto.WithVariableMap(context.Background())
 		ctx = proto.WithConnectionID(ctx, connectionID)
 		ctx = proto.WithUserName(ctx, c.UserName())
+		ctx = proto.WithRemoteAddr(ctx, c.RemoteAddr().String())
 		ctx = proto.WithSchema(ctx, l.schemaName)
 		newCtx, span := tracing.GetTraceSpan(ctx, "mysql_handle")
 		err = l.ExecuteCommand(newCtx, c, content)
@@ -571,6 +572,7 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 
 			ctx = proto.WithCommandType(newCtx, commandType)
 			ctx = proto.WithQueryStmt(ctx, stmt)
+			ctx = proto.WithSqlText(ctx, query)
 			result, warn, err := l.executor.ExecutorComQuery(ctx, query)
 			if err != nil {
 				if writeErr := c.WriteErrorPacketFromError(err); writeErr != nil {
@@ -680,10 +682,10 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 		l.statementID.Inc()
 		stmt := &proto.Stmt{
 			StatementID: l.statementID.Load(),
-			PrepareStmt: query,
+			SqlText:     query,
 		}
 		p := parser.New()
-		act, err := p.ParseOneStmt(stmt.PrepareStmt, "", "")
+		act, err := p.ParseOneStmt(stmt.SqlText, "", "")
 		if err != nil {
 			log.Errorf("Conn %v: Error parsing prepared statement: %v", c, err)
 			if writeErr := c.WriteErrorPacketFromError(err); writeErr != nil {
@@ -748,6 +750,7 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 
 			ctx = proto.WithCommandType(newCtx, commandType)
 			ctx = proto.WithPrepareStmt(ctx, stmt)
+			ctx = proto.WithSqlText(ctx, stmt.SqlText)
 			result, warn, err := l.executor.ExecutorComStmtExecute(ctx, stmt)
 			if err != nil {
 				if writeErr := c.WriteErrorPacketFromError(err); writeErr != nil {

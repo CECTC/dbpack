@@ -41,6 +41,7 @@ services:
     volumes:
       - ./conf/config_sdb.yaml:/config.yaml
       - ./scripts/wait-for-mysql.sh:/wait-for-mysql.sh
+      - /root/:/var/log/:rw
     depends_on:
       - etcd
       - mysql

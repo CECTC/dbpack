@@ -76,7 +76,7 @@ func TestPrepareSelectForUpdate(t *testing.T) {
 			ctx := proto.WithCommandType(context.Background(), constant.ComStmtExecute)
 			protoStmt := &proto.Stmt{
 				StatementID: 1,
-				PrepareStmt: c.sql,
+				SqlText:     c.sql,
 				ParamsCount: 1,
 				ParamData:   nil,
 				ParamsType:  nil,
