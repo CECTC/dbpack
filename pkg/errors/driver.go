@@ -22,7 +22,7 @@ var (
 	ErrInvalidDSNUnescaped       = errors.New("invalid DSN: did you forget to escape a param value?")
 	ErrInvalidDSNAddr            = errors.New("invalid DSN: network address not terminated (missing closing brace)")
 	ErrInvalidDSNNoSlash         = errors.New("invalid DSN: missing the slash separating the database name")
-	errInvalidDSNUnsafeCollation = errors.New("invalid DSN: interpolateParams can not be used with unsafe collations")
+	ErrInvalidDSNUnsafeCollation = errors.New("invalid DSN: interpolateParams can not be used with unsafe collations")
 
 	ErrInvalidConn       = errors.New("invalid connection")
 	ErrMalformedPkt      = errors.New("malformed packet")
