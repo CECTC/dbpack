@@ -28,7 +28,8 @@ const (
 	driverName                            = "mysql"
 	dataSourceName                        = "dksl:123456@tcp(127.0.0.1:13306)/drug?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
 	selectDrugResource                    = "select id, drug_res_type_id, base_type, sale_price from drug_resource where id between ? and ?"
-	selectDrugResourceOrderByIDDesc       = "select id, drug_res_type_id, base_type, sale_price from drug_resource where id between ? and ? order by id desc"
+	selectDrugResourceOrderBy1            = "select id, drug_res_type_id, base_type, sale_price from drug_resource where id between ? and ? order by id desc"
+	selectDrugResourceOrderBy2            = "select id, drug_res_type_id, manufacturer_id, sale_price from drug_resource where id between ? and ? order by manufacturer_id desc, id asc"
 	selectDrugResourceOrderByIDDescLimit  = "select id, drug_res_type_id, base_type, sale_price from drug_resource where id between ? and ? order by id desc limit ?, ?"
 	selectDrugResourceOrderByIDDescLimit2 = "select id, drug_res_type_id, base_type, sale_price from drug_resource where id between ? and ? order by id desc limit ?"
 
@@ -79,7 +80,7 @@ func (suite *_ShardingSuite) TestSelect() {
 }
 
 func (suite *_ShardingSuite) TestSelectOrderBy() {
-	rows, err := suite.db.Query(selectDrugResourceOrderByIDDesc, 200, 210)
+	rows, err := suite.db.Query(selectDrugResourceOrderBy1, 200, 210)
 	if suite.NoErrorf(err, "select row error: %v", err) {
 		var (
 			id            int64
@@ -91,6 +92,23 @@ func (suite *_ShardingSuite) TestSelectOrderBy() {
 			err := rows.Scan(&id, &drugResTypeId, &baseType, &salePrice)
 			suite.NoError(err)
 			suite.T().Logf("id: %d, drug resource type id: %s, base type: %d, sale price: %v", id, drugResTypeId, baseType, salePrice)
+		}
+	}
+}
+
+func (suite *_ShardingSuite) TestSelectOrderBy2() {
+	rows, err := suite.db.Query(selectDrugResourceOrderBy2, 200, 250)
+	if suite.NoErrorf(err, "select row error: %v", err) {
+		var (
+			id             int64
+			drugResTypeId  string
+			manufacturerId string
+			salePrice      float32
+		)
+		for rows.Next() {
+			err := rows.Scan(&id, &drugResTypeId, &manufacturerId, &salePrice)
+			suite.NoError(err)
+			suite.T().Logf("id: %d, drug resource type id: %s, manufacturer id: %s, sale price: %v", id, drugResTypeId, manufacturerId, salePrice)
 		}
 	}
 }
@@ -152,7 +170,7 @@ func (suite *_ShardingSuite) TestUpdateDrugResource() {
 	suite.Assert().Nil(err)
 	suite.Assert().Equal(int64(11), affectedRows)
 
-	rows, err := suite.db.Query(selectDrugResourceOrderByIDDesc, 200, 210)
+	rows, err := suite.db.Query(selectDrugResourceOrderBy1, 200, 210)
 	if suite.NoErrorf(err, "select row error: %v", err) {
 		var (
 			id            int64
