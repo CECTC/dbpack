@@ -45,14 +45,10 @@ const (
 	hintGlobalLock = "GlobalLock"
 )
 
-func init() {
-	filter.RegistryFilterFactory(mysqlFilter, &mysqlFactory{})
+type _mysqlFactory struct {
 }
 
-type mysqlFactory struct {
-}
-
-func (factory *mysqlFactory) NewFilter(config map[string]interface{}) (proto.Filter, error) {
+func (factory *_mysqlFactory) NewFilter(config map[string]interface{}) (proto.Filter, error) {
 	var (
 		err     error
 		content []byte
@@ -226,4 +222,8 @@ func hasGlobalLockHint(hints []*ast.TableOptimizerHint) bool {
 		}
 	}
 	return false
+}
+
+func init() {
+	filter.RegistryFilterFactory(mysqlFilter, &_mysqlFactory{})
 }

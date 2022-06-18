@@ -65,14 +65,10 @@ func (t *MatchType) unmarshalText(text []byte) bool {
 	return true
 }
 
-func init() {
-	filter.RegistryFilterFactory(httpFilter, &httpFactory{})
+type _httpFactory struct {
 }
 
-type httpFactory struct {
-}
-
-func (factory *httpFactory) NewFilter(config map[string]interface{}) (proto.Filter, error) {
+func (factory *_httpFactory) NewFilter(config map[string]interface{}) (proto.Filter, error) {
 	var (
 		err          error
 		content      []byte
@@ -230,4 +226,8 @@ func (f _httpFilter) matchTransactionInfo(requestPath string) (*TransactionInfo,
 		}
 	}
 	return nil, false
+}
+
+func init() {
+	filter.RegistryFilterFactory(httpFilter, &_httpFactory{})
 }
