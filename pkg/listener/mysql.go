@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha1"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -825,8 +826,22 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 			l.stmts.Delete(stmtID)
 		}
 	case constant.ComStmtSendLongData: // no response
-		values := make([]byte, len(data))
-		copy(values, data)
+		if len(data) < 6 {
+			return err2.ErrMalformedPkt
+		}
+
+		stmtID := int(binary.LittleEndian.Uint32(data[0:4]))
+
+		si, ok := l.stmts.Load(stmtID)
+		if !ok {
+			return errors.Errorf("statement not found, statement id: %v", stmtID)
+		}
+		stmt := si.(*proto.Stmt)
+
+		paramID := int(binary.LittleEndian.Uint16(data[4:6]))
+		parameterID := fmt.Sprintf("v%d", paramID+1)
+		stmt.HasLongDataParam = true
+		stmt.BindVars[parameterID] = data[6:]
 	case constant.ComStmtReset:
 		stmtID, _, ok := misc.ReadUint32(data, 1)
 		c.RecycleReadPacket()

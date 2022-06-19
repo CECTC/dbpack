@@ -70,13 +70,14 @@ type (
 
 	// Stmt is a buffer used for store prepare statement meta data
 	Stmt struct {
-		StatementID uint32
-		SqlText     string
-		ParamsCount uint16
-		ParamData   []byte
-		ParamsType  []int32
-		ColumnNames []string
-		BindVars    map[string]interface{}
-		StmtNode    ast.StmtNode
+		StatementID      uint32
+		HasLongDataParam bool
+		SqlText          string
+		ParamsCount      uint16
+		ParamData        []byte
+		ParamsType       []int32
+		ColumnNames      []string
+		BindVars         map[string]interface{}
+		StmtNode         ast.StmtNode
 	}
 )

@@ -18,6 +18,7 @@ package sql
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/uber-go/atomic"
 
@@ -57,7 +58,22 @@ func (tx *Tx) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, 
 	if err := tx.db.doConnectionPreFilter(ctx, tx.conn); err != nil {
 		return nil, 0, err
 	}
-	result, warn, err := tx.conn.PrepareQuery(query, stmt.ParamData)
+
+	var (
+		result proto.Result
+		args   []interface{}
+		warn   uint16
+		err    error
+	)
+	if stmt.HasLongDataParam {
+		for i := 0; i < len(stmt.BindVars); i++ {
+			parameterID := fmt.Sprintf("v%d", i+1)
+			args = append(args, stmt.BindVars[parameterID])
+		}
+		result, warn, err = tx.conn.PrepareQueryArgs(query, args)
+	} else {
+		result, warn, err = tx.conn.PrepareQuery(query, stmt.ParamData)
+	}
 	if err != nil {
 		return result, warn, err
 	}
