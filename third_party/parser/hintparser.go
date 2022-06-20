@@ -31,9 +31,8 @@
 
 package parser
 
-import __yyfmt__ "fmt"
-
 import (
+	__yyfmt__ "fmt"
 	"strconv"
 
 	"github.com/cectc/dbpack/third_party/parser/ast"

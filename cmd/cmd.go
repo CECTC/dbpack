@@ -45,6 +45,7 @@ import (
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/pkg/server"
+	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/third_party/pools"
 	_ "github.com/cectc/dbpack/third_party/types/parser_driver"
 )
@@ -56,12 +57,13 @@ func main() {
 var (
 	Version               = "0.1.0"
 	defaultHTTPListenPort = 18888
+	appName               = "dbpack"
 
 	configPath string
 
 	rootCommand = &cobra.Command{
-		Use:     "dbpack",
-		Short:   "dbpack is a db proxy server",
+		Use:     appName,
+		Short:   fmt.Sprintf("%s is a db proxy server", appName),
 		Version: Version,
 	}
 
@@ -152,6 +154,13 @@ var (
 				}
 			}
 
+			tracingMgr, err := tracing.NewTracer(Version, "console")
+			if err != nil {
+				log.Fatalf("could not setup tracing manager: %s", err.Error())
+			}
+			if err != nil {
+				log.Fatalf("could not setup tracing exporter: %s", err.Error())
+			}
 			ctx, cancel := context.WithCancel(context.Background())
 			c := make(chan os.Signal, 2)
 			signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -164,6 +173,7 @@ var (
 					cancel()
 				}()
 				<-c
+				_ = tracingMgr.Shutdown(ctx)
 				os.Exit(1) // second signal. Exit directly.
 			}()
 
