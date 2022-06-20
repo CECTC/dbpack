@@ -365,6 +365,7 @@ func (db *DB) TestConn() error {
 	if err != nil {
 		return err
 	}
+	defer db.pool.Put(r)
 	conn := r.(*driver.BackendConnection)
 	return conn.Ping(context.Background())
 }
