@@ -21,8 +21,6 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/cectc/dbpack/pkg/tracing"
-
 	"github.com/pkg/errors"
 
 	"github.com/cectc/dbpack/pkg/config"
@@ -30,6 +28,7 @@ import (
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
+	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 )
 

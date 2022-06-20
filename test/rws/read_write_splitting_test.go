@@ -31,10 +31,11 @@ const (
 	masterDataSourceName = "root:123456@tcp(127.0.0.1:3306)/employees?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
 	slaveDataSourceName  = "root:123456@tcp(127.0.0.1:3307)/employees?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
 
-	insertEmployee = `INSERT INTO employees ( emp_no, birth_date, first_name, last_name, gender, hire_date ) VALUES (?, ?, ?, ?, ?, ?)`
-	selectEmployee = `SELECT emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
-	updateEmployee = `UPDATE employees set last_name = ? where emp_no = ?`
-	deleteEmployee = `DELETE FROM employees WHERE emp_no = ?`
+	insertEmployee  = `INSERT INTO employees ( emp_no, birth_date, first_name, last_name, gender, hire_date ) VALUES (?, ?, ?, ?, ?, ?)`
+	selectEmployee1 = `SELECT emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
+	selectEmployee2 = `SELECT /*+ UseDB('employees-master') */ emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
+	updateEmployee  = `UPDATE employees set last_name = ? where emp_no = ?`
+	deleteEmployee  = `DELETE FROM employees WHERE emp_no = ?`
 )
 
 type _ReadWriteSplittingSuite struct {
@@ -105,7 +106,7 @@ func (suite *_ReadWriteSplittingSuite) TestInsert() {
 			suite.Equal(int64(1), affected)
 		}
 	}
-	rows, err := suite.masterDB.Query(selectEmployee, 100001)
+	rows, err := suite.masterDB.Query(selectEmployee1, 100001)
 	if suite.NoErrorf(err, "select row error: %v", err) {
 		var empNo string
 		var birthDate time.Time
@@ -121,8 +122,25 @@ func (suite *_ReadWriteSplittingSuite) TestInsert() {
 	}
 }
 
-func (suite *_ReadWriteSplittingSuite) TestSelect() {
-	rows, err := suite.db.Query(selectEmployee, 100001)
+func (suite *_ReadWriteSplittingSuite) TestSelect1() {
+	rows, err := suite.db.Query(selectEmployee1, 100001)
+	if suite.NoErrorf(err, "select row error: %v", err) {
+		var empNo string
+		var birthDate time.Time
+		var firstName string
+		var lastName string
+		var gender string
+		var hireDate time.Time
+		if rows.Next() {
+			err := rows.Scan(&empNo, &birthDate, &firstName, &lastName, &gender, &hireDate)
+			suite.NoError(err)
+		}
+		suite.Equal("slave", firstName)
+	}
+}
+
+func (suite *_ReadWriteSplittingSuite) TestSelect2() {
+	rows, err := suite.db.Query(selectEmployee2, 100001)
 	if suite.NoErrorf(err, "select row error: %v", err) {
 		var empNo string
 		var birthDate time.Time
@@ -146,7 +164,7 @@ func (suite *_ReadWriteSplittingSuite) TestUpdate() {
 			suite.Equal(int64(1), affected)
 		}
 	}
-	rows, err := suite.masterDB.Query(selectEmployee, 100001)
+	rows, err := suite.masterDB.Query(selectEmployee1, 100001)
 	if suite.NoErrorf(err, "select row error: %v", err) {
 		var empNo string
 		var birthDate time.Time
