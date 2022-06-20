@@ -56,7 +56,7 @@ func (rows *Rows) Next() (*Row, error) {
 	// EOF Packet
 	if data[0] == constant.EOFPacket && len(data) == 5 {
 		// server_status [2 bytes]
-		rows.conn.StatusFlags, _, _ = misc.ReadUint16(data, 3)
+		misc.ReadUint16(data, 3)
 		rows.conn = nil
 		return nil, io.EOF
 	}
