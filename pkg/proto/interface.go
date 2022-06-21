@@ -15,6 +15,8 @@
  */
 
 //go:generate mockgen -destination=../../testdata/mock_db_manager.go -package=testdata . DBManager
+//go:generate mockgen -destination=../../testdata/mock_db.go -package=testdata . DB
+//go:generate mockgen -destination=../../testdata/mock_tx.go -package=testdata . Tx
 package proto
 
 import (

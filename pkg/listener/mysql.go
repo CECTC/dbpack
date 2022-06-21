@@ -177,7 +177,7 @@ func (l *MysqlListener) handle(conn net.Conn, connectionID uint32) {
 	}
 
 	// Negotiation worked, send OK packet.
-	if err = c.WriteOKPacket(0, 0, c.StatusFlags, 0); err != nil {
+	if err := c.WriteOKPacket(0, 0, c.StatusFlags(), 0); err != nil {
 		log.Errorf("Cannot write OK packet to %s: %v", c, err)
 		return
 	}
@@ -539,7 +539,7 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 			tracing.RecordErrorSpan(span, err)
 			return err
 		}
-		if err = c.WriteOKPacket(0, 0, c.StatusFlags, 0); err != nil {
+		if err := c.WriteOKPacket(0, 0, c.StatusFlags(), 0); err != nil {
 			log.Errorf("Error writing ComInitDB result to %s: %v", c, err)
 			tracing.RecordErrorSpan(span, err)
 			return err
@@ -588,7 +588,11 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 					// We should not send any more packets after this, but make sure
 					// to extract the affected rows and last insert id from the result
 					// struct here since clients expect it.
-					return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, c.StatusFlags, warn)
+					flag := c.StatusFlags()
+					if l.executor.InLocalTransaction(ctx) {
+						flag = flag | constant.ServerStatusInTrans
+					}
+					return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, flag, warn)
 				}
 				err = c.WriteFields(l.capabilities, rlt.Fields)
 				if err != nil {
@@ -609,7 +613,7 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 					// We should not send any more packets after this, but make sure
 					// to extract the affected rows and last insert id from the result
 					// struct here since clients expect it.
-					return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, c.StatusFlags, warn)
+					return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, c.StatusFlags(), warn)
 				}
 				err = c.WriteFields(l.capabilities, rlt.Fields)
 				if err != nil {
@@ -637,7 +641,7 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 		c.RecycleReadPacket()
 
 		// Return error if MysqlListener was shut down and OK otherwise
-		if err := c.WriteOKPacket(0, 0, c.StatusFlags, 0); err != nil {
+		if err := c.WriteOKPacket(0, 0, c.StatusFlags(), 0); err != nil {
 			log.Errorf("Error writing ComPing result to %s: %v", c, err)
 			tracing.RecordErrorSpan(span, err)
 			return err
@@ -761,7 +765,11 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 					// We should not send any more packets after this, but make sure
 					// to extract the affected rows and last insert id from the result
 					// struct here since clients expect it.
-					return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, c.StatusFlags, warn)
+					flag := c.StatusFlags()
+					if l.executor.InLocalTransaction(ctx) {
+						flag = flag | constant.ServerStatusInTrans
+					}
+					return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, flag, warn)
 				}
 
 				err = c.WriteFields(l.capabilities, rlt.Fields)
@@ -783,7 +791,7 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 					// We should not send any more packets after this, but make sure
 					// to extract the affected rows and last insert id from the result
 					// struct here since clients expect it.
-					return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, c.StatusFlags, warn)
+					return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, c.StatusFlags(), warn)
 				}
 				err = c.WriteFields(l.capabilities, rlt.Fields)
 				if err != nil {
@@ -824,7 +832,7 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 			stmt := si.(*proto.Stmt)
 			stmt.BindVars = make(map[string]interface{}, 0)
 		}
-		return c.WriteOKPacket(0, 0, c.StatusFlags, 0)
+		return c.WriteOKPacket(0, 0, c.StatusFlags(), 0)
 	case constant.ComSetOption:
 		operation, _, ok := misc.ReadUint16(data, 1)
 		c.RecycleReadPacket()

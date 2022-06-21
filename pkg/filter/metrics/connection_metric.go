@@ -24,7 +24,6 @@ import (
 
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/filter"
-	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 )
@@ -33,13 +32,9 @@ const (
 	connectionMetricFilter = "ConnectionMetricFilter"
 )
 
-func init() {
-	filter.RegistryFilterFactory(connectionMetricFilter, &connectionMetricFactory{})
-}
+type _factory struct{}
 
-type connectionMetricFactory struct{}
-
-func (factory *connectionMetricFactory) NewFilter(config map[string]interface{}) (proto.Filter, error) {
+func (factory *_factory) NewFilter(config map[string]interface{}) (proto.Filter, error) {
 	connectionFilterExecDuration := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Namespace: "dbpack",
@@ -49,69 +44,67 @@ func (factory *connectionMetricFactory) NewFilter(config map[string]interface{})
 			Buckets:   prometheus.ExponentialBuckets(0.001 /* 1 ms */, 2, 18),
 		}, []string{"database", "command_type", "command"})
 	prometheus.MustRegister(connectionFilterExecDuration)
-	return &_connectionMetricFilter{
+	return &_filter{
 		connectionFilterExecDuration: connectionFilterExecDuration, timeKey: "start_at"}, nil
 }
 
-type _connectionMetricFilter struct {
+type _filter struct {
 	connectionFilterExecDuration *prometheus.HistogramVec
 	timeKey                      string
 }
 
-func (f *_connectionMetricFilter) GetKind() string {
+func (f *_filter) GetKind() string {
 	return connectionMetricFilter
 }
 
-func (f *_connectionMetricFilter) PreHandle(ctx context.Context, conn proto.Connection) error {
+func (f *_filter) PreHandle(ctx context.Context, conn proto.Connection) error {
 	start := time.Now()
-	conn.DataSourceName()
 	proto.WithVariable(ctx, f.timeKey, start)
 	return nil
 }
 
-func (f *_connectionMetricFilter) PostHandle(ctx context.Context, result proto.Result, conn proto.Connection) error {
+func (f *_filter) PostHandle(ctx context.Context, result proto.Result, conn proto.Connection) error {
 	v := proto.Variable(ctx, f.timeKey)
-	if startAt, ok := v.(time.Time); ok {
-		commandType := proto.CommandType(ctx)
-		var command string
-		var strCommandType string
-		var stmtNode ast.StmtNode
-
-		switch commandType {
-		case constant.ComQuery:
-			strCommandType = "com_query"
-			stmtNode = proto.QueryStmt(ctx)
-			if stmtNode == nil {
-				log.Warn("not support stmt")
-				return nil
-			}
-		case constant.ComStmtExecute:
-			strCommandType = "com_stmt_execute"
-			stmt := proto.PrepareStmt(ctx)
-			if stmt == nil {
-				log.Warn("not support stmt")
-				return nil
-			}
-			stmtNode = stmt.StmtNode
-		}
-
-		if len(strCommandType) == 0 {
-			log.Warnf("not support command_type %v", commandType)
-			return nil
-		}
-
-		switch stmtNode.(type) {
-		case *ast.DeleteStmt:
-			command = "delete"
-		case *ast.InsertStmt:
-			command = "insert"
-		case *ast.UpdateStmt:
-			command = "update"
-		case *ast.SelectStmt:
-			command = "select"
-		}
-
-		f.connectionFilterExecDuration.WithLabelValues(conn.DataSourceName(), strCommandType, command).Observe(time.Since(startAt).Seconds())
+	startAt, ok := v.(time.Time)
+	if !ok {
+		return nil
 	}
+
+	commandType := proto.CommandType(ctx)
+
+	var command string
+	var commandTypeStr string
+	var stmtNode ast.StmtNode
+
+	switch commandType {
+	case constant.ComQuery:
+		commandTypeStr = "COM_QUERY"
+		stmtNode = proto.QueryStmt(ctx)
+	case constant.ComStmtExecute:
+		commandTypeStr = "COM_STMT_EXECUTE"
+		statement := proto.PrepareStmt(ctx)
+		stmtNode = statement.StmtNode
+	default:
+		return nil
+	}
+
+	switch stmtNode.(type) {
+	case *ast.DeleteStmt:
+		command = "DELETE"
+	case *ast.InsertStmt:
+		command = "INSERT"
+	case *ast.UpdateStmt:
+		command = "UPDATE"
+	case *ast.SelectStmt:
+		command = "SELECT"
+	default:
+		return nil
+	}
+
+	f.connectionFilterExecDuration.WithLabelValues(conn.DataSourceName(), commandTypeStr, command).Observe(time.Since(startAt).Seconds())
 	return nil
+}
+
+func init() {
+	filter.RegistryFilterFactory(connectionMetricFilter, &_factory{})
 }
