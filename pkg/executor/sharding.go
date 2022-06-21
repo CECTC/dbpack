@@ -21,6 +21,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/cectc/dbpack/pkg/tracing"
+
 	"github.com/pkg/errors"
 
 	"github.com/cectc/dbpack/pkg/cond"
@@ -198,16 +200,18 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 		plan proto.Plan
 		err  error
 	)
+	newCtx, span := tracing.GetTraceSpan(ctx, "sharding_execute_com_query")
+	defer span.End()
 
 	log.Debugf("query: %s", sql)
-	queryStmt := proto.QueryStmt(ctx)
+	queryStmt := proto.QueryStmt(newCtx)
 	if queryStmt == nil {
 		return nil, 0, errors.New("query stmt should not be nil")
 	}
 	if _, ok := queryStmt.(*ast.SetStmt); ok {
 		for _, db := range executor.all {
 			go func(db *DataSourceBrief) {
-				if _, _, err := db.DB.Query(ctx, sql); err != nil {
+				if _, _, err := db.DB.Query(newCtx, sql); err != nil {
 					log.Error(err)
 				}
 			}(db)
@@ -221,17 +225,17 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 	if selectStmt, ok := queryStmt.(*ast.SelectStmt); ok {
 		if selectStmt.Fields != nil && len(selectStmt.Fields.Fields) > 0 {
 			if _, ok := selectStmt.Fields.Fields[0].Expr.(*ast.VariableExpr); ok {
-				return executor.all[0].DB.Query(ctx, sql)
+				return executor.all[0].DB.Query(newCtx, sql)
 			}
 		}
 	}
 
-	plan, err = executor.optimizer.Optimize(ctx, queryStmt)
+	plan, err = executor.optimizer.Optimize(newCtx, queryStmt)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	return plan.Execute(ctx)
+	return plan.Execute(newCtx)
 }
 
 func (executor *ShardingExecutor) ExecutorComStmtExecute(ctx context.Context, stmt *proto.Stmt) (proto.Result, uint16, error) {

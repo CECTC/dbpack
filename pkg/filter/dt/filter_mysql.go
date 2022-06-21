@@ -22,6 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cectc/dbpack/pkg/tracing"
+
 	"github.com/pkg/errors"
 
 	"github.com/cectc/dbpack/pkg/constant"
@@ -93,31 +95,34 @@ func (f *_mysqlFilter) GetKind() string {
 func (f *_mysqlFilter) PreHandle(ctx context.Context, conn proto.Connection) error {
 	var err error
 	bc := conn.(*driver.BackendConnection)
-	commandType := proto.CommandType(ctx)
+	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_filter_pre_handle")
+	defer span.End()
+	commandType := proto.CommandType(newCtx)
+
 	switch commandType {
 	case constant.ComQuery:
-		stmt := proto.QueryStmt(ctx)
+		stmt := proto.QueryStmt(newCtx)
 		if stmt == nil {
 			return errors.New("query stmt should not be nil")
 		}
 		switch stmtNode := stmt.(type) {
 		case *ast.DeleteStmt:
-			err = f.processBeforeQueryDelete(ctx, bc, stmtNode)
+			err = f.processBeforeQueryDelete(newCtx, bc, stmtNode)
 		case *ast.UpdateStmt:
-			err = f.processBeforeQueryUpdate(ctx, bc, stmtNode)
+			err = f.processBeforeQueryUpdate(newCtx, bc, stmtNode)
 		default:
 			return nil
 		}
 	case constant.ComStmtExecute:
-		stmt := proto.PrepareStmt(ctx)
+		stmt := proto.PrepareStmt(newCtx)
 		if stmt == nil {
 			return errors.New("prepare stmt should not be nil")
 		}
 		switch stmtNode := stmt.StmtNode.(type) {
 		case *ast.DeleteStmt:
-			err = f.processBeforePrepareDelete(ctx, bc, stmt, stmtNode)
+			err = f.processBeforePrepareDelete(newCtx, bc, stmt, stmtNode)
 		case *ast.UpdateStmt:
-			err = f.processBeforePrepareUpdate(ctx, bc, stmt, stmtNode)
+			err = f.processBeforePrepareUpdate(newCtx, bc, stmt, stmtNode)
 		default:
 			return nil
 		}
@@ -130,20 +135,22 @@ func (f *_mysqlFilter) PreHandle(ctx context.Context, conn proto.Connection) err
 func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn proto.Connection) error {
 	var err error
 	bc := conn.(*driver.BackendConnection)
-	commandType := proto.CommandType(ctx)
+	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_filter_post_handle")
+	defer span.End()
+	commandType := proto.CommandType(newCtx)
 	switch commandType {
 	case constant.ComQuery:
-		stmt := proto.QueryStmt(ctx)
+		stmt := proto.QueryStmt(newCtx)
 		if stmt == nil {
 			return errors.New("query stmt should not be nil")
 		}
 		switch stmtNode := stmt.(type) {
 		case *ast.DeleteStmt:
-			err = f.processAfterQueryDelete(ctx, bc, stmtNode)
+			err = f.processAfterQueryDelete(newCtx, bc, stmtNode)
 		case *ast.InsertStmt:
-			err = f.processAfterQueryInsert(ctx, bc, result, stmtNode)
+			err = f.processAfterQueryInsert(newCtx, bc, result, stmtNode)
 		case *ast.UpdateStmt:
-			err = f.processAfterQueryUpdate(ctx, bc, stmtNode)
+			err = f.processAfterQueryUpdate(newCtx, bc, stmtNode)
 		case *ast.SelectStmt:
 			if stmtNode.LockInfo != nil && stmtNode.LockInfo.LockType == ast.SelectLockForUpdate {
 				err = f.processSelectForQueryUpdate(ctx, bc, result, stmtNode)
@@ -152,20 +159,20 @@ func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn
 			return nil
 		}
 	case constant.ComStmtExecute:
-		stmt := proto.PrepareStmt(ctx)
+		stmt := proto.PrepareStmt(newCtx)
 		if stmt == nil {
 			return errors.New("prepare stmt should not be nil")
 		}
 		switch stmtNode := stmt.StmtNode.(type) {
 		case *ast.DeleteStmt:
-			err = f.processAfterPrepareDelete(ctx, bc, stmt, stmtNode)
+			err = f.processAfterPrepareDelete(newCtx, bc, stmt, stmtNode)
 		case *ast.InsertStmt:
-			err = f.processAfterPrepareInsert(ctx, bc, result, stmt, stmtNode)
+			err = f.processAfterPrepareInsert(newCtx, bc, result, stmt, stmtNode)
 		case *ast.UpdateStmt:
-			err = f.processAfterPrepareUpdate(ctx, bc, stmt, stmtNode)
+			err = f.processAfterPrepareUpdate(newCtx, bc, stmt, stmtNode)
 		case *ast.SelectStmt:
 			if stmtNode.LockInfo != nil && stmtNode.LockInfo.LockType == ast.SelectLockForUpdate {
-				err = f.processSelectForPrepareUpdate(ctx, bc, result, stmt, stmtNode)
+				err = f.processSelectForPrepareUpdate(newCtx, bc, result, stmt, stmtNode)
 			}
 		default:
 			return nil

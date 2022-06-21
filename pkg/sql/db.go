@@ -20,6 +20,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/cectc/dbpack/pkg/tracing"
+
 	"github.com/pkg/errors"
 	"github.com/uber-go/atomic"
 
@@ -59,10 +61,12 @@ func NewDB(name string, pingInterval time.Duration,
 }
 
 func (db *DB) UseDB(ctx context.Context, schema string) error {
+	newCtx, span := tracing.GetTraceSpan(ctx, "db_use")
+	defer span.End()
 	db.inflightRequests.Inc()
 	defer db.inflightRequests.Dec()
 
-	r, err := db.pool.Get(ctx)
+	r, err := db.pool.Get(newCtx)
 	if err != nil {
 		err = errors.WithStack(err)
 		return err
@@ -74,10 +78,12 @@ func (db *DB) UseDB(ctx context.Context, schema string) error {
 }
 
 func (db *DB) ExecuteFieldList(ctx context.Context, table, wildcard string) ([]proto.Field, error) {
+	newCtx, span := tracing.GetTraceSpan(ctx, "db_exec_field_list")
+	defer span.End()
 	db.inflightRequests.Inc()
 	defer db.inflightRequests.Dec()
 
-	r, err := db.pool.Get(ctx)
+	r, err := db.pool.Get(newCtx)
 	if err != nil {
 		err = errors.WithStack(err)
 		return nil, err
@@ -102,10 +108,12 @@ func (db *DB) ExecuteFieldList(ctx context.Context, table, wildcard string) ([]p
 }
 
 func (db *DB) Query(ctx context.Context, query string) (proto.Result, uint16, error) {
+	newCtx, span := tracing.GetTraceSpan(ctx, "db_query")
+	defer span.End()
 	db.inflightRequests.Inc()
 	defer db.inflightRequests.Dec()
 
-	r, err := db.pool.Get(ctx)
+	r, err := db.pool.Get(newCtx)
 	if err != nil {
 		err = errors.WithStack(err)
 		return nil, 0, err
@@ -113,14 +121,14 @@ func (db *DB) Query(ctx context.Context, query string) (proto.Result, uint16, er
 	defer db.pool.Put(r)
 
 	conn := r.(*driver.BackendConnection)
-	if err := db.doConnectionPreFilter(ctx, conn); err != nil {
+	if err := db.doConnectionPreFilter(newCtx, conn); err != nil {
 		return nil, 0, err
 	}
 	result, warn, err := conn.ExecuteWithWarningCount(query, true)
 	if err != nil {
 		return result, warn, err
 	}
-	if err := db.doConnectionPostFilter(ctx, result, conn); err != nil {
+	if err := db.doConnectionPostFilter(newCtx, result, conn); err != nil {
 		return nil, 0, err
 	}
 	return result, warn, err
@@ -153,24 +161,26 @@ func (db *DB) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, 
 }
 
 func (db *DB) ExecuteSql(ctx context.Context, sql string, args ...interface{}) (proto.Result, uint16, error) {
+	newCtx, span := tracing.GetTraceSpan(ctx, "db_exec_sql")
+	defer span.End()
 	db.inflightRequests.Inc()
 	defer db.inflightRequests.Dec()
 
-	r, err := db.pool.Get(ctx)
+	r, err := db.pool.Get(newCtx)
 	if err != nil {
 		err = errors.WithStack(err)
 		return nil, 0, err
 	}
 	defer db.pool.Put(r)
 	conn := r.(*driver.BackendConnection)
-	if err := db.doConnectionPreFilter(ctx, conn); err != nil {
+	if err := db.doConnectionPreFilter(newCtx, conn); err != nil {
 		return nil, 0, err
 	}
 	result, warn, err := conn.PrepareQueryArgs(sql, args)
 	if err != nil {
 		return result, warn, err
 	}
-	if err := db.doConnectionPostFilter(ctx, result, conn); err != nil {
+	if err := db.doConnectionPostFilter(newCtx, result, conn); err != nil {
 		return nil, 0, err
 	}
 	return result, warn, err
@@ -182,8 +192,9 @@ func (db *DB) Begin(ctx context.Context) (proto.Tx, proto.Result, error) {
 		conn   *driver.BackendConnection
 		err    error
 	)
-
-	r, err := db.pool.Get(ctx)
+	newCtx, span := tracing.GetTraceSpan(ctx, "db_tx_begin")
+	defer span.End()
+	r, err := db.pool.Get(newCtx)
 	if err != nil {
 		err = errors.WithStack(err)
 		return nil, nil, err

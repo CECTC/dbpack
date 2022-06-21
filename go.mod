@@ -45,12 +45,15 @@ require (
 require (
 	github.com/BurntSushi/toml v1.1.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
-	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2 // indirect
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/soheilhy/cmux v0.1.5-0.20210205191134-5ec6847320e5 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802 // indirect
+	go.opentelemetry.io/otel v1.7.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.7.0
+	go.opentelemetry.io/otel/sdk v1.7.0
+	go.opentelemetry.io/otel/trace v1.7.0
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	golang.org/x/tools v0.1.10 // indirect
 	google.golang.org/protobuf v1.27.1
