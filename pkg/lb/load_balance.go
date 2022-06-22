@@ -55,11 +55,11 @@ func (l *LoadBalanceAlgorithm) unmarshalText(text []byte) bool {
 		return true
 	}
 	if strings.EqualFold(alg, "RoundRobin") {
-		*l = Random
+		*l = RoundRobin
 		return true
 	}
 	if strings.EqualFold(alg, "RandomWeight") {
-		*l = Random
+		*l = RandomWeight
 		return true
 	}
 	return false

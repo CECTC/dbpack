@@ -19,13 +19,11 @@ package tracing
 import (
 	"context"
 	"fmt"
-
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/codes"
-
 	"os"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	traceSDK "go.opentelemetry.io/otel/sdk/trace"
