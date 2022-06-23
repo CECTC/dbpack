@@ -63,7 +63,7 @@ func (suite *_DistributedTransactionSuite) SetupSuite() {
 		RetryDeadThreshold:               130000,
 		RollbackRetryTimeoutUnlockEnable: true,
 		EtcdConfig: clientv3.Config{
-			Endpoints: []string{"localhost:2379", "localhost:2378", "localhost:2377"},
+			Endpoints: []string{"localhost:2379"},
 		},
 	}
 

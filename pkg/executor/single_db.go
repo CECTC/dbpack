@@ -199,7 +199,7 @@ func (executor *SingleDBExecutor) ExecutorComQuery(ctx context.Context, sql stri
 
 func (executor *SingleDBExecutor) ExecutorComStmtExecute(ctx context.Context, stmt *proto.Stmt) (proto.Result, uint16, error) {
 	connectionID := proto.ConnectionID(ctx)
-	log.Debugf("connectionID: %d, prepare: %s", connectionID, stmt.PrepareStmt)
+	log.Debugf("connectionID: %d, prepare: %s", connectionID, stmt.SqlText)
 	txi, ok := executor.localTransactionMap.Load(connectionID)
 	if ok {
 		tx := txi.(proto.Tx)

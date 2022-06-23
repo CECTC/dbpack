@@ -520,7 +520,9 @@ func (conn *BackendConnection) ReadQueryResult(wantFields bool) (result *mysql.R
 	}
 
 	result = &mysql.Result{
-		Fields: make([]*mysql.Field, colNumber),
+		AffectedRows: affectedRows,
+		InsertId:     lastInsertID,
+		Fields:       make([]*mysql.Field, colNumber),
 	}
 
 	// Read column headers. One packet per column.

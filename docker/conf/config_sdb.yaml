@@ -26,16 +26,30 @@ data_source_cluster:
     filters:
       - metricFilter
       - mysqlDTFilter
+      - auditLogFilter
 
 filters:
+  - name: metricFilter
+    kind: ConnectionMetricFilter
   - name: mysqlDTFilter
     kind: MysqlDistributedTransaction
     conf:
       appid: svc
       lock_retry_interval: 50ms
       lock_retry_times: 30
-  - name: metricFilter
-    kind: ConnectionMetricFilter
+  - name: auditLogFilter
+    kind: AuditLogFilter
+    conf:
+      audit_log_dir: /var/log/dbpack/
+      # unit MB
+      max_size: 300
+      # unit Day
+      max_age: 28
+      # maximum number of old log files to retain
+      max_backups: 1
+      # determines if the rotated log files should be compressed using gzip
+      compress: true
+      record_before: true
 
 distributed_transaction:
   appid: svc

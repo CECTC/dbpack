@@ -36,6 +36,8 @@ type (
 	keyQueryStmt    struct{}
 	keyPrepareStmt  struct{}
 	keyVariableMap  struct{}
+	keySqlText      struct{}
+	keyRemoteAddr   struct{}
 )
 
 type cFlag uint8
@@ -116,7 +118,7 @@ func CommandType(ctx context.Context) byte {
 	return 0
 }
 
-// WithQueryStmt bind query stmt
+// WithQueryStmt binds query stmt
 func WithQueryStmt(ctx context.Context, stmt ast.StmtNode) context.Context {
 	return context.WithValue(ctx, keyQueryStmt{}, stmt)
 }
@@ -130,7 +132,7 @@ func QueryStmt(ctx context.Context) ast.StmtNode {
 	return nil
 }
 
-// WithPrepareStmt bind prepare stmt
+// WithPrepareStmt binds prepare stmt
 func WithPrepareStmt(ctx context.Context, stmt *Stmt) context.Context {
 	return context.WithValue(ctx, keyPrepareStmt{}, stmt)
 }
@@ -166,6 +168,34 @@ func Variable(ctx context.Context, key string) interface{} {
 		return variables[key]
 	}
 	return nil
+}
+
+// WithSqlText binds sql text
+func WithSqlText(ctx context.Context, sqlText string) context.Context {
+	return context.WithValue(ctx, keySqlText{}, sqlText)
+}
+
+// SqlText extracts sql text
+func SqlText(ctx context.Context) string {
+	sqlText, ok := ctx.Value(keySqlText{}).(string)
+	if ok {
+		return sqlText
+	}
+	return ""
+}
+
+// WithRemoteAddr binds remote address
+func WithRemoteAddr(ctx context.Context, remoteAddr string) context.Context {
+	return context.WithValue(ctx, keyRemoteAddr{}, remoteAddr)
+}
+
+// RemoteAddr extracts remote addr
+func RemoteAddr(ctx context.Context) string {
+	remoteAddr, ok := ctx.Value(keyRemoteAddr{}).(string)
+	if ok {
+		return remoteAddr
+	}
+	return ""
 }
 
 func hasFlag(ctx context.Context, flag cFlag) bool {

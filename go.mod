@@ -57,5 +57,6 @@ require (
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	golang.org/x/tools v0.1.10 // indirect
 	google.golang.org/protobuf v1.27.1
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	k8s.io/apimachinery v0.23.5
 )
