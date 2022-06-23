@@ -33,7 +33,7 @@ import (
 	"github.com/cectc/dbpack/third_party/parser"
 )
 
-func TestSingleDBExecutor(t *testing.T) {
+func TestReadWriteSplittingExecutor(t *testing.T) {
 	testCases := []*struct {
 		query              bool
 		connectionID       uint32
@@ -73,7 +73,13 @@ func TestSingleDBExecutor(t *testing.T) {
 		{
 			true,
 			1,
-			"select id, name, age from employee",
+			"select /*+ usedb('employee-master') */ id, name, age from employee",
+			false,
+		},
+		{
+			false,
+			1,
+			"select /*+ usedb('employee-master') */ id, name, age from employee where id = ?",
 			false,
 		},
 		{
@@ -115,6 +121,7 @@ func TestSingleDBExecutor(t *testing.T) {
 	tx := testdata.NewMockTx(ctrl)
 	db.EXPECT().Query(gomock.Any(), gomock.Any()).Return(&mysql.Result{}, uint16(0), nil).MaxTimes(100)
 	db.EXPECT().ExecuteStmt(gomock.Any(), gomock.Any()).Return(&mysql.Result{}, uint16(0), nil).MaxTimes(100)
+	db.EXPECT().Status().Return(proto.Running).MaxTimes(10).MaxTimes(100)
 	db.EXPECT().Begin(gomock.Any()).Return(tx, &mysql.Result{}, nil).MaxTimes(100)
 
 	tx.EXPECT().Query(gomock.Any(), gomock.Any()).Return(&mysql.Result{}, uint16(0), nil).MaxTimes(100)
@@ -126,11 +133,25 @@ func TestSingleDBExecutor(t *testing.T) {
 	manager.EXPECT().GetDB(gomock.Any()).AnyTimes().Return(db)
 	resource.SetDBManager(manager)
 
-	executor, err := NewSingleDBExecutor(&config.Executor{
-		Name: "sdb",
-		Mode: config.SDB,
+	executor, err := NewReadWriteSplittingExecutor(&config.Executor{
+		Name: "rws",
+		Mode: config.RWS,
 		Config: map[string]interface{}{
-			"data_source_ref": "employee",
+			"load_balance_algorithm": "Random",
+			"data_sources": []*config.DataSourceRef{
+				{
+					Name:   "employee-master",
+					Weight: "r0w10",
+				},
+				{
+					Name:   "employee-read1",
+					Weight: "r5w0",
+				},
+				{
+					Name:   "employee-read2",
+					Weight: "r5w0",
+				},
+			},
 		},
 	})
 	assert.Nil(t, err)
@@ -157,8 +178,7 @@ func TestSingleDBExecutor(t *testing.T) {
 				assert.Equal(t, c.inLocalTransaction, inLocalTransaction)
 			} else {
 				protoStmt := &proto.Stmt{
-					ParamsCount: 3,
-					StmtNode:    stmt,
+					StmtNode: stmt,
 				}
 				ctx := proto.WithVariableMap(context.Background())
 				ctx = proto.WithConnectionID(ctx, c.connectionID)

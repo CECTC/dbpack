@@ -21,8 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/cectc/dbpack/pkg/tracing"
-
 	"github.com/pkg/errors"
 
 	"github.com/cectc/dbpack/pkg/cond"
@@ -34,6 +32,7 @@ import (
 	"github.com/cectc/dbpack/pkg/optimize"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/topo"
+	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 )
 
