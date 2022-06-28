@@ -18,6 +18,7 @@ package sql
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/cectc/dbpack/pkg/tracing"
@@ -138,6 +139,13 @@ func (db *DB) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, 
 	db.inflightRequests.Inc()
 	defer db.inflightRequests.Dec()
 
+	var (
+		result proto.Result
+		args   []interface{}
+		warn   uint16
+		err    error
+	)
+
 	r, err := db.pool.Get(ctx)
 	if err != nil {
 		err = errors.WithStack(err)
@@ -150,7 +158,15 @@ func (db *DB) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, 
 	if err := db.doConnectionPreFilter(ctx, conn); err != nil {
 		return nil, 0, err
 	}
-	result, warn, err := conn.PrepareQuery(query, stmt.ParamData)
+	if stmt.HasLongDataParam {
+		for i := 0; i < len(stmt.BindVars); i++ {
+			parameterID := fmt.Sprintf("v%d", i+1)
+			args = append(args, stmt.BindVars[parameterID])
+		}
+		result, warn, err = conn.PrepareQueryArgs(query, args)
+	} else {
+		result, warn, err = conn.PrepareQuery(query, stmt.ParamData)
+	}
 	if err != nil {
 		return result, warn, err
 	}
