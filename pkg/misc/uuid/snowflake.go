@@ -33,7 +33,8 @@ type SnowflakeWorker struct {
 	rnd      *rand.Rand
 }
 
-func NewWorker(workerID int64) (*SnowflakeWorker, error) {
+func NewWorker() (*SnowflakeWorker, error) {
+	workerID := generateWorkerID()
 	if workerID < 0 || workerID > maxWorkerID {
 		return nil, fmt.Errorf("worker id can't be greater than %d or less than 0", maxWorkerID)
 	}

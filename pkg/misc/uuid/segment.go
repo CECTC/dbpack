@@ -17,126 +17,90 @@
 package uuid
 
 import (
-	"context"
-	"errors"
-	"sync"
-	"sync/atomic"
+	"database/sql"
+	"fmt"
 	"time"
-)
 
-const (
-	MaxRetry = 3
+	"github.com/cectc/dbpack/pkg/log"
 )
 
 type SegmentWorker struct {
-	Key        string
-	Step       int32
-	CurrentPos int32                  // current buffer pos
-	Buffer     []*Segment             // use two buffer, one buffer offers ID, another as preload
-	UpdateTime time.Time              //  mark update time
-	mutex      sync.Mutex             //
-	IsPreload  bool                   // mark worker finished preload or not
-	Waiting    map[string][]chan byte // hang
+	db     *sql.DB
+	buffer chan int64
+	min    int64
+	max    int64
+	bizID  string
 }
 
-type Segment struct {
-	Cursor int64 // current index
-	Max    int64
-	Min    int64
-	InitOk bool
-}
-
-type SegmentRecord struct {
-	ID         int64  `json:"id" form:"id"` // pk
-	BizTag     string `json:"biz_tag" form:"biz_tag"`
-	MaxID      int64  `json:"max_id" form:"max_id"`
-	Step       int32  `json:"step" form:"step"`
-	UpdateTime int64  `json:"update_time" form:"update_time"`
-}
-
-func NewSegmentWorker(sr *SegmentRecord) (*SegmentWorker, error) {
+func NewSegmentWorker(db *sql.DB, len int, biz string) (*SegmentWorker, error) {
 	return &SegmentWorker{
-		Key:        sr.BizTag,
-		Step:       sr.Step,
-		CurrentPos: 0, // use first buffer
-		Buffer:     make([]*Segment, 0),
-		UpdateTime: time.Now(),
-		Waiting:    make(map[string][]chan byte),
-		IsPreload:  false,
+		db:     db,
+		buffer: make(chan int64, len),
+		bizID:  biz,
 	}, nil
 }
 
 func (w *SegmentWorker) NextID() (int64, error) {
-	w.mutex.Lock()
-	defer w.mutex.Unlock()
-
-	var id int64
-	curBuffer := w.Buffer[w.CurrentPos]
-	// check if current buffer has seq
-	if w.HasSeq() {
-		id = atomic.AddInt64(&w.Buffer[w.CurrentPos].Cursor, 1)
-		w.UpdateTime = time.Now()
-	}
-
-	// if current buffer already use 50% ids，check another buffer if preload
-	if curBuffer.Max-id < int64(0.5*float32(w.Step)) && len(w.Buffer) <= 1 && !w.IsPreload {
-		w.IsPreload = true
-		cancel, _ := context.WithTimeout(context.Background(), 3*time.Second)
-		go w.PreloadBuffer(cancel)
-	}
-
-	// first buffer use out
-	if id == curBuffer.Max {
-		// checkout to another buffer
-		if len(w.Buffer) > 1 && w.Buffer[w.CurrentPos+1].InitOk {
-			w.Buffer = append(w.Buffer[:0], w.Buffer[1:]...)
-		}
-	}
-	// return if id valid
-	if w.HasID(id) {
+	select {
+	case <-time.After(time.Second):
+		return 0, fmt.Errorf("get id timeout")
+	case id := <-w.buffer:
 		return id, nil
 	}
-
-	// wait goroutine
-	waitChan := make(chan byte, 1)
-	w.Waiting[w.Key] = append(w.Waiting[w.Key], waitChan)
-
-	w.mutex.Unlock()
-
-	timer := time.NewTimer(500 * time.Millisecond) // wait 500ms
-	select {
-	case <-waitChan:
-	case <-timer.C:
-	}
-
-	w.mutex.Lock()
-	// second buffer still unready
-	if len(w.Buffer) <= 1 {
-		return 0, errors.New("get id failed")
-	}
-	// switch buffer if second buffer ok
-	w.Buffer = append(w.Buffer[:0], w.Buffer[1:]...)
-	if w.HasSeq() {
-		id = atomic.AddInt64(&w.Buffer[w.CurrentPos].Cursor, 1)
-		w.UpdateTime = time.Now()
-	}
-	return id, nil
 }
 
-func (w *SegmentWorker) HasSeq() bool {
-	if w.Buffer[w.CurrentPos].InitOk && w.Buffer[w.CurrentPos].Cursor < w.Buffer[w.CurrentPos].Max {
-		return true
+func (w *SegmentWorker) ProduceID() {
+	w.reload()
+	for {
+		if w.min >= w.max {
+			w.reload()
+		}
+
+		w.min++
+		w.buffer <- w.min
 	}
-	return false
 }
 
-func (w *SegmentWorker) PreloadBuffer(ctx context.Context) error {
-	for i := 0; i < MaxRetry; i++ {
-
+func (w *SegmentWorker) reload() error {
+	var err error
+	for {
+		err = w.fetchSegmentFromDB()
+		if err == nil {
+			return nil
+		}
+		log.Errorf("failed to fetch id from db: %w", err)
+		time.Sleep(time.Second)
 	}
+}
+
+func (w *SegmentWorker) fetchSegmentFromDB() error {
+	var (
+		maxID int64
+		step  int64
+	)
+
+	tx, err := w.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	row := tx.QueryRow("SELECT max_id,step FROM uid WHERE business_id = ? FOR UPDATE", w.bizID)
+	err = row.Scan(&maxID, &step)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("UPDATE uid SET max_id = ? WHERE business_id = ?", maxID+step, w.bizID)
+	if err != nil {
+		return err
+	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	w.min = maxID
+	w.max = maxID + step
 	return nil
-}
-
-func (w *SegmentWorker) HasID(id int64) bool {
-	return id != 0
 }
