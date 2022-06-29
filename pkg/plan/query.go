@@ -38,6 +38,7 @@ import (
 type QueryOnSingleDBPlan struct {
 	Database string
 	Tables   []string
+	PK       string
 	Stmt     *ast.SelectStmt
 	Limit    *Limit
 	Args     []interface{}
@@ -83,9 +84,8 @@ func (p *QueryOnSingleDBPlan) generate(sb *strings.Builder, args *[]interface{})
 		err = generateSelect(p.Tables[0], p.Stmt, sb, p.Limit)
 		p.appendArgs(args)
 	default:
-		if p.Stmt.OrderBy != nil {
-			sb.WriteString("SELECT * FROM (")
-		}
+		sb.WriteString("SELECT * FROM (")
+
 		sb.WriteByte('(')
 		if err = generateSelect(p.Tables[0], p.Stmt, sb, p.Limit); err != nil {
 			return
@@ -103,12 +103,14 @@ func (p *QueryOnSingleDBPlan) generate(sb *strings.Builder, args *[]interface{})
 			sb.WriteByte(')')
 			p.appendArgs(args)
 		}
+		sb.WriteString(") t ")
 		if p.Stmt.OrderBy != nil {
-			sb.WriteString(") t ")
 			restoreCtx := format.NewRestoreCtx(format.DefaultRestoreFlags, sb)
 			if err := p.Stmt.OrderBy.Restore(restoreCtx); err != nil {
 				return errors.WithStack(err)
 			}
+		} else {
+			sb.WriteString(fmt.Sprintf("ORDER BY `%s` ASC", p.PK))
 		}
 	}
 	return
@@ -258,7 +260,7 @@ func generateSelect(table string, stmt *ast.SelectStmt, sb *strings.Builder, lim
 	if limit != nil {
 		sb.WriteByte(' ')
 		limitCount := limit.Offset + limit.Count
-		sb.WriteString(fmt.Sprintf("limit %d", limitCount))
+		sb.WriteString(fmt.Sprintf("LIMIT %d", limitCount))
 	}
 
 	return nil

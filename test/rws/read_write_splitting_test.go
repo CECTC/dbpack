@@ -152,7 +152,7 @@ func (suite *_ReadWriteSplittingSuite) TestSelect2() {
 			err := rows.Scan(&empNo, &birthDate, &firstName, &lastName, &gender, &hireDate)
 			suite.NoError(err)
 		}
-		suite.Equal("slave", firstName)
+		suite.Equal("master", firstName)
 	}
 }
 
