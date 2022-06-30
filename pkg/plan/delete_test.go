@@ -59,7 +59,7 @@ func TestDeleteOnSingleDBPlan(t *testing.T) {
 			}
 			stmt.Accept(&visitor.ParamVisitor{})
 			deleteStmt := stmt.(*ast.DeleteStmt)
-			plan := &DeleteOnSingleDBPlan{
+			plan := &DeletePlan{
 				Database: "school_0",
 				Tables:   c.tables,
 				Stmt:     deleteStmt,

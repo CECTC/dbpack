@@ -30,7 +30,7 @@ import (
 	"github.com/cectc/dbpack/third_party/parser/format"
 )
 
-type DeleteOnSingleDBPlan struct {
+type DeletePlan struct {
 	Database string
 	Tables   []string
 	Stmt     *ast.DeleteStmt
@@ -38,7 +38,7 @@ type DeleteOnSingleDBPlan struct {
 	Executor proto.DBGroupExecutor
 }
 
-func (p *DeleteOnSingleDBPlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
+func (p *DeletePlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
 	var (
 		sb                     strings.Builder
 		tx                     proto.Tx
@@ -87,7 +87,7 @@ func (p *DeleteOnSingleDBPlan) Execute(ctx context.Context) (proto.Result, uint1
 	return mysqlResult, warnings, nil
 }
 
-func (p *DeleteOnSingleDBPlan) generate(sb *strings.Builder, table string) error {
+func (p *DeletePlan) generate(sb *strings.Builder, table string) error {
 	ctx := format.NewRestoreCtx(format.DefaultRestoreFlags, sb)
 	ctx.WriteKeyWord("DELETE ")
 	ctx.WriteKeyWord("FROM ")
@@ -122,12 +122,12 @@ func (p *DeleteOnSingleDBPlan) generate(sb *strings.Builder, table string) error
 	return nil
 }
 
-type DeleteOnMultiDBPlan struct {
+type MultiDeletePlan struct {
 	Stmt  *ast.DeleteStmt
-	Plans []*DeleteOnSingleDBPlan
+	Plans []*DeletePlan
 }
 
-func (p *DeleteOnMultiDBPlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
+func (p *MultiDeletePlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
 	var (
 		affectedRows uint64
 		warnings     uint16

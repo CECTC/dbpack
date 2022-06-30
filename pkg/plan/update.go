@@ -30,7 +30,7 @@ import (
 	"github.com/cectc/dbpack/third_party/parser/format"
 )
 
-type UpdateOnSingleDBPlan struct {
+type UpdatePlan struct {
 	Database string
 	Tables   []string
 	Stmt     *ast.UpdateStmt
@@ -38,7 +38,7 @@ type UpdateOnSingleDBPlan struct {
 	Executor proto.DBGroupExecutor
 }
 
-func (p *UpdateOnSingleDBPlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
+func (p *UpdatePlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
 	var (
 		sb                     strings.Builder
 		tx                     proto.Tx
@@ -87,7 +87,7 @@ func (p *UpdateOnSingleDBPlan) Execute(ctx context.Context) (proto.Result, uint1
 	return mysqlResult, warnings, nil
 }
 
-func (p *UpdateOnSingleDBPlan) generate(sb *strings.Builder, table string) error {
+func (p *UpdatePlan) generate(sb *strings.Builder, table string) error {
 	ctx := format.NewRestoreCtx(format.DefaultRestoreFlags, sb)
 	ctx.WriteKeyWord("UPDATE ")
 	// todo add xid hint for distributed transaction
@@ -132,12 +132,12 @@ func (p *UpdateOnSingleDBPlan) generate(sb *strings.Builder, table string) error
 	return nil
 }
 
-type UpdateOnMultiDBPlan struct {
+type MultiUpdatePlan struct {
 	Stmt  *ast.UpdateStmt
-	Plans []*UpdateOnSingleDBPlan
+	Plans []*UpdatePlan
 }
 
-func (p *UpdateOnMultiDBPlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
+func (p *MultiUpdatePlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
 	var (
 		affectedRows uint64
 		warnings     uint16
