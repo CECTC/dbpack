@@ -64,7 +64,7 @@ func (o Optimizer) optimizeDelete(ctx context.Context, stmt *ast.DeleteStmt, arg
 				return nil, errors.Errorf("db group %s should not be nil", k)
 			}
 
-			return &plan.DeleteOnSingleDBPlan{
+			return &plan.DeletePlan{
 				Database: k,
 				Tables:   v,
 				Stmt:     stmt,
@@ -74,7 +74,7 @@ func (o Optimizer) optimizeDelete(ctx context.Context, stmt *ast.DeleteStmt, arg
 		}
 	}
 
-	plans := make([]*plan.DeleteOnSingleDBPlan, 0, len(shards))
+	plans := make([]*plan.DeletePlan, 0, len(shards))
 
 	for k, v := range shardMap {
 		executor, exists := o.dbGroupExecutors[k]
@@ -82,7 +82,7 @@ func (o Optimizer) optimizeDelete(ctx context.Context, stmt *ast.DeleteStmt, arg
 			return nil, errors.Errorf("db group %s should not be nil", k)
 		}
 
-		plans = append(plans, &plan.DeleteOnSingleDBPlan{
+		plans = append(plans, &plan.DeletePlan{
 			Database: k,
 			Tables:   v,
 			Stmt:     stmt,
@@ -91,7 +91,7 @@ func (o Optimizer) optimizeDelete(ctx context.Context, stmt *ast.DeleteStmt, arg
 		})
 	}
 
-	multiPlan := &plan.DeleteOnMultiDBPlan{
+	multiPlan := &plan.MultiDeletePlan{
 		Stmt:  stmt,
 		Plans: plans,
 	}

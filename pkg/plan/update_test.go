@@ -59,7 +59,7 @@ func TestUpdateOnSingleDBPlan(t *testing.T) {
 			}
 			stmt.Accept(&visitor.ParamVisitor{})
 			updateStmt := stmt.(*ast.UpdateStmt)
-			plan := &UpdateOnSingleDBPlan{
+			plan := &UpdatePlan{
 				Database: "school_0",
 				Tables:   c.tables,
 				Stmt:     updateStmt,

@@ -64,7 +64,7 @@ func (o Optimizer) optimizeUpdate(ctx context.Context, stmt *ast.UpdateStmt, arg
 				return nil, errors.Errorf("db group %s should not be nil", k)
 			}
 
-			return &plan.UpdateOnSingleDBPlan{
+			return &plan.UpdatePlan{
 				Database: k,
 				Tables:   v,
 				Stmt:     stmt,
@@ -74,7 +74,7 @@ func (o Optimizer) optimizeUpdate(ctx context.Context, stmt *ast.UpdateStmt, arg
 		}
 	}
 
-	plans := make([]*plan.UpdateOnSingleDBPlan, 0, len(shards))
+	plans := make([]*plan.UpdatePlan, 0, len(shards))
 
 	for k, v := range shardMap {
 		executor, exists := o.dbGroupExecutors[k]
@@ -82,7 +82,7 @@ func (o Optimizer) optimizeUpdate(ctx context.Context, stmt *ast.UpdateStmt, arg
 			return nil, errors.Errorf("db group %s should not be nil", k)
 		}
 
-		plans = append(plans, &plan.UpdateOnSingleDBPlan{
+		plans = append(plans, &plan.UpdatePlan{
 			Database: k,
 			Tables:   v,
 			Stmt:     stmt,
@@ -91,7 +91,7 @@ func (o Optimizer) optimizeUpdate(ctx context.Context, stmt *ast.UpdateStmt, arg
 		})
 	}
 
-	multiPlan := &plan.UpdateOnMultiDBPlan{
+	multiPlan := &plan.MultiUpdatePlan{
 		Stmt:  stmt,
 		Plans: plans,
 	}
