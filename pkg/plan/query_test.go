@@ -31,26 +31,30 @@ func TestQueryOnSingleDBPlan(t *testing.T) {
 	testCases := []struct {
 		selectSql           string
 		tables              []string
+		pk                  string
 		args                []interface{}
 		expectedGenerateSql string
 	}{
 		{
 			selectSql:           "select * from student where id in (?,?)",
 			tables:              []string{"student_1", "student_5"},
+			pk:                  "id",
 			args:                []interface{}{1, 5},
-			expectedGenerateSql: "(SELECT * FROM `student_1` WHERE `id` IN (?,?)) UNION ALL (SELECT * FROM `student_5` WHERE `id` IN (?,?))",
+			expectedGenerateSql: "SELECT * FROM ((SELECT * FROM `student_1` WHERE `id` IN (?,?)) UNION ALL (SELECT * FROM `student_5` WHERE `id` IN (?,?))) t ORDER BY `id` ASC",
 		},
 		{
 			selectSql:           "select * from student where id in (?,?) order by id desc",
 			tables:              []string{"student_1", "student_5"},
+			pk:                  "id",
 			args:                []interface{}{1, 5},
 			expectedGenerateSql: "SELECT * FROM ((SELECT * FROM `student_1` WHERE `id` IN (?,?) ORDER BY `id` DESC) UNION ALL (SELECT * FROM `student_5` WHERE `id` IN (?,?) ORDER BY `id` DESC)) t ORDER BY `id` DESC",
 		},
 		{
 			selectSql:           "select * from student where id in (?,?) order by id desc limit ?, ?",
 			tables:              []string{"student_1", "student_5"},
+			pk:                  "id",
 			args:                []interface{}{1, 5, 1000, 20},
-			expectedGenerateSql: "SELECT * FROM ((SELECT * FROM `student_1` WHERE `id` IN (?,?) ORDER BY `id` DESC limit 1020) UNION ALL (SELECT * FROM `student_5` WHERE `id` IN (?,?) ORDER BY `id` DESC limit 1020)) t ORDER BY `id` DESC",
+			expectedGenerateSql: "SELECT * FROM ((SELECT * FROM `student_1` WHERE `id` IN (?,?) ORDER BY `id` DESC LIMIT 1020) UNION ALL (SELECT * FROM `student_5` WHERE `id` IN (?,?) ORDER BY `id` DESC LIMIT 1020)) t ORDER BY `id` DESC",
 		},
 	}
 
@@ -67,6 +71,7 @@ func TestQueryOnSingleDBPlan(t *testing.T) {
 			plan := &QueryOnSingleDBPlan{
 				Database: "school_0",
 				Tables:   c.tables,
+				PK:       c.pk,
 				Stmt:     selectStmt,
 				Args:     c.args,
 				Executor: nil,

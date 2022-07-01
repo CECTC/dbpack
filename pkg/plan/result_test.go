@@ -94,6 +94,46 @@ func TestMergeResultWithOutOrderByAndLimit(t *testing.T) {
 	}
 }
 
+func TestMergeResultWithLimit(t *testing.T) {
+	buildStudents1(10050)
+	patch1 := buildRowsNextPatch(10050)
+	defer patch1.Reset()
+	merge := func(commandType int) (*mysql.MergeResult, uint16) {
+		return mergeResultWithLimit(proto.WithCommandType(context.Background(), byte(commandType)),
+			[]*ResultWithErr{
+				{
+					Result:  &mysql.Result{},
+					Warning: 0,
+					Error:   nil,
+				},
+				{
+					Result:  &mysql.Result{},
+					Warning: 0,
+					Error:   nil,
+				},
+				{
+					Result:  &mysql.Result{},
+					Warning: 0,
+					Error:   nil,
+				},
+			}, &Limit{
+				Offset: 20,
+				Count:  10,
+			})
+	}
+	t.Log("Merge COM_QUERY result:")
+	result, _ := merge(constant.ComQuery)
+	for _, row := range result.Rows {
+		t.Logf("%s", row.Data())
+	}
+	begin.Swap(10000)
+	t.Log("Merge COM_STMT_EXECUTE result:")
+	result, _ = merge(constant.ComStmtExecute)
+	for _, row := range result.Rows {
+		t.Logf("%s", row.Data())
+	}
+}
+
 func TestMergeResultWithOrderByAndLimit(t *testing.T) {
 	buildStudents3(10050)
 	patch1 := buildRowsNextPatch(10050)

@@ -46,7 +46,6 @@ import (
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/pkg/server"
-	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/third_party/pools"
 	_ "github.com/cectc/dbpack/third_party/types/parser_driver"
 )
@@ -155,13 +154,12 @@ var (
 				}
 			}
 
-			tracingMgr, err := tracing.NewTracer(Version, "console")
-			if err != nil {
-				log.Fatalf("could not setup tracing manager: %s", err.Error())
-			}
-			if err != nil {
-				log.Fatalf("could not setup tracing exporter: %s", err.Error())
-			}
+			// temporarily turn off tracer output
+			//tracingMgr, err := tracing.NewTracer(Version, "console")
+			//if err != nil {
+			//	log.Fatalf("could not setup tracing manager: %s", err.Error())
+			//}
+
 			ctx, cancel := context.WithCancel(context.Background())
 			c := make(chan os.Signal, 2)
 			signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -174,7 +172,7 @@ var (
 					cancel()
 				}()
 				<-c
-				_ = tracingMgr.Shutdown(ctx)
+				//_ = tracingMgr.Shutdown(ctx)
 				os.Exit(1) // second signal. Exit directly.
 			}()
 

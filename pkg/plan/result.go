@@ -174,7 +174,7 @@ func mergeResult(ctx context.Context, results []*ResultWithErr, orderBy *ast.Ord
 		return mergeResultWithOrderBy(ctx, results, orderBy)
 	}
 	if limit != nil {
-		log.Panic("unsupported limit without order by")
+		return mergeResultWithLimit(ctx, results, limit)
 	}
 	return nil, 0
 }
@@ -203,6 +203,7 @@ func mergeResultWithOutOrderByAndLimit(ctx context.Context, results []*ResultWit
 				endResult[i] = true
 				continue
 			}
+			pop += 1
 			if commandType == constant.ComQuery {
 				binaryRow := &mysql.TextRow{Row: row}
 				rows = append(rows, binaryRow)
@@ -210,7 +211,66 @@ func mergeResultWithOutOrderByAndLimit(ctx context.Context, results []*ResultWit
 				binaryRow := &mysql.BinaryRow{Row: row}
 				rows = append(rows, binaryRow)
 			}
+		}
+		if pop == 0 {
+			break
+		}
+	}
+	fields = results[0].Result.(*mysql.Result).Fields
+	result := &mysql.MergeResult{
+		Fields:       fields,
+		AffectedRows: 0,
+		InsertId:     0,
+		Rows:         rows,
+	}
+	return result, warning
+}
+
+func mergeResultWithLimit(ctx context.Context, results []*ResultWithErr, limit *Limit) (*mysql.MergeResult, uint16) {
+	var (
+		fields      []*mysql.Field
+		warning     uint16 = 0
+		offset      int64
+		count       int64
+		rowCount    int64
+		commandType = proto.CommandType(ctx)
+		rows        = make([]proto.Row, 0)
+		// Record whether mysql.Result has been traversed
+		endResult = make([]bool, len(results))
+	)
+	for _, rlt := range results {
+		warning += rlt.Warning
+	}
+	offset = limit.Offset
+	count = limit.Count
+	rowCount = 0
+	for {
+		pop := 0
+		for i, rlt := range results {
+			if endResult[i] {
+				continue
+			}
+			result := rlt.Result.(*mysql.Result)
+			row, err := result.Rows.Next()
+			if err != nil {
+				endResult[i] = true
+				continue
+			}
+			rowCount++
 			pop += 1
+			if rowCount > offset {
+				if int64(len(rows)) == count {
+					// drain connection buffer
+					continue
+				}
+				if commandType == constant.ComQuery {
+					binaryRow := &mysql.TextRow{Row: row}
+					rows = append(rows, binaryRow)
+				} else {
+					binaryRow := &mysql.BinaryRow{Row: row}
+					rows = append(rows, binaryRow)
+				}
+			}
 		}
 		if pop == 0 {
 			break

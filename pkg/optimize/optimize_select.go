@@ -23,17 +23,22 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/cectc/dbpack/pkg/cond"
+	"github.com/cectc/dbpack/pkg/dt/schema"
+	"github.com/cectc/dbpack/pkg/meta"
 	"github.com/cectc/dbpack/pkg/plan"
 	"github.com/cectc/dbpack/pkg/proto"
+	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/pkg/topo"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 )
 
 func (o Optimizer) optimizeSelect(ctx context.Context, stmt *ast.SelectStmt, args []interface{}) (proto.Plan, error) {
 	var (
-		alg      cond.ShardingAlgorithm
-		topology *topo.Topology
-		exists   bool
+		alg       cond.ShardingAlgorithm
+		topology  *topo.Topology
+		tableMeta schema.TableMeta
+		exists    bool
+		err       error
 	)
 	tableName := stmt.From.TableRefs.Left.(*ast.TableSource).Source.(*ast.TableName).Name.String()
 
@@ -43,6 +48,17 @@ func (o Optimizer) optimizeSelect(ctx context.Context, stmt *ast.SelectStmt, arg
 	if topology, exists = o.topologies[tableName]; !exists {
 		return nil, errors.New("topology should not be nil")
 	}
+
+	for db, tables := range topology.DBs {
+		sqlDB := resource.GetDBManager().GetDB(db)
+		tableMeta, err = meta.GetTableMetaCache().GetTableMeta(ctx, sqlDB, tables[0])
+		if err != nil {
+			continue
+		} else {
+			break
+		}
+	}
+	pk := tableMeta.GetPKName()
 
 	condition, err := cond.ParseCondition(stmt.Where, args...)
 	if err != nil {
@@ -69,6 +85,7 @@ func (o Optimizer) optimizeSelect(ctx context.Context, stmt *ast.SelectStmt, arg
 			return &plan.QueryOnSingleDBPlan{
 				Database: k,
 				Tables:   v,
+				PK:       pk,
 				Stmt:     stmt,
 				Args:     args,
 				Executor: executor,
@@ -92,6 +109,7 @@ func (o Optimizer) optimizeSelect(ctx context.Context, stmt *ast.SelectStmt, arg
 		plans = append(plans, &plan.QueryOnSingleDBPlan{
 			Database: k,
 			Tables:   shardMap[k],
+			PK:       pk,
 			Stmt:     stmt,
 			Args:     args,
 			Executor: executor,
