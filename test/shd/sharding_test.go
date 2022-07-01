@@ -19,6 +19,7 @@ package rws
 import (
 	"database/sql"
 	"testing"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql" // register mysql
 	"github.com/stretchr/testify/suite"
@@ -34,7 +35,7 @@ const (
 	selectDrugResourceOrderByIDDescLimit  = "select id, drug_res_type_id, base_type, sale_price from drug_resource where id between ? and ? order by id desc limit ?, ?"
 	selectDrugResourceOrderByIDDescLimit2 = "select id, drug_res_type_id, base_type, sale_price from drug_resource where id between ? and ? order by id desc limit ?"
 
-	deleteDrugResource = "delete from drug_resource where id = ?"
+	deleteDrugResource = "delete from drug_resource where id between ? and ?"
 	insertDrugResource = "INSERT INTO `drug_resource`(`id`, `drug_res_type_id`, `base_type`, `status`, `type_id`, " +
 		"`dict_dosage_id`, `code`, `pym`, `name`, `manufacturer_id`, `approval_no`, `med_type`, `admin_code`, " +
 		"`pack_unit_id`, `min_unit_id`, `pack_quantity`, `dosage_unit_id`, `dosage_quantity`, `pack_spec`, `take_method_id`, " +
@@ -166,11 +167,12 @@ func (suite *_ShardingSuite) TestSelectOrderByAndLimit2() {
 }
 
 func (suite *_ShardingSuite) TestDeleteDrugResource() {
-	result, err := suite.db.Exec(deleteDrugResource, 20)
+	result, err := suite.db.Exec(deleteDrugResource, 10, 20)
 	suite.Assert().Nil(err)
 	affectedRows, err := result.RowsAffected()
 	suite.Assert().Nil(err)
 	suite.Assert().Equal(int64(1), affectedRows)
+	time.Sleep(10 * time.Second)
 }
 
 func (suite *_ShardingSuite) TestInsertDrugResource() {

@@ -38,7 +38,7 @@ type UpdatePlan struct {
 	Executor proto.DBGroupExecutor
 }
 
-func (p *UpdatePlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
+func (p *UpdatePlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
 	var (
 		sb                     strings.Builder
 		tx                     proto.Tx
@@ -137,7 +137,7 @@ type MultiUpdatePlan struct {
 	Plans []*UpdatePlan
 }
 
-func (p *MultiUpdatePlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
+func (p *MultiUpdatePlan) Execute(ctx context.Context, _ ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
 	var (
 		affectedRows uint64
 		warnings     uint16

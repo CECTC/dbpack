@@ -25,6 +25,7 @@ import (
 
 	"github.com/cectc/dbpack/pkg/cond"
 	"github.com/cectc/dbpack/pkg/config"
+	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/filter"
 	"github.com/cectc/dbpack/pkg/lb"
 	"github.com/cectc/dbpack/pkg/log"
@@ -40,6 +41,7 @@ type ShardingExecutor struct {
 	PreFilters  []proto.DBPreFilter
 	PostFilters []proto.DBPostFilter
 
+	config              *config.ShardingConfig
 	all                 []*DataSourceBrief
 	optimizer           proto.Optimizer
 	localTransactionMap map[uint32]proto.Tx
@@ -76,6 +78,7 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 	executor := &ShardingExecutor{
 		PreFilters:          make([]proto.DBPreFilter, 0),
 		PostFilters:         make([]proto.DBPostFilter, 0),
+		config:              shardingConfig,
 		all:                 all,
 		optimizer:           optimize.NewOptimizer(executors, algorithms, topologies),
 		localTransactionMap: make(map[uint32]proto.Tx, 0),
@@ -199,7 +202,7 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 		plan proto.Plan
 		err  error
 	)
-	newCtx, span := tracing.GetTraceSpan(ctx, "sharding_execute_com_query")
+	newCtx, span := tracing.GetTraceSpan(ctx, "sharding_com_query")
 	defer span.End()
 
 	log.Debugf("query: %s", sql)
@@ -228,12 +231,11 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 			}
 		}
 	}
-
 	plan, err = executor.optimizer.Optimize(newCtx, queryStmt)
 	if err != nil {
 		return nil, 0, err
 	}
-
+	proto.WithVariable(newCtx, constant.TransactionTimeout, executor.config.TransactionTimeout)
 	return plan.Execute(newCtx)
 }
 
@@ -243,17 +245,19 @@ func (executor *ShardingExecutor) ExecutorComStmtExecute(ctx context.Context, st
 		plan proto.Plan
 		err  error
 	)
+	newCtx, span := tracing.GetTraceSpan(ctx, "sharding_com_stmt_execute")
+	defer span.End()
 
 	for i := 0; i < len(stmt.BindVars); i++ {
 		parameterID := fmt.Sprintf("v%d", i+1)
 		args = append(args, stmt.BindVars[parameterID])
 	}
-	plan, err = executor.optimizer.Optimize(ctx, stmt.StmtNode, args...)
+	plan, err = executor.optimizer.Optimize(newCtx, stmt.StmtNode, args...)
 	if err != nil {
 		return nil, 0, err
 	}
-
-	return plan.Execute(ctx)
+	proto.WithVariable(newCtx, constant.TransactionTimeout, executor.config.TransactionTimeout)
+	return plan.Execute(newCtx)
 }
 
 func (executor *ShardingExecutor) ConnectionClose(ctx context.Context) {

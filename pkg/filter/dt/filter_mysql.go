@@ -19,7 +19,6 @@ package dt
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"time"
 
 	"github.com/cectc/dbpack/pkg/tracing"
@@ -35,16 +34,13 @@ import (
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/third_party/parser/ast"
-	"github.com/cectc/dbpack/third_party/parser/model"
 )
 
 const (
-	mysqlFilter    = "MysqlDistributedTransaction"
-	beforeImage    = "BeforeImage"
-	XID            = "x-dbpack-xid"
-	BranchID       = "x-dbpack-branch-id"
-	hintXID        = "XID"
-	hintGlobalLock = "GlobalLock"
+	mysqlFilter = "MysqlDistributedTransaction"
+	beforeImage = "BeforeImage"
+	XID         = "x-dbpack-xid"
+	BranchID    = "x-dbpack-branch-id"
 )
 
 type _mysqlFactory struct {
@@ -209,26 +205,6 @@ func (f *_mysqlFilter) registerBranchTransaction(ctx context.Context, xid, resou
 		}
 	}
 	return branchID, err
-}
-
-func hasXIDHint(hints []*ast.TableOptimizerHint) (bool, string) {
-	for _, hint := range hints {
-		if strings.EqualFold(hint.HintName.String(), hintXID) {
-			hintData := hint.HintData.(model.CIStr)
-			xid := hintData.String()
-			return true, xid
-		}
-	}
-	return false, ""
-}
-
-func hasGlobalLockHint(hints []*ast.TableOptimizerHint) bool {
-	for _, hint := range hints {
-		if strings.EqualFold(hint.HintName.String(), hintGlobalLock) {
-			return true
-		}
-	}
-	return false
 }
 
 func init() {

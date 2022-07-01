@@ -13,6 +13,7 @@ executors:
   - name: redirect
     mode: shd
     config:
+      transaction_timeout: 60000
       db_groups:
         - name: drug_0
           load_balance_algorithm: RandomWeight
@@ -43,6 +44,8 @@ data_source_cluster:
     dsn: root:123456@tcp(dbpack-mysql1:3306)/drug?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8
     ping_interval: 20s
     ping_times_for_change_status: 3
+    filters:
+      - mysqlDTFilter
 
   - name: drug_1
     capacity: 10
@@ -51,5 +54,22 @@ data_source_cluster:
     dsn: root:123456@tcp(dbpack-mysql2:3306)/drug?timeout=60s&readTimeout=60s&writeTimeout=60s&parseTime=true&loc=Local&charset=utf8mb4,utf8
     ping_interval: 20s
     ping_times_for_change_status: 3
+    filters:
+      - mysqlDTFilter
 
+filters:
+  - name: mysqlDTFilter
+    kind: MysqlDistributedTransaction
+    conf:
+      appid: svc
+      lock_retry_interval: 50ms
+      lock_retry_times: 30
+
+distributed_transaction:
+  appid: svc
+  retry_dead_threshold: 130000
+  rollback_retry_timeout_unlock_enable: true
+  etcd_config:
+    endpoints:
+      - etcd:2379
 http_listen_port: 9999

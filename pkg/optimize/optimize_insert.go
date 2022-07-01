@@ -109,11 +109,9 @@ func (o Optimizer) optimizeInsert(ctx context.Context, stmt *ast.InsertStmt, arg
 }
 
 func findPkIndex(stmt *ast.InsertStmt, pk string) int {
-	if stmt.Columns != nil {
-		for i, column := range stmt.Columns {
-			if column.Name.String() == pk {
-				return i
-			}
+	for i, column := range stmt.Columns {
+		if column.Name.String() == pk {
+			return i
 		}
 	}
 	return -1

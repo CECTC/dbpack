@@ -38,7 +38,7 @@ type InsertPlan struct {
 	Executor proto.DBGroupExecutor
 }
 
-func (p *InsertPlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
+func (p *InsertPlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
 	var (
 		sb  strings.Builder
 		err error
