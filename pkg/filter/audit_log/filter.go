@@ -30,6 +30,7 @@ import (
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/filter"
 	"github.com/cectc/dbpack/pkg/log"
+	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 )
@@ -177,17 +178,17 @@ func (f *_filter) PostHandle(ctx context.Context, result proto.Result, conn prot
 	var (
 		commandTypeStr string
 		args           strings.Builder
-		stmt           ast.Node
+		stmtNode       ast.StmtNode
 	)
 	args.WriteByte('[')
 	switch commandType {
 	case constant.ComQuery:
 		commandTypeStr = "COM_QUERY"
-		stmt = proto.QueryStmt(ctx)
+		stmtNode = proto.QueryStmt(ctx)
 	case constant.ComStmtExecute:
 		commandTypeStr = "COM_STMT_EXECUTE"
 		statement := proto.PrepareStmt(ctx)
-		stmt = statement.StmtNode
+		stmtNode = statement.StmtNode
 		for i := 0; i < len(statement.BindVars); i++ {
 			parameterID := fmt.Sprintf("v%d", i+1)
 			param := statement.BindVars[parameterID]
@@ -208,18 +209,7 @@ func (f *_filter) PostHandle(ctx context.Context, result proto.Result, conn prot
 	}
 	args.WriteByte(']')
 
-	var command string
-	switch stmt.(type) {
-	case *ast.DeleteStmt:
-		command = "DELETE"
-	case *ast.InsertStmt:
-		command = "INSERT"
-	case *ast.UpdateStmt:
-		command = "UPDATE"
-	case *ast.SelectStmt:
-		command = "SELECT"
-	default:
-	}
+	command := misc.GetStmtLabel(stmtNode)
 
 	affected, err := result.RowsAffected()
 	if err != nil {
