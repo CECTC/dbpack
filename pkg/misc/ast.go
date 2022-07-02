@@ -18,7 +18,7 @@ package misc
 
 import "github.com/cectc/dbpack/third_party/parser/ast"
 
-// GetStmtLabel generates a label for a statement.
+// GetStmtLabel generates a label for given statement.
 func GetStmtLabel(stmtNode ast.StmtNode) string {
 	switch x := stmtNode.(type) {
 	case *ast.AlterTableStmt:
