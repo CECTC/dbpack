@@ -102,5 +102,5 @@ func GetStmtLabel(stmtNode ast.StmtNode) string {
 	case *ast.ShutdownStmt:
 		return "Shutdown"
 	}
-	return "other"
+	return "Unrecognized"
 }
