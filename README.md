@@ -33,7 +33,7 @@ using prometheus metrics, default metric server run at :18888
 
 ## Architecture
 
-![architecture](https://github.com/CECTC/dbpack-doc/blob/master/images/sc_20220418101615.png)
+![architecture](https://github.com/CECTC/dbpack-doc/blob/master/images/arch-for-dbpack.drawio.png)
 
 + Listener: responsible for parsing the SQL protocol.
 + Executor: responsible for forwarding SQL requests to the backend physical DB.
