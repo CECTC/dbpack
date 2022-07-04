@@ -142,8 +142,6 @@ func castFunc2script(sb *strings.Builder, node *ast.FuncCastExpr) error {
 			}
 			sb.WriteString(", ")
 
-			sb.WriteString(", ")
-
 			if node.Tp.Charset != "" {
 				sb.WriteByte('\'')
 				sb.WriteString(misc.Escape(node.Tp.Charset, misc.EscapeSingleQuote))
