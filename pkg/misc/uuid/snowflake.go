@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/cectc/dbpack/pkg/misc"
 )
 
 const (
@@ -28,7 +30,7 @@ const (
 
 type SnowflakeWorker struct {
 	workerID int64
-	lastTs   int64
+	lastTs   uint64
 	seq      int32
 	rnd      *rand.Rand
 }
@@ -49,14 +51,14 @@ func NewWorker() (*SnowflakeWorker, error) {
 }
 
 func (w *SnowflakeWorker) NextID() (int64, error) {
-	ts := time.Now().UnixMilli()
+	ts := misc.CurrentTimeMillis()
 	if ts < w.lastTs {
 		offset := w.lastTs - ts
 		if offset > 5 {
 			return int64(0), fmt.Errorf("worker %d clock move back", w.workerID)
 		}
 		time.Sleep(time.Duration(offset<<1) * time.Millisecond)
-		ts = time.Now().UnixMilli()
+		ts = misc.CurrentTimeMillis()
 		if ts < w.lastTs {
 			return int64(0), fmt.Errorf("worker %d clock move back", w.workerID)
 		}
@@ -72,19 +74,19 @@ func (w *SnowflakeWorker) NextID() (int64, error) {
 	return w.makeID(ts)
 }
 
-func (w *SnowflakeWorker) makeID(now int64) (int64, error) {
+func (w *SnowflakeWorker) makeID(now uint64) (int64, error) {
 	w.lastTs = now
-	timestamp := (now - int64(epoch)) << (sequenceBits + workerIDBits)
+	timestamp := (now - epoch) << (sequenceBits + workerIDBits)
 	workerID := w.workerID << sequenceBits
-	id := timestamp | workerID | int64(w.seq)
+	id := int64(timestamp) | workerID | int64(w.seq)
 	return int64(id), nil
 }
 
-func (w *SnowflakeWorker) waitUntilNextTs() int64 {
-	t := time.Now().UnixMilli()
+func (w *SnowflakeWorker) waitUntilNextTs() uint64 {
+	t := misc.CurrentTimeMillis()
 	for t <= w.lastTs {
 		time.Sleep(100 * time.Microsecond)
-		t = time.Now().UnixMilli()
+		t = misc.CurrentTimeMillis()
 	}
 	return t
 }
