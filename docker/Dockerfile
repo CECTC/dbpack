@@ -1,4 +1,4 @@
-FROM golang:1.16.3 as builder
+FROM golang:1.18.3 as builder
 WORKDIR /app
 ADD . /app
 RUN make build-local
