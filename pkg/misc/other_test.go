@@ -119,7 +119,6 @@ func TestCompare(t *testing.T) {
 		"map":    {map[string]string{"a": "a", "b": "b"}, map[string]string{"a": "a", "b": "b"}, 0},
 		"struct": {struct{ a int }{1}, "1", 1},
 		"chan":   {make(chan int), make(chan int), -1},
-		"func":   {func() int { return 1 }, "1", -1},
 	}
 
 	for name, c := range cases {
