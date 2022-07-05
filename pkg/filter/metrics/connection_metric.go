@@ -24,6 +24,7 @@ import (
 
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/filter"
+	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 )
@@ -88,18 +89,7 @@ func (f *_filter) PostHandle(ctx context.Context, result proto.Result, conn prot
 		return nil
 	}
 
-	switch stmtNode.(type) {
-	case *ast.DeleteStmt:
-		command = "DELETE"
-	case *ast.InsertStmt:
-		command = "INSERT"
-	case *ast.UpdateStmt:
-		command = "UPDATE"
-	case *ast.SelectStmt:
-		command = "SELECT"
-	default:
-		return nil
-	}
+	command = misc.GetStmtLabel(stmtNode)
 
 	f.connectionFilterExecDuration.WithLabelValues(conn.DataSourceName(), commandTypeStr, command).Observe(time.Since(startAt).Seconds())
 	return nil

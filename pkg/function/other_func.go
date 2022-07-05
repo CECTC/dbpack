@@ -170,7 +170,7 @@ func (js *JsRuntime) registerCastNChar() error {
 					s = $_toString(s)
 				}
 				if (s === null) return null;
-				return length > 0 ? s.substring(0, length) : s;
+				return s;
 			}`, funcCastNChar)
 	_, err := js.RunString(script)
 	return err
@@ -183,7 +183,7 @@ func (js *JsRuntime) registerCastChar() error {
 						src = $_toString(src)
 					}
 				} else {
-					src = $_CAST_CHARSET(charset, src)
+					src = $_CAST_CHARSET(src)
 				}
 			
 				if (src === null) return null;
@@ -207,7 +207,7 @@ func (js *JsRuntime) registerCastDate() error {
 					return d
 				}
 				return null;
-			}`, funcCastChar)
+			}`, funcCastDate)
 	_, err := js.RunString(script)
 	return err
 }
@@ -223,7 +223,7 @@ func (js *JsRuntime) registerCastDateTime() error {
 					return new Date(ts)
 				}
 				return null;
-			}`, funcCastChar)
+			}`, funcCastDateTime)
 	_, err := js.RunString(script)
 	return err
 }
@@ -241,7 +241,7 @@ func (js *JsRuntime) registerCastTime() error {
 					}
 				}
 				return null;
-			}`, funcCastChar)
+			}`, funcCastTime)
 	_, err := js.RunString(script)
 	return err
 }
