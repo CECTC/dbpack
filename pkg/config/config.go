@@ -45,6 +45,8 @@ type Configuration struct {
 	TerminationDrainDuration time.Duration `yaml:"termination_drain_duration" json:"termination_drain_duration"`
 
 	HTTPListenPort *int `yaml:"http_listen_port"`
+
+	Trace *Trace `yaml:"trace"`
 }
 
 type (
@@ -111,6 +113,10 @@ type (
 		Time                time.Duration `yaml:"time" json:"-"`
 		Timeout             time.Duration `yaml:"timeout" json:"-"`
 		PermitWithoutStream bool          `yaml:"permit_without_stream"`
+	}
+
+	Trace struct {
+		JaegerEndpoint string `yaml:"jaeger_endpoint"`
 	}
 )
 

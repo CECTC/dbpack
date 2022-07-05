@@ -272,31 +272,33 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 }
 
 func (executor *ReadWriteSplittingExecutor) ExecutorComStmtExecute(ctx context.Context, stmt *proto.Stmt) (proto.Result, uint16, error) {
-	connectionID := proto.ConnectionID(ctx)
+	newCtx, span := tracing.GetTraceSpan(ctx, "executor_com_stmt_execute")
+	defer span.End()
+	connectionID := proto.ConnectionID(newCtx)
 	txi, ok := executor.localTransactionMap.Load(connectionID)
 	if ok {
 		// in local transaction
 		tx := txi.(proto.Tx)
-		return tx.ExecuteStmt(ctx, stmt)
+		return tx.ExecuteStmt(newCtx, stmt)
 	}
 	switch st := stmt.StmtNode.(type) {
 	case *ast.InsertStmt, *ast.DeleteStmt, *ast.UpdateStmt:
-		db := executor.masters.Next(proto.WithMaster(ctx)).(*DataSourceBrief)
-		return db.DB.ExecuteStmt(proto.WithMaster(ctx), stmt)
+		db := executor.masters.Next(proto.WithMaster(newCtx)).(*DataSourceBrief)
+		return db.DB.ExecuteStmt(proto.WithMaster(newCtx), stmt)
 	case *ast.SelectStmt:
 		var db *DataSourceBrief
 		if has, dsName := hasUseDBHint(st.TableHints); has {
 			protoDB := resource.GetDBManager().GetDB(dsName)
 			if protoDB == nil {
 				log.Debugf("data source %d not found", dsName)
-				db = executor.reads.Next(proto.WithSlave(ctx)).(*DataSourceBrief)
-				return db.DB.ExecuteStmt(proto.WithSlave(ctx), stmt)
+				db = executor.reads.Next(proto.WithSlave(newCtx)).(*DataSourceBrief)
+				return db.DB.ExecuteStmt(proto.WithSlave(newCtx), stmt)
 			} else {
-				return protoDB.ExecuteStmt(proto.WithSlave(ctx), stmt)
+				return protoDB.ExecuteStmt(proto.WithSlave(newCtx), stmt)
 			}
 		}
-		db = executor.reads.Next(proto.WithSlave(ctx)).(*DataSourceBrief)
-		return db.DB.ExecuteStmt(proto.WithSlave(ctx), stmt)
+		db = executor.reads.Next(proto.WithSlave(newCtx)).(*DataSourceBrief)
+		return db.DB.ExecuteStmt(proto.WithSlave(newCtx), stmt)
 	default:
 		return nil, 0, errors.Errorf("unsupported %t statement", stmt.StmtNode)
 	}

@@ -125,6 +125,8 @@ func (db *DB) Query(ctx context.Context, query string) (proto.Result, uint16, er
 	if err := db.doConnectionPreFilter(newCtx, conn); err != nil {
 		return nil, 0, err
 	}
+
+	query = addTraceSQLComment(query, span.SpanContext().TraceID().String())
 	result, warn, err := conn.ExecuteWithWarningCount(query, true)
 	if err != nil {
 		return result, warn, err
@@ -136,6 +138,8 @@ func (db *DB) Query(ctx context.Context, query string) (proto.Result, uint16, er
 }
 
 func (db *DB) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, uint16, error) {
+	newCtx, span := tracing.GetTraceSpan(ctx, "db_exec_stmt")
+	defer span.End()
 	db.inflightRequests.Inc()
 	defer db.inflightRequests.Dec()
 
@@ -155,9 +159,10 @@ func (db *DB) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, 
 
 	conn := r.(*driver.BackendConnection)
 	query := stmt.StmtNode.Text()
-	if err := db.doConnectionPreFilter(ctx, conn); err != nil {
+	if err := db.doConnectionPreFilter(newCtx, conn); err != nil {
 		return nil, 0, err
 	}
+	query = addTraceSQLComment(query, span.SpanContext().TraceID().String())
 	if stmt.HasLongDataParam {
 		for i := 0; i < len(stmt.BindVars); i++ {
 			parameterID := fmt.Sprintf("v%d", i+1)
@@ -170,7 +175,7 @@ func (db *DB) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, 
 	if err != nil {
 		return result, warn, err
 	}
-	if err := db.doConnectionPostFilter(ctx, result, conn); err != nil {
+	if err := db.doConnectionPostFilter(newCtx, result, conn); err != nil {
 		return nil, 0, err
 	}
 	return result, warn, err
@@ -192,6 +197,7 @@ func (db *DB) ExecuteSql(ctx context.Context, sql string, args ...interface{}) (
 	if err := db.doConnectionPreFilter(newCtx, conn); err != nil {
 		return nil, 0, err
 	}
+	sql = addTraceSQLComment(sql, span.SpanContext().TraceID().String())
 	result, warn, err := conn.PrepareQueryArgs(sql, args)
 	if err != nil {
 		return result, warn, err
