@@ -602,7 +602,7 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 					tracing.RecordErrorSpan(span, err)
 					return err
 				}
-				err = c.WriteRows(rlt)
+				err = c.WriteTextRows(rlt)
 				if err != nil {
 					tracing.RecordErrorSpan(span, err)
 					return err
@@ -623,7 +623,7 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 					tracing.RecordErrorSpan(span, err)
 					return err
 				}
-				err = c.WriteRowsDirect(rlt)
+				err = c.WriteRows(rlt)
 				if err != nil {
 					tracing.RecordErrorSpan(span, err)
 					return err
@@ -802,7 +802,7 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 					tracing.RecordErrorSpan(span, err)
 					return err
 				}
-				err = c.WriteRowsDirect(rlt)
+				err = c.WriteRows(rlt)
 				if err != nil {
 					tracing.RecordErrorSpan(span, err)
 					return err

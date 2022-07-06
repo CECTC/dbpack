@@ -34,6 +34,7 @@ const (
 	selectDrugResourceOrderBy2            = "select id, drug_res_type_id, manufacturer_id, sale_price from drug_resource where id between ? and ? order by manufacturer_id desc, id asc"
 	selectDrugResourceOrderByIDDescLimit  = "select id, drug_res_type_id, base_type, sale_price from drug_resource where id between ? and ? order by id desc limit ?, ?"
 	selectDrugResourceOrderByIDDescLimit2 = "select id, drug_res_type_id, base_type, sale_price from drug_resource where id between ? and ? order by id desc limit ?"
+	selectCount                           = "select count(1) from drug_resource where manufacturer_id = ?"
 
 	deleteDrugResource = "delete from drug_resource where id between ? and ?"
 	insertDrugResource = "INSERT INTO `drug_resource`(`id`, `drug_res_type_id`, `base_type`, `status`, `type_id`, " +
@@ -162,6 +163,20 @@ func (suite *_ShardingSuite) TestSelectOrderByAndLimit2() {
 			err := rows.Scan(&id, &drugResTypeId, &baseType, &salePrice)
 			suite.NoError(err)
 			suite.T().Logf("id: %d, drug resource type id: %s, base type: %d, sale price: %v", id, drugResTypeId, baseType, salePrice)
+		}
+	}
+}
+
+func (suite *_ShardingSuite) TestSelectCount() {
+	rows, err := suite.db.Query(selectCount, "sccj_w")
+	if suite.NoErrorf(err, "select row error: %v", err) {
+		var (
+			count int64
+		)
+		for rows.Next() {
+			err := rows.Scan(&count)
+			suite.NoError(err)
+			suite.T().Logf("count: %d", count)
 		}
 	}
 }

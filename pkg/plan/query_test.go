@@ -17,6 +17,7 @@
 package plan
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -81,7 +82,7 @@ func TestQueryOnSingleDBPlan(t *testing.T) {
 				args []interface{}
 			)
 			plan.castLimit()
-			err = plan.generate(&sb, &args)
+			err = plan.generate(context.Background(), &sb, &args)
 			assert.Nil(t, err)
 			assert.Equal(t, c.expectedGenerateSql, sb.String())
 		})

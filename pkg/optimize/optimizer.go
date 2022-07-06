@@ -19,6 +19,8 @@ package optimize
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/cectc/dbpack/pkg/cond"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/topo"
@@ -55,7 +57,6 @@ func (o Optimizer) Optimize(ctx context.Context, stmt ast.StmtNode, args ...inte
 	case *ast.UpdateStmt:
 		return o.optimizeUpdate(ctx, t, args)
 	}
-
-	//TODO implement all statements
-	panic("implement me")
+	sqlText := proto.SqlText(ctx)
+	return nil, errors.Errorf("unsupported statement type, sql: %s", sqlText)
 }

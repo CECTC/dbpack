@@ -26,13 +26,40 @@ type ParamVisitor struct {
 }
 
 func (v *ParamVisitor) Enter(in ast.Node) (out ast.Node, skipChildren bool) {
-	if n, ok := in.(*driver.ParamMarkerExpr); ok {
-		n.SetOrder(v.order)
+	if param, ok := in.(*driver.ParamMarkerExpr); ok {
+		param.SetOrder(v.order)
 		v.order++
 	}
 	return in, false
 }
 
 func (v *ParamVisitor) Leave(in ast.Node) (out ast.Node, ok bool) {
+	return in, true
+}
+
+type FuncColumn struct {
+	FuncName    string
+	ColumnIndex int
+}
+
+type FuncVisitor struct {
+	FuncColumns []*FuncColumn
+	order       int
+}
+
+func (v *FuncVisitor) Enter(in ast.Node) (out ast.Node, skipChildren bool) {
+	if field, ok := in.(*ast.SelectField); ok {
+		if f, is := field.Expr.(*ast.AggregateFuncExpr); is {
+			v.FuncColumns = append(v.FuncColumns, &FuncColumn{
+				FuncName:    f.F,
+				ColumnIndex: v.order,
+			})
+		}
+		v.order++
+	}
+	return in, false
+}
+
+func (v *FuncVisitor) Leave(in ast.Node) (out ast.Node, ok bool) {
 	return in, true
 }

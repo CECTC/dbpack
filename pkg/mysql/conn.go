@@ -609,7 +609,7 @@ func (c *Conn) WriteFields(capabilities uint32, fields []*Field) error {
 	return nil
 }
 
-func (c *Conn) writeRow(row []*proto.Value) error {
+func (c *Conn) writeTextRow(row []*proto.Value) error {
 	length := 0
 	for _, val := range row {
 		if val == nil || val.Val == nil {
@@ -639,8 +639,8 @@ func (c *Conn) writeRow(row []*proto.Value) error {
 	return c.WriteEphemeralPacket()
 }
 
-// WriteRows sends the rows of a Result.
-func (c *Conn) WriteRows(result *Result) error {
+// WriteTextRows sends the rows of a Result.
+func (c *Conn) WriteTextRows(result *Result) error {
 	for {
 		row, err := result.Rows.Next()
 		if err != nil {
@@ -654,7 +654,7 @@ func (c *Conn) WriteRows(result *Result) error {
 		if err != nil {
 			return err
 		}
-		if err := c.writeRow(values); err != nil {
+		if err := c.writeTextRow(values); err != nil {
 			return err
 		}
 	}
@@ -702,13 +702,13 @@ func (c *Conn) WritePrepare(capabilities uint32, prepare *proto.Stmt) error {
 	return nil
 }
 
-// WriteBinaryRow writes text row to binary row
-func (c *Conn) writeBinaryRow(fields []*Field, row []*proto.Value) error {
+// writeTextToBinaryRows writes text row to binary row
+func (c *Conn) writeTextToBinaryRows(fields []*Field, row []*proto.Value) error {
 	length := 0
 	nullBitMapLen := (len(fields) + 7 + 2) / 8
 	for _, val := range row {
 		if val != nil && val.Val != nil {
-			l, err := packet.Val2MySQLLen(val)
+			l, err := packet.TextVal2MySQLLen(val)
 			if err != nil {
 				return fmt.Errorf("internal value %v get MySQL value length error: %v", val, err)
 			}
@@ -733,7 +733,7 @@ func (c *Conn) writeBinaryRow(fields []*Field, row []*proto.Value) error {
 			bitPos := (i + 2) % 8
 			data[bytePos] |= 1 << uint(bitPos)
 		} else {
-			v, err := packet.Val2MySQL(val)
+			v, err := packet.TextVal2MySQL(val)
 			if err != nil {
 				c.RecycleWritePacket()
 				return fmt.Errorf("internal value %v to MySQL value error: %v", val, err)
@@ -749,26 +749,51 @@ func (c *Conn) writeBinaryRow(fields []*Field, row []*proto.Value) error {
 	return c.WriteEphemeralPacket()
 }
 
-// writeTextToBinaryRows sends the rows of a Result with binary form.
-func (c *Conn) writeTextToBinaryRows(result *Result) error {
-	for {
-		row, err := result.Rows.Next()
-		if err != nil {
-			if err == io.EOF {
-				break
+// writeBinaryRows writes text row to binary row
+func (c *Conn) writeBinaryRows(fields []*Field, row []*proto.Value) error {
+	length := 0
+	nullBitMapLen := (len(fields) + 7 + 2) / 8
+	for _, val := range row {
+		if val != nil && val.Val != nil {
+			l, err := packet.BinaryVal2MySQLLen(val)
+			if err != nil {
+				return fmt.Errorf("internal value %v get MySQL value length error: %v", val, err)
 			}
-			return err
-		}
-		textRow := TextRow{Row: row}
-		values, err := textRow.Decode()
-		if err != nil {
-			return err
-		}
-		if err := c.writeBinaryRow(result.Fields, values); err != nil {
-			return err
+			length += l
 		}
 	}
-	return nil
+
+	length += nullBitMapLen + 1
+
+	data := c.StartEphemeralPacket(length)
+	pos := 0
+
+	pos = misc.WriteByte(data, pos, 0x00)
+
+	for i := 0; i < nullBitMapLen; i++ {
+		pos = misc.WriteByte(data, pos, 0x00)
+	}
+
+	for i, val := range row {
+		if val == nil || val.Val == nil {
+			bytePos := (i+2)/8 + 1
+			bitPos := (i + 2) % 8
+			data[bytePos] |= 1 << uint(bitPos)
+		} else {
+			v, err := packet.BinaryVal2MySQL(val)
+			if err != nil {
+				c.RecycleWritePacket()
+				return fmt.Errorf("internal value %v to MySQL value error: %v", val, err)
+			}
+			pos += copy(data[pos:], v)
+		}
+	}
+
+	if pos != length {
+		return fmt.Errorf("internal error packet row: got %v bytes but expected %v", pos, length)
+	}
+
+	return c.WriteEphemeralPacket()
 }
 
 func (c *Conn) WriteBinaryRows(result *Result) error {
@@ -787,10 +812,17 @@ func (c *Conn) WriteBinaryRows(result *Result) error {
 	return nil
 }
 
-func (c *Conn) WriteRowsDirect(result *MergeResult) error {
+func (c *Conn) WriteRows(result *MergeResult) error {
 	for _, row := range result.Rows {
-		if err := c.WritePacket(row.Data()); err != nil {
-			return err
+		switch r := row.(type) {
+		case *TextRow:
+			if err := c.writeTextRow(r.Values); err != nil {
+				return err
+			}
+		case *BinaryRow:
+			if err := c.writeBinaryRows(result.Fields, r.Values); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
