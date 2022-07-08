@@ -27,12 +27,13 @@ import (
 	"github.com/cectc/dbpack/pkg/dt/schema"
 	"github.com/cectc/dbpack/pkg/filter/dt/exec"
 	"github.com/cectc/dbpack/pkg/log"
+	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 )
 
 func (f *_mysqlFilter) processBeforePrepareDelete(ctx context.Context, conn *driver.BackendConnection, stmt *proto.Stmt, deleteStmt *ast.DeleteStmt) error {
-	if hasGlobalLockHint(deleteStmt.TableHints) {
+	if misc.HasGlobalLockHint(deleteStmt.TableHints) {
 		executor := exec.NewPrepareGlobalLockExecutor(conn, false, deleteStmt, nil, stmt.BindVars)
 		result, err := executor.Executable(ctx, f.lockRetryInterval, f.lockRetryTimes)
 		if err != nil {
@@ -43,7 +44,7 @@ func (f *_mysqlFilter) processBeforePrepareDelete(ctx context.Context, conn *dri
 		}
 		return nil
 	}
-	if has, _ := hasXIDHint(deleteStmt.TableHints); !has {
+	if has, _ := misc.HasXIDHint(deleteStmt.TableHints); !has {
 		return nil
 	}
 	executor := exec.NewPrepareDeleteExecutor(conn, deleteStmt, stmt.BindVars)
@@ -58,7 +59,7 @@ func (f *_mysqlFilter) processBeforePrepareDelete(ctx context.Context, conn *dri
 }
 
 func (f *_mysqlFilter) processBeforePrepareUpdate(ctx context.Context, conn *driver.BackendConnection, stmt *proto.Stmt, updateStmt *ast.UpdateStmt) error {
-	if hasGlobalLockHint(updateStmt.TableHints) {
+	if misc.HasGlobalLockHint(updateStmt.TableHints) {
 		executor := exec.NewPrepareGlobalLockExecutor(conn, true, nil, updateStmt, stmt.BindVars)
 		result, err := executor.Executable(ctx, f.lockRetryInterval, f.lockRetryTimes)
 		if err != nil {
@@ -69,7 +70,7 @@ func (f *_mysqlFilter) processBeforePrepareUpdate(ctx context.Context, conn *dri
 		}
 		return nil
 	}
-	if has, _ := hasXIDHint(updateStmt.TableHints); !has {
+	if has, _ := misc.HasXIDHint(updateStmt.TableHints); !has {
 		return nil
 	}
 	executor := exec.NewPrepareUpdateExecutor(conn, updateStmt, stmt.BindVars, nil)
@@ -85,7 +86,7 @@ func (f *_mysqlFilter) processBeforePrepareUpdate(ctx context.Context, conn *dri
 
 func (f *_mysqlFilter) processAfterPrepareDelete(ctx context.Context, conn *driver.BackendConnection,
 	stmt *proto.Stmt, deleteStmt *ast.DeleteStmt) error {
-	has, xid := hasXIDHint(deleteStmt.TableHints)
+	has, xid := misc.HasXIDHint(deleteStmt.TableHints)
 	if !has {
 		return nil
 	}
@@ -115,7 +116,7 @@ func (f *_mysqlFilter) processAfterPrepareDelete(ctx context.Context, conn *driv
 
 func (f *_mysqlFilter) processAfterPrepareInsert(ctx context.Context, conn *driver.BackendConnection,
 	result proto.Result, stmt *proto.Stmt, insertStmt *ast.InsertStmt) error {
-	has, xid := hasXIDHint(insertStmt.TableHints)
+	has, xid := misc.HasXIDHint(insertStmt.TableHints)
 	if !has {
 		return nil
 	}
@@ -144,7 +145,7 @@ func (f *_mysqlFilter) processAfterPrepareInsert(ctx context.Context, conn *driv
 
 func (f *_mysqlFilter) processAfterPrepareUpdate(ctx context.Context, conn *driver.BackendConnection,
 	stmt *proto.Stmt, updateStmt *ast.UpdateStmt) error {
-	has, xid := hasXIDHint(updateStmt.TableHints)
+	has, xid := misc.HasXIDHint(updateStmt.TableHints)
 	if !has {
 		return nil
 	}
@@ -177,7 +178,7 @@ func (f *_mysqlFilter) processAfterPrepareUpdate(ctx context.Context, conn *driv
 
 func (f *_mysqlFilter) processSelectForPrepareUpdate(ctx context.Context, conn *driver.BackendConnection,
 	result proto.Result, stmt *proto.Stmt, selectStmt *ast.SelectStmt) error {
-	has, _ := hasXIDHint(selectStmt.TableHints)
+	has, _ := misc.HasXIDHint(selectStmt.TableHints)
 	if !has {
 		return nil
 	}

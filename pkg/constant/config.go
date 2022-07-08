@@ -17,5 +17,6 @@
 package constant
 
 const (
-	ConfigPathKey = "config"
+	ConfigPathKey      = "config"
+	TransactionTimeout = "transaction-timeout"
 )

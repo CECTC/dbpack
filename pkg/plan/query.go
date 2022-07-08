@@ -51,7 +51,7 @@ type Limit struct {
 	Count            int64
 }
 
-func (p *QueryOnSingleDBPlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
+func (p *QueryOnSingleDBPlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
 	var (
 		sb   strings.Builder
 		args []interface{}
@@ -166,7 +166,7 @@ type QueryOnMultiDBPlan struct {
 	Plans []*QueryOnSingleDBPlan
 }
 
-func (p *QueryOnMultiDBPlan) Execute(ctx context.Context) (proto.Result, uint16, error) {
+func (p *QueryOnMultiDBPlan) Execute(ctx context.Context, _ ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
 	resultChan := make(chan *ResultWithErr, len(p.Plans))
 	var wg sync.WaitGroup
 	wg.Add(len(p.Plans))

@@ -166,7 +166,7 @@ type (
 	// Plan represents a plan for query/execute command.
 	Plan interface {
 		// Execute executes the current Plan.
-		Execute(ctx context.Context) (Result, uint16, error)
+		Execute(ctx context.Context, hints ...*ast.TableOptimizerHint) (Result, uint16, error)
 	}
 
 	// Optimizer represents a sql statement optimizer which can be used to create QueryPlan or ExecPlan.

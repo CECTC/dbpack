@@ -18,6 +18,7 @@ package plan
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -530,4 +531,19 @@ func getOrderByFieldIndex(orderByField string, fields []*mysql.Field) int {
 		}
 	}
 	return 0
+}
+
+func generateStatement(sql string, stmtNode ast.StmtNode, args []interface{}) *proto.Stmt {
+	stmt := &proto.Stmt{
+		HasLongDataParam: true,
+		SqlText:          sql,
+		ParamsCount:      uint16(len(args)),
+		StmtNode:         stmtNode,
+	}
+	stmt.BindVars = make(map[string]interface{})
+	for i, arg := range args {
+		parameterID := fmt.Sprintf("v%d", i+1)
+		stmt.BindVars[parameterID] = arg
+	}
+	return stmt
 }

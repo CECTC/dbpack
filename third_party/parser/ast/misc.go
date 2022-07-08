@@ -3385,6 +3385,8 @@ func (n *TableOptimizerHint) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteString(hintData.VarName)
 		ctx.WritePlain(", ")
 		ctx.WriteString(hintData.Value)
+	case "xid":
+		ctx.WriteString(n.HintData.(model.CIStr).String())
 	}
 	ctx.WritePlain(")")
 	return nil
