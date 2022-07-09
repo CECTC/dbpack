@@ -188,7 +188,7 @@ func mergeResult(ctx context.Context,
 	return nil, 0
 }
 
-// mergeResultWithOutOrderByAndLimit select * from t where id between ? and ?
+// mergeResultWithOutOrderByAndLimit e.g. select * from t where id between ? and ?
 func mergeResultWithoutOrderByAndLimit(ctx context.Context,
 	results []*ResultWithErr) (*mysql.MergeResult, uint16) {
 	var (
