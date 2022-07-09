@@ -66,7 +66,7 @@ func TestMergeResultWithOutOrderByAndLimit(t *testing.T) {
 	patch3 := buildBinaryRowDecodePatch()
 	defer patch3.Reset()
 	merge := func(commandType int) (*mysql.MergeResult, uint16) {
-		return mergeResultWithOutOrderByAndLimit(proto.WithCommandType(context.Background(), byte(commandType)),
+		return mergeResultWithoutOrderByAndLimit(proto.WithCommandType(context.Background(), byte(commandType)),
 			[]*ResultWithErr{
 				{
 					Result:  &mysql.Result{},
