@@ -171,7 +171,7 @@ func (suite *_ShardingSuite) TestDeleteDrugResource() {
 	suite.Assert().Nil(err)
 	affectedRows, err := result.RowsAffected()
 	suite.Assert().Nil(err)
-	suite.Assert().Equal(int64(1), affectedRows)
+	suite.Assert().Equal(int64(11), affectedRows)
 	time.Sleep(10 * time.Second)
 }
 
