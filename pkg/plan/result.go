@@ -174,7 +174,7 @@ func mergeResult(ctx context.Context,
 	orderBy *ast.OrderByClause,
 	limit *Limit) (*mysql.MergeResult, uint16) {
 	if orderBy == nil && limit == nil {
-		return mergeResultWithOutOrderByAndLimit(ctx, results)
+		return mergeResultWithoutOrderByAndLimit(ctx, results)
 	}
 	if orderBy != nil && limit != nil {
 		return mergeResultWithOrderByAndLimit(ctx, results, orderBy, limit)
@@ -243,7 +243,7 @@ func mergeResultWithoutOrderByAndLimit(ctx context.Context,
 	return result, warning
 }
 
-// mergeResultWithLimit select * from t where id between ? and ? limit ?,?
+// mergeResultWithLimit e.g. select * from t where id between ? and ? limit ?,?
 func mergeResultWithLimit(ctx context.Context,
 	results []*ResultWithErr,
 	limit *Limit) (*mysql.MergeResult, uint16) {
@@ -312,7 +312,7 @@ func mergeResultWithLimit(ctx context.Context,
 	return result, warning
 }
 
-// mergeResultWithOrderByAndLimit select * from t where id between ? and ? order by id desc limit ?,?
+// mergeResultWithOrderByAndLimit e.g. select * from t where id between ? and ? order by id desc limit ?,?
 func mergeResultWithOrderByAndLimit(ctx context.Context,
 	results []*ResultWithErr,
 	orderBy *ast.OrderByClause,
@@ -416,7 +416,7 @@ func mergeResultWithOrderByAndLimit(ctx context.Context,
 	return result, warning
 }
 
-// mergeResultWithOrderBy select * from t where id between ? and ? order by id desc
+// mergeResultWithOrderBy e.g. select * from t where id between ? and ? order by id desc
 func mergeResultWithOrderBy(ctx context.Context,
 	results []*ResultWithErr,
 	orderBy *ast.OrderByClause) (*mysql.MergeResult, uint16) {
