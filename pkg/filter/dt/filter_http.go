@@ -126,7 +126,6 @@ type TccResourceInfo struct {
 // HttpFilterConfig http filter config
 type HttpFilterConfig struct {
 	ApplicationID string `yaml:"appid" json:"appid"`
-	BackendHost   string `yaml:"backend_host" json:"backend_host"`
 
 	TransactionInfos []*TransactionInfo `yaml:"transaction_infos" json:"transaction_infos"`
 	TCCResourceInfos []*TccResourceInfo `yaml:"tcc_resource_infos" json:"tcc_resource_infos"`

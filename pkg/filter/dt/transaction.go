@@ -80,14 +80,18 @@ func (f *_httpFilter) handleHttp1BranchRegister(ctx *fasthttp.RequestCtx, tccRes
 
 	requestContext := &dt.RequestContext{
 		ActionContext: make(map[string]string),
-		Headers:       ctx.Request.Header.Header(),
+		Headers:       make(map[string]string),
 		Body:          bodyBytes,
 	}
 
-	requestContext.ActionContext[dt.VarHost] = f.conf.BackendHost
+	ctx.Request.Header.VisitAll(func(key, value []byte) {
+		requestContext.Headers[string(key)] = string(value)
+	})
+
+	requestContext.ActionContext[dt.VarHost] = ctx.UserValue(dt.VarHost).(string)
 	requestContext.ActionContext[dt.CommitRequestPath] = tccResource.CommitRequestPath
 	requestContext.ActionContext[dt.RollbackRequestPath] = tccResource.RollbackRequestPath
-	queryString := ctx.Request.RequestURI()
+	queryString := ctx.QueryArgs().QueryString()
 	if string(queryString) != "" {
 		requestContext.ActionContext[dt.VarQueryString] = string(queryString)
 	}

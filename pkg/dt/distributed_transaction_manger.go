@@ -18,7 +18,6 @@ package dt
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -478,7 +477,7 @@ func (manager *DistributedTransactionManager) IsRollingBackDead(bs *api.BranchSe
 func (manager *DistributedTransactionManager) tccBranchCommit(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
 	requestContext := &RequestContext{
 		ActionContext: make(map[string]string),
-		Headers:       []byte{},
+		Headers:       make(map[string]string),
 		Body:          []byte{},
 	}
 	err := requestContext.Decode(bs.ApplicationData)
@@ -499,7 +498,7 @@ func (manager *DistributedTransactionManager) tccBranchCommit(bs *api.BranchSess
 func (manager *DistributedTransactionManager) tccBranchRollback(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
 	requestContext := &RequestContext{
 		ActionContext: make(map[string]string),
-		Headers:       []byte{},
+		Headers:       make(map[string]string),
 		Body:          []byte{},
 	}
 	err := requestContext.Decode(bs.ApplicationData)
@@ -542,14 +541,10 @@ func (manager *DistributedTransactionManager) doHttpRequest(requestContext *Requ
 
 	client := resty.New()
 	request := client.R()
-
-	headers := make(map[string]string)
-	err := json.Unmarshal(requestContext.Headers, &headers)
-	if err != nil {
-		return nil, fmt.Errorf("error json.Unmarshal requestContext.Headers: %v", err)
-	}
-	request.SetHeaders(headers)
+	request.SetHeaders(requestContext.Headers)
 	request.SetBody(requestContext.Body)
+	log.Debugf("send http request to host: %s, request path: %s, header: %s, body: %s", host, path,
+		requestContext.Headers, request.Body)
 
 	return request.Post(u.String())
 }
