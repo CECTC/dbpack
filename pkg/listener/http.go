@@ -26,6 +26,7 @@ import (
 	"github.com/valyala/fasthttp"
 
 	"github.com/cectc/dbpack/pkg/config"
+	"github.com/cectc/dbpack/pkg/dt"
 	"github.com/cectc/dbpack/pkg/filter"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/proto"
@@ -93,6 +94,7 @@ func NewHttpListener(conf *config.Listener) (proto.Listener, error) {
 func (l *HttpListener) Listen() {
 	log.Infof("start http listener %s", l.listener.Addr())
 	if err := fasthttp.Serve(l.listener, func(ctx *fasthttp.RequestCtx) {
+		ctx.SetUserValue(dt.VarHost, l.conf.BackendHost)
 		if err := l.doPreFilter(ctx); err != nil {
 			log.Error(err)
 			return

@@ -27,42 +27,61 @@ import (
 
 type RequestContext struct {
 	ActionContext map[string]string
-	Headers       []byte
+	Headers       map[string]string
 	Body          []byte
 }
 
 func (ctx *RequestContext) Encode() ([]byte, error) {
 	var (
-		err               error
+		buffer            bytes.Buffer
 		actionContextData []byte
-		b                 bytes.Buffer
+		headersData       []byte
+		err               error
 	)
 
-	w := byteio.BigEndianWriter{Writer: &b}
+	w := byteio.BigEndianWriter{Writer: &buffer}
 
 	if ctx.ActionContext == nil || len(ctx.ActionContext) == 0 {
-		w.WriteUint32(0)
+		if _, err = w.WriteUint32(0); err != nil {
+			return nil, err
+		}
 	} else {
 		actionContextData, err = json.Marshal(ctx.ActionContext)
 		if err != nil {
 			return nil, err
 		}
 
-		w.WriteUint32(uint32(len(actionContextData)))
-		w.Write(actionContextData)
+		if _, err = w.WriteUint32(uint32(len(actionContextData))); err != nil {
+			return nil, err
+		}
+		if _, err = w.Write(actionContextData); err != nil {
+			return nil, err
+		}
 	}
 
 	if ctx.Headers == nil || len(ctx.Headers) == 0 {
-		w.WriteUint32(0)
+		if _, err = w.WriteUint32(0); err != nil {
+			return nil, err
+		}
 	} else {
-		w.WriteUint32(uint32(len(ctx.Headers)))
-		w.Write(ctx.Headers)
+		headersData, err = json.Marshal(ctx.Headers)
+		if err != nil {
+			return nil, err
+		}
+		if _, err = w.WriteUint32(uint32(len(headersData))); err != nil {
+			return nil, err
+		}
+		if _, err = w.Write(headersData); err != nil {
+			return nil, err
+		}
 	}
 
-	w.WriteUint32(uint32(len(ctx.Body)))
-	b.Write(ctx.Body)
+	if _, err = w.WriteUint32(uint32(len(ctx.Body))); err != nil {
+		return nil, err
+	}
+	buffer.Write(ctx.Body)
 
-	return b.Bytes(), nil
+	return buffer.Bytes(), nil
 }
 
 func (ctx *RequestContext) Decode(b []byte) error {
@@ -70,6 +89,7 @@ func (ctx *RequestContext) Decode(b []byte) error {
 		actionContextData []byte
 		headersData       []byte
 		bodyData          []byte
+		err               error
 	)
 	r := byteio.BigEndianReader{Reader: bytes.NewReader(b)}
 
@@ -106,8 +126,13 @@ func (ctx *RequestContext) Decode(b []byte) error {
 			log.Errorf("unmarshal action context failed, %v", err)
 		}
 	}
+	if headersData != nil {
+		err = json.Unmarshal(headersData, &(ctx.Headers))
+		if err != nil {
+			log.Errorf("unmarshal action context failed, %v", err)
+		}
+	}
 
-	ctx.Headers = headersData
 	ctx.Body = bodyData
 	return nil
 }
