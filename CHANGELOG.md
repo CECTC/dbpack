@@ -84,3 +84,9 @@
 
 * support usedb hint for customize the sql routing ([13](https://github.com/CECTC/dbpack/issues/13)) ([be37d88](https://github.com/CECTC/dbpack/commit/be37d88f356e807d90fe57ffe17296752f65b7d5))
 * audit log filter ([103](https://github.com/CECTC/dbpack/issues/103)) ([e7f819d](https://github.com/CECTC/dbpack/commit/e7f819da076b7534dbc56d90dea3cd6c147eb64d))
+
+## v0.2.1
+
+### Bug Fixes
+
+* in tcc mode, json.Unmarshal requestContext.Headers failed ([194](https://github.com/CECTC/dbpack/issues/194)) ([6e1f8c3](https://github.com/CECTC/dbpack/commit/6e1f8c3b7a9b558e72ed84807cfb0364e1fc89c0))
