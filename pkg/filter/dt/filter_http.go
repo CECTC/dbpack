@@ -18,6 +18,7 @@ package dt
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -29,6 +30,7 @@ import (
 	"github.com/cectc/dbpack/pkg/filter"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/proto"
+	"github.com/cectc/dbpack/pkg/tracing"
 )
 
 const httpFilter = "HttpDistributedTransaction"
@@ -139,13 +141,18 @@ type _httpFilter struct {
 	tccResourceInfoMap map[string]*TccResourceInfo
 }
 
+var _ proto.HttpPostFilter = (*_httpFilter)(nil)
+var _ proto.HttpPostFilter = (*_httpFilter)(nil)
+
 func (f *_httpFilter) GetKind() string {
 	return httpFilter
 }
 
-func (f _httpFilter) PreHandle(ctx *fasthttp.RequestCtx) error {
-	path := ctx.Request.RequestURI()
-	method := ctx.Method()
+func (f _httpFilter) PreHandle(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error {
+	newCtx, span := tracing.GetTraceSpan(ctx, "http_filter_pre_handle")
+	defer span.End()
+	path := fastHttpCtx.Request.RequestURI()
+	method := fastHttpCtx.Method()
 
 	if !strings.EqualFold(string(method), fasthttp.MethodPost) {
 		return nil
@@ -153,9 +160,9 @@ func (f _httpFilter) PreHandle(ctx *fasthttp.RequestCtx) error {
 
 	transactionInfo, found := f.matchTransactionInfo(string(path))
 	if found {
-		result, err := f.handleHttp1GlobalBegin(ctx, transactionInfo)
+		result, err := f.handleHttp1GlobalBegin(newCtx, fastHttpCtx, transactionInfo)
 		if !result {
-			if err := f.handleHttp1GlobalEnd(ctx); err != nil {
+			if err := f.handleHttp1GlobalEnd(newCtx, fastHttpCtx); err != nil {
 				log.Error(err)
 			}
 		}
@@ -164,9 +171,9 @@ func (f _httpFilter) PreHandle(ctx *fasthttp.RequestCtx) error {
 
 	tccResource, exists := f.tccResourceInfoMap[strings.ToLower(string(path))]
 	if exists {
-		result, err := f.handleHttp1BranchRegister(ctx, tccResource)
+		result, err := f.handleHttp1BranchRegister(newCtx, fastHttpCtx, tccResource)
 		if !result {
-			if err := f.handleHttp1BranchEnd(ctx); err != nil {
+			if err := f.handleHttp1BranchEnd(newCtx, fastHttpCtx); err != nil {
 				log.Error(err)
 			}
 		}
@@ -175,9 +182,11 @@ func (f _httpFilter) PreHandle(ctx *fasthttp.RequestCtx) error {
 	return nil
 }
 
-func (f _httpFilter) PostHandle(ctx *fasthttp.RequestCtx) error {
-	path := ctx.Request.RequestURI()
-	method := ctx.Method()
+func (f _httpFilter) PostHandle(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error {
+	newCtx, span := tracing.GetTraceSpan(ctx, "http_filter_post_handle")
+	defer span.End()
+	path := fastHttpCtx.Request.RequestURI()
+	method := fastHttpCtx.Method()
 
 	if !strings.EqualFold(string(method), fasthttp.MethodPost) {
 		return nil
@@ -185,14 +194,14 @@ func (f _httpFilter) PostHandle(ctx *fasthttp.RequestCtx) error {
 
 	_, found := f.transactionInfoMap[strings.ToLower(string(path))]
 	if found {
-		if err := f.handleHttp1GlobalEnd(ctx); err != nil {
+		if err := f.handleHttp1GlobalEnd(newCtx, fastHttpCtx); err != nil {
 			return err
 		}
 	}
 
 	_, exists := f.tccResourceInfoMap[strings.ToLower(string(path))]
 	if exists {
-		if err := f.handleHttp1BranchEnd(ctx); err != nil {
+		if err := f.handleHttp1BranchEnd(newCtx, fastHttpCtx); err != nil {
 			return err
 		}
 	}

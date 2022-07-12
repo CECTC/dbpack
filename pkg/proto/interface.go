@@ -54,12 +54,12 @@ type (
 
 	HttpPreFilter interface {
 		Filter
-		PreHandle(ctx *fasthttp.RequestCtx) error
+		PreHandle(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error
 	}
 
 	HttpPostFilter interface {
 		Filter
-		PostHandle(ctx *fasthttp.RequestCtx) error
+		PostHandle(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error
 	}
 
 	// DBPreFilter ...

@@ -19,6 +19,9 @@ package tracing
 import (
 	"context"
 
+	"github.com/cectc/dbpack/pkg/misc"
+	"github.com/cectc/dbpack/third_party/parser/ast"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/jaeger"
@@ -85,6 +88,30 @@ func (p TracerController) Shutdown(ctx context.Context) error {
 
 func GetTraceSpan(ctx context.Context, spanName string) (context.Context, trace.Span) {
 	return otel.Tracer(serviceName).Start(ctx, spanName)
+}
+
+func BuildContextFromSQLHint(ctx context.Context, stmt ast.Node) context.Context {
+	var traceParent string
+	var flag bool
+	switch node := stmt.(type) {
+	case *ast.SelectStmt:
+		flag, traceParent = misc.HasTraceParentHint(node.TableHints)
+	case *ast.InsertStmt:
+		flag, traceParent = misc.HasTraceParentHint(node.TableHints)
+	case *ast.UpdateStmt:
+		flag, traceParent = misc.HasTraceParentHint(node.TableHints)
+	case *ast.DeleteStmt:
+		flag, traceParent = misc.HasTraceParentHint(node.TableHints)
+	}
+
+	sc := trace.SpanContext{}
+	if flag {
+		traceID, err := trace.TraceIDFromHex(traceParent)
+		if err == nil {
+			sc = trace.NewSpanContext(trace.SpanContextConfig{TraceID: traceID})
+		}
+	}
+	return trace.ContextWithSpanContext(ctx, sc)
 }
 
 func RecordErrorSpan(span trace.Span, err error) {
