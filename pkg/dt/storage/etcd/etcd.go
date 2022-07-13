@@ -334,7 +334,8 @@ func (s *store) ListBranchSession(ctx context.Context, applicationID string) ([]
 		return nil, nil
 	}
 	var result []*api.BranchSession
-	for _, kv := range resp.Kvs {
+	for i := len(resp.Kvs) - 1; i >= 0; i-- {
+		kv := resp.Kvs[i]
 		branchSession := &api.BranchSession{}
 		err = branchSession.Unmarshal(kv.Value)
 		if err != nil {
@@ -369,7 +370,8 @@ func (s *store) GetBranchSessionKeys(ctx context.Context, xid string) ([]string,
 		return nil, err
 	}
 	var result []string
-	for _, kv := range branchKeyResp.Kvs {
+	for i := len(branchKeyResp.Kvs) - 1; i >= 0; i-- {
+		kv := branchKeyResp.Kvs[i]
 		result = append(result, string(kv.Value))
 	}
 	return result, nil
