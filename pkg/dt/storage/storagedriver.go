@@ -37,6 +37,7 @@ type Driver interface {
 	GetBranchSessionKeys(ctx context.Context, xid string) ([]string, error)
 	BranchReport(ctx context.Context, branchID string, status api.BranchSession_BranchStatus) error
 	IsLockable(ctx context.Context, resourceID string, lockKey string) (bool, error)
+	IsLockableWithXID(ctx context.Context, resourceID string, lockKey string, xid string) (bool, error)
 	ReleaseLockKeys(ctx context.Context, resourceID string, lockKeys []string) (bool, error)
 	WatchGlobalSessions(ctx context.Context, applicationID string) Watcher
 	WatchBranchSessions(ctx context.Context, applicationID string) Watcher

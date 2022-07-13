@@ -46,7 +46,7 @@ func NewPrepareGlobalLockExecutor(
 	isUpdate bool,
 	deleteStmt *ast.DeleteStmt,
 	updateStmt *ast.UpdateStmt,
-	args map[string]interface{}) Executable {
+	args map[string]interface{}) GlobalLockExecutor {
 	return &prepareGlobalLockExecutor{
 		conn:       conn,
 		isUpdate:   isUpdate,

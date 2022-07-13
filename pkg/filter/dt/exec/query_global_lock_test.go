@@ -118,7 +118,7 @@ func TestQueryGlobalLock(t *testing.T) {
 			}
 			ctx = proto.WithPrepareStmt(ctx, protoStmt)
 
-			var executor Executable
+			var executor GlobalLockExecutor
 			if c.isUpdate {
 				updateStmt := stmt.(*ast.UpdateStmt)
 				executor = NewQueryGlobalLockExecutor(&driver.BackendConnection{}, c.isUpdate, nil, updateStmt)

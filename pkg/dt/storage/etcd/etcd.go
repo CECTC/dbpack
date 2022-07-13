@@ -19,6 +19,7 @@ package etcd
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -129,14 +130,18 @@ func (s *store) AddBranchSession(ctx context.Context, branchSession *api.BranchS
 
 	if branchSession.Type == api.AT && branchSession.LockKey != "" {
 		rowKeys := misc.CollectRowKeys(branchSession.LockKey, branchSession.ResourceID)
+		rowKeys, err = s.filterRowKey(ctx, rowKeys, branchSession.XID)
+		if err != nil {
+			return err
+		}
 		for _, rowKey := range rowKeys {
 			comparisons = append(comparisons, notFound(rowKey))
 		}
 
 		for _, rowKey := range rowKeys {
-			lockKey := fmt.Sprintf("lk/%s/%s", branchSession.XID, rowKey)
-			ops = append(ops, clientv3.OpPut(lockKey, rowKey))
-			ops = append(ops, clientv3.OpPut(rowKey, lockKey))
+			rowKeyValue := fmt.Sprintf("lk/%s/%s", branchSession.XID, rowKey)
+			ops = append(ops, clientv3.OpPut(rowKeyValue, rowKey))
+			ops = append(ops, clientv3.OpPut(rowKey, rowKeyValue))
 		}
 	}
 
@@ -467,6 +472,27 @@ func (s *store) IsLockable(ctx context.Context, resourceID string, lockKey strin
 	return true, nil
 }
 
+func (s *store) IsLockableWithXID(ctx context.Context, resourceID string, lockKey string, xid string) (bool, error) {
+	rowKeys := misc.CollectRowKeys(lockKey, resourceID)
+
+	for _, rowKey := range rowKeys {
+		resp, err := s.client.Get(ctx, rowKey, clientv3.WithSerializable())
+		if err != nil {
+			return false, err
+		}
+		if len(resp.Kvs) == 0 {
+			continue
+		}
+		// rowKeyValue: lk/${branchSession.XID}/${rowKey}
+		if strings.Contains(string(resp.Kvs[0].Value), xid) {
+			continue
+		} else {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func (s *store) ReleaseLockKeys(ctx context.Context, resourceID string, lockKeys []string) (bool, error) {
 	var ops []clientv3.Op
 	for _, lockKey := range lockKeys {
@@ -493,6 +519,43 @@ func (s *store) ReleaseLockKeys(ctx context.Context, resourceID string, lockKeys
 
 func notFound(key string) clientv3.Cmp {
 	return clientv3.Compare(clientv3.ModRevision(key), "=", 0)
+}
+
+func (s *store) filterRowKey(ctx context.Context, rowKeys []string, xid string) ([]string, error) {
+	var result []string
+	rowKeyValues, err := s.getRowKeyValues(ctx, rowKeys)
+	if err != nil {
+		return nil, err
+	}
+	for _, rowKey := range rowKeys {
+		if value, ok := rowKeyValues[rowKey]; ok {
+			if !strings.Contains(value, xid) {
+				result = append(result, rowKey)
+			}
+		} else {
+			result = append(result, rowKey)
+		}
+	}
+	return result, nil
+}
+
+func (s *store) getRowKeyValues(ctx context.Context, rowKeys []string) (map[string]string, error) {
+	var (
+		result = make(map[string]string)
+		resp   *clientv3.GetResponse
+		err    error
+	)
+	for _, rowKey := range rowKeys {
+		resp, err = s.client.Get(ctx, rowKey, clientv3.WithSerializable())
+		if err != nil {
+			return nil, err
+		}
+		if len(resp.Kvs) == 0 {
+			continue
+		}
+		result[rowKey] = string(resp.Kvs[0].Value)
+	}
+	return result, nil
 }
 
 func (s *store) WatchGlobalSessions(ctx context.Context, applicationID string) storage.Watcher {

@@ -174,13 +174,13 @@ func (f *_mysqlFilter) processAfterQueryUpdate(ctx context.Context, conn *driver
 	return dt.GetUndoLogManager().InsertUndoLogWithNormal(conn, xid, branchID, undoLog)
 }
 
-func (f *_mysqlFilter) processSelectForQueryUpdate(ctx context.Context, conn *driver.BackendConnection,
+func (f *_mysqlFilter) processQuerySelectForUpdate(ctx context.Context, conn *driver.BackendConnection,
 	result proto.Result, selectStmt *ast.SelectStmt) error {
-	has, _ := misc.HasXIDHint(selectStmt.TableHints)
+	has, xid := misc.HasXIDHint(selectStmt.TableHints)
 	if !has {
 		return nil
 	}
 	executor := exec.NewQuerySelectForUpdateExecutor(conn, selectStmt, result)
-	_, err := executor.Executable(ctx, f.lockRetryInterval, f.lockRetryTimes)
+	_, err := executor.Executable(ctx, xid, f.lockRetryInterval, f.lockRetryTimes)
 	return err
 }

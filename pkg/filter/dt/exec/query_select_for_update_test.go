@@ -37,6 +37,7 @@ import (
 func TestQuerySelectForUpdate(t *testing.T) {
 	testCases := []*struct {
 		sql                    string
+		xid                    string
 		lockInterval           time.Duration
 		lockTimes              int
 		expectedTableName      string
@@ -44,7 +45,8 @@ func TestQuerySelectForUpdate(t *testing.T) {
 		expectedErr            error
 	}{
 		{
-			sql:                    "select /*+ GlobalLock() */ * from T where id = 10 for update",
+			sql:                    "select /*+ xid('123') */ * from T where id = 10 for update",
+			xid:                    "123",
 			lockInterval:           5 * time.Millisecond,
 			lockTimes:              3,
 			expectedTableName:      "`T`",
@@ -53,7 +55,7 @@ func TestQuerySelectForUpdate(t *testing.T) {
 		},
 	}
 
-	patches1 := isLockablePatch()
+	patches1 := isLockableWithXIDPatch()
 	defer patches1.Reset()
 
 	patches2 := getQueryTableMetaPatch()
@@ -92,7 +94,7 @@ func TestQuerySelectForUpdate(t *testing.T) {
 			executor := NewQuerySelectForUpdateExecutor(&driver.BackendConnection{}, selectForUpdateStmt, &mysql.Result{})
 			tableName := executor.GetTableName()
 			assert.Equal(t, c.expectedTableName, tableName)
-			_, executeErr := executor.Executable(ctx, c.lockInterval, c.lockTimes)
+			_, executeErr := executor.Executable(ctx, c.xid, c.lockInterval, c.lockTimes)
 			assert.Equal(t, c.expectedErr, executeErr)
 		})
 	}

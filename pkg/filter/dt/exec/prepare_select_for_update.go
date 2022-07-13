@@ -53,7 +53,7 @@ func NewPrepareSelectForUpdateExecutor(
 	}
 }
 
-func (executor *prepareSelectForUpdateExecutor) Executable(ctx context.Context, lockRetryInterval time.Duration, lockRetryTimes int) (bool, error) {
+func (executor *prepareSelectForUpdateExecutor) Executable(ctx context.Context, xid string, lockRetryInterval time.Duration, lockRetryTimes int) (bool, error) {
 	tableMeta, err := executor.GetTableMeta(ctx)
 	if err != nil {
 		return false, err
@@ -70,8 +70,8 @@ func (executor *prepareSelectForUpdateExecutor) Executable(ctx context.Context, 
 			err      error
 		)
 		for i := 0; i < lockRetryTimes; i++ {
-			lockable, err = dt.GetDistributedTransactionManager().IsLockable(ctx,
-				executor.conn.DataSourceName(), lockKeys)
+			lockable, err = dt.GetDistributedTransactionManager().IsLockableWithXID(ctx,
+				executor.conn.DataSourceName(), lockKeys, xid)
 			if lockable && err == nil {
 				break
 			}
