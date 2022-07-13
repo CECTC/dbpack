@@ -113,7 +113,7 @@ func (p *UpdatePlan) generate(sb *strings.Builder, table string, hints ...*ast.T
 				ctx.WritePlain(" ")
 			}
 			if err := tableHint.Restore(ctx); err != nil {
-				return errors.Wrapf(err, "An error occurred while restore UpdateStmt.TableHints[%d], HintName: %s",
+				return errors.Wrapf(err, "An error occurred while restoring UpdateStmt.TableHints[%d], HintName: %s",
 					i, tableHint.HintName.String())
 			}
 		}
