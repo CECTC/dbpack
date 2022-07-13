@@ -74,7 +74,7 @@ require (
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/pingcap/failpoint v0.0.0-20210316064728-7acb0f0a3dfd // indirect
 	github.com/pingcap/kvproto v0.0.0-20210806074406-317f69fb54b4 // indirect
-	github.com/pingcap/parser v0.0.0-20210831085004-b5390aa83f65 // indirect
+	github.com/pingcap/parser v0.0.0-20210831085004-b5390aa83f65
 	github.com/pingcap/tipb v0.0.0-20210708040514-0f154bb0dc0f // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect

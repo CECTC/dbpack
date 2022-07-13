@@ -31,11 +31,12 @@ const (
 	masterDataSourceName = "root:123456@tcp(127.0.0.1:3306)/employees?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
 	slaveDataSourceName  = "root:123456@tcp(127.0.0.1:3307)/employees?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
 
-	insertEmployee  = `INSERT INTO employees ( emp_no, birth_date, first_name, last_name, gender, hire_date ) VALUES (?, ?, ?, ?, ?, ?)`
-	selectEmployee1 = `SELECT emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
-	selectEmployee2 = `SELECT /*+ UseDB('employees-master') */ emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
-	updateEmployee  = `UPDATE employees set last_name = ? where emp_no = ?`
-	deleteEmployee  = `DELETE FROM employees WHERE emp_no = ?`
+	insertEmployee   = `INSERT INTO employees ( emp_no, birth_date, first_name, last_name, gender, hire_date ) VALUES (?, ?, ?, ?, ?, ?)`
+	selectEmployee1  = `SELECT emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
+	insertDepartment = `INSERT INTO departments( id, dept_no, dept_name ) values (?, ?, ?)`
+	selectEmployee2  = `SELECT /*+ UseDB('employees-master') */ emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
+	updateEmployee   = `UPDATE employees set last_name = ? where emp_no = ?`
+	deleteEmployee   = `DELETE FROM employees WHERE emp_no = ?`
 )
 
 type _ReadWriteSplittingSuite struct {
@@ -136,6 +137,16 @@ func (suite *_ReadWriteSplittingSuite) TestSelect1() {
 			suite.NoError(err)
 		}
 		suite.Equal("slave", firstName)
+	}
+}
+
+func (suite *_ReadWriteSplittingSuite) TestInsertEncryption() {
+	result, err := suite.db.Exec(insertDepartment, 1, "1001", "sunset")
+	if suite.NoErrorf(err, "insert row error: %v", err) {
+		affected, err := result.RowsAffected()
+		if suite.NoErrorf(err, "insert row error: %v", err) {
+			suite.Equal(int64(1), affected)
+		}
 	}
 }
 

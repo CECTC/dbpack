@@ -33,6 +33,7 @@ import (
 	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/third_party/parser/ast"
+	"github.com/cectc/dbpack/third_party/parser/format"
 	"github.com/cectc/dbpack/third_party/parser/model"
 )
 
@@ -152,19 +153,38 @@ func (executor *ReadWriteSplittingExecutor) ExecuteFieldList(ctx context.Context
 	return nil, errors.New("unimplemented COM_FIELD_LIST in read write splitting mode")
 }
 
-func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context, sql string) (proto.Result, uint16, error) {
-	var (
-		db     *DataSourceBrief
-		tx     proto.Tx
-		result proto.Result
-		err    error
-	)
-
+func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
+	ctx context.Context, _ string) (result proto.Result, warns uint16, err error) {
 	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.RWSComQuery)
 	defer span.End()
 
+	if err = executor.doPreFilter(spanCtx); err != nil {
+		return nil, 0, err
+	}
+	defer func() {
+		if err == nil {
+			err = executor.doPostFilter(spanCtx, result)
+		} else {
+			span.RecordError(err)
+		}
+	}()
+
+	var (
+		db *DataSourceBrief
+		tx proto.Tx
+		sb strings.Builder
+	)
+
 	connectionID := proto.ConnectionID(spanCtx)
 	queryStmt := proto.QueryStmt(spanCtx)
+	if err := queryStmt.Restore(format.NewRestoreCtx(format.RestoreStringSingleQuotes|
+		format.RestoreKeyWordUppercase|
+		format.RestoreStringWithoutDefaultCharset, &sb)); err != nil {
+		return nil, 0, err
+	}
+	sql := sb.String()
+	spanCtx = proto.WithSqlText(spanCtx, sql)
+
 	switch stmt := queryStmt.(type) {
 	case *ast.SetStmt:
 		if shouldStartTransaction(stmt) {
@@ -271,9 +291,21 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 	}
 }
 
-func (executor *ReadWriteSplittingExecutor) ExecutorComStmtExecute(ctx context.Context, stmt *proto.Stmt) (proto.Result, uint16, error) {
+func (executor *ReadWriteSplittingExecutor) ExecutorComStmtExecute(
+	ctx context.Context, stmt *proto.Stmt) (result proto.Result, warns uint16, err error) {
 	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.RWSComStmtExecute)
 	defer span.End()
+
+	if err = executor.doPreFilter(spanCtx); err != nil {
+		return nil, 0, err
+	}
+	defer func() {
+		if err == nil {
+			err = executor.doPostFilter(spanCtx, result)
+		} else {
+			span.RecordError(err)
+		}
+	}()
 
 	connectionID := proto.ConnectionID(spanCtx)
 	txi, ok := executor.localTransactionMap.Load(connectionID)

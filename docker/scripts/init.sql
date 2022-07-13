@@ -52,7 +52,7 @@ CREATE TABLE employees (
 CREATE TABLE departments (
     `id` bigint NOT NULL AUTO_INCREMENT,
     dept_no     CHAR(4)         NOT NULL,
-    dept_name   VARCHAR(40)     NOT NULL,
+    dept_name   VARCHAR(100)    NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE  KEY (dept_name)
 );

@@ -19,6 +19,8 @@ executors:
           weight: r0w10
         - name: employees-slave
           weight: r10w0
+    filters:
+      - cryptoFilter
 
 data_source_cluster:
   - name: employees-master
@@ -46,6 +48,13 @@ filters:
       appid: svc
       lock_retry_interval: 50ms
       lock_retry_times: 30
+  - name: cryptoFilter
+    kind: CryptoFilter
+    conf:
+      column_crypto_list:
+        - table: departments
+          columns: ["dept_name"]
+          aeskey: 123456789abcdefg
 
 distributed_transaction:
   appid: svc

@@ -240,11 +240,20 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 	return plan.Execute(spanCtx)
 }
 
-func (executor *ShardingExecutor) ExecutorComStmtExecute(ctx context.Context, stmt *proto.Stmt) (proto.Result, uint16, error) {
+func (executor *ShardingExecutor) ExecutorComStmtExecute(
+	ctx context.Context, stmt *proto.Stmt) (result proto.Result, warns uint16, err error) {
+	if err = executor.doPreFilter(ctx); err != nil {
+		return nil, 0, err
+	}
+	defer func() {
+		if err == nil {
+			err = executor.doPostFilter(ctx, result)
+		}
+	}()
+
 	var (
 		args []interface{}
 		plan proto.Plan
-		err  error
 	)
 
 	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.SHDComStmtExecute)

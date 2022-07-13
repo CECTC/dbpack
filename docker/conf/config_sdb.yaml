@@ -14,6 +14,8 @@ executors:
     mode: sdb
     config:
       data_source_ref: employees
+    filters:
+      - cryptoFilter
 
 data_source_cluster:
   - name: employees
@@ -50,6 +52,13 @@ filters:
       # determines if the rotated log files should be compressed using gzip
       compress: true
       record_before: true
+  - name: cryptoFilter
+    kind: CryptoFilter
+    conf:
+      column_crypto_list:
+      - table: departments
+        columns: ["dept_name"]
+        aeskey: 123456789abcdefg
 
 distributed_transaction:
   appid: svc

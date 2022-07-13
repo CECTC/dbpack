@@ -29,11 +29,12 @@ const (
 	driverName = "mysql"
 
 	// user:password@tcp(127.0.0.1:3306)/dbName?
-	dataSourceName = "dksl:123456@tcp(127.0.0.1:13306)/employees?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
-	insertEmployee = `INSERT INTO employees ( emp_no, birth_date, first_name, last_name, gender, hire_date ) VALUES (?, ?, ?, ?, ?, ?)`
-	selectEmployee = `SELECT emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
-	updateEmployee = `UPDATE employees set last_name = ? where emp_no = ?`
-	deleteEmployee = `DELETE FROM employees WHERE emp_no = ?`
+	dataSourceName   = "dksl:123456@tcp(127.0.0.1:13306)/employees?interpolateParams=true&timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
+	insertEmployee   = `INSERT INTO employees ( emp_no, birth_date, first_name, last_name, gender, hire_date ) VALUES (?, ?, ?, ?, ?, ?)`
+	insertDepartment = `INSERT INTO departments( id, dept_no, dept_name ) values (?, ?, ?)`
+	selectEmployee   = `SELECT emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
+	updateEmployee   = `UPDATE employees set last_name = ? where emp_no = ?`
+	deleteEmployee   = `DELETE FROM employees WHERE emp_no = ?`
 )
 
 type _CRUDSuite struct {
@@ -72,6 +73,16 @@ func (suite *_CRUDSuite) TestDelete() {
 
 func (suite *_CRUDSuite) TestInsert() {
 	result, err := suite.db.Exec(insertEmployee, 100001, "1992-01-07", "scott", "lewis", "M", "2014-09-01")
+	if suite.NoErrorf(err, "insert row error: %v", err) {
+		affected, err := result.RowsAffected()
+		if suite.NoErrorf(err, "insert row error: %v", err) {
+			suite.Equal(int64(1), affected)
+		}
+	}
+}
+
+func (suite *_CRUDSuite) TestInsertEncryption() {
+	result, err := suite.db.Exec(insertDepartment, 1, "1001", "sunset")
 	if suite.NoErrorf(err, "insert row error: %v", err) {
 		affected, err := result.RowsAffected()
 		if suite.NoErrorf(err, "insert row error: %v", err) {
