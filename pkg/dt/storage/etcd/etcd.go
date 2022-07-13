@@ -39,6 +39,11 @@ const (
 	// We have set a buffer in order to reduce times of context switches.
 	incomingBufSize = 100
 	outgoingBufSize = 100
+
+	// LockKeyFormat lk/${XID}/${rowKey}
+	LockKeyFormat = "lk/%s/%s"
+	// BranchKeyFormat bs/${XID}/${BranchSessionID}
+	BranchKeyFormat = "bs/%s/%d"
 )
 
 type store struct {
@@ -125,8 +130,8 @@ func (s *store) AddBranchSession(ctx context.Context, branchSession *api.BranchS
 	comparisons = append(comparisons, clientv3.Compare(clientv3.ModRevision(branchSession.XID), "=", modRevision))
 	ops = append(ops, clientv3.OpPut(branchSession.BranchID, string(data)))
 	// branch transactions of global transaction
-	globalBranchKey := fmt.Sprintf("bs/%s/%d", branchSession.XID, branchSession.BranchSessionID)
-	ops = append(ops, clientv3.OpPut(globalBranchKey, branchSession.BranchID))
+	branchKey := fmt.Sprintf(BranchKeyFormat, branchSession.XID, branchSession.BranchSessionID)
+	ops = append(ops, clientv3.OpPut(branchKey, branchSession.BranchID))
 
 	if branchSession.Type == api.AT && branchSession.LockKey != "" {
 		rowKeys := misc.CollectRowKeys(branchSession.LockKey, branchSession.ResourceID)
@@ -139,7 +144,7 @@ func (s *store) AddBranchSession(ctx context.Context, branchSession *api.BranchS
 		}
 
 		for _, rowKey := range rowKeys {
-			rowKeyValue := fmt.Sprintf("lk/%s/%s", branchSession.XID, rowKey)
+			rowKeyValue := fmt.Sprintf(LockKeyFormat, branchSession.XID, rowKey)
 			ops = append(ops, clientv3.OpPut(rowKeyValue, rowKey))
 			ops = append(ops, clientv3.OpPut(rowKey, rowKeyValue))
 		}
@@ -485,7 +490,7 @@ func (s *store) IsLockableWithXID(ctx context.Context, resourceID string, lockKe
 		if len(resp.Kvs) == 0 {
 			continue
 		}
-		// rowKeyValue: lk/${branchSession.XID}/${rowKey}
+		// rowKeyValue: lk/${XID}/${rowKey}
 		if strings.Contains(string(resp.Kvs[0].Value), xid) {
 			continue
 		} else {
