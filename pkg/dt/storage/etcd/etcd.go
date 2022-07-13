@@ -130,7 +130,7 @@ func (s *store) AddBranchSession(ctx context.Context, branchSession *api.BranchS
 
 	if branchSession.Type == api.AT && branchSession.LockKey != "" {
 		rowKeys := misc.CollectRowKeys(branchSession.LockKey, branchSession.ResourceID)
-		rowKeys, err = s.filterRowKey(ctx, rowKeys, branchSession.XID)
+		rowKeys, err = s.filterRowKeys(ctx, rowKeys, branchSession.XID)
 		if err != nil {
 			return err
 		}
@@ -523,7 +523,7 @@ func notFound(key string) clientv3.Cmp {
 	return clientv3.Compare(clientv3.ModRevision(key), "=", 0)
 }
 
-func (s *store) filterRowKey(ctx context.Context, rowKeys []string, xid string) ([]string, error) {
+func (s *store) filterRowKeys(ctx context.Context, rowKeys []string, xid string) ([]string, error) {
 	var result []string
 	rowKeyValues, err := s.getRowKeyValues(ctx, rowKeys)
 	if err != nil {
