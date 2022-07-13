@@ -146,6 +146,7 @@ func (f *_filter) PreHandle(ctx context.Context, conn proto.Connection) error {
 	args.WriteByte(']')
 
 	command := misc.GetStmtLabel(stmtNode)
+	command = strings.ToUpper(command)
 
 	if _, err := f.log.Write([]byte(fmt.Sprintf("%s,%s,%s,%v,%s,%s,%s,%s,0\n", carbon.Now(), userName, remoteAddr, connectionID,
 		commandTypeStr, command, sqlText, args.String()))); err != nil {
@@ -199,6 +200,7 @@ func (f *_filter) PostHandle(ctx context.Context, result proto.Result, conn prot
 	args.WriteByte(']')
 
 	command := misc.GetStmtLabel(stmtNode)
+	command = strings.ToUpper(command)
 
 	affected, err := result.RowsAffected()
 	if err != nil {
