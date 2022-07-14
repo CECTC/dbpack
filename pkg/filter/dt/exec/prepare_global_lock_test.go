@@ -227,7 +227,7 @@ func TestPrepareGlobalLock(t *testing.T) {
 			}
 			ctx = proto.WithPrepareStmt(ctx, protoStmt)
 
-			var executor Executable
+			var executor GlobalLockExecutor
 			if c.isUpdate {
 				updateStmt := stmt.(*ast.UpdateStmt)
 				executor = NewPrepareGlobalLockExecutor(&driver.BackendConnection{}, c.isUpdate, nil, updateStmt, protoStmt.BindVars)
@@ -250,6 +250,17 @@ func TestPrepareGlobalLock(t *testing.T) {
 func isLockablePatch() *gomonkey.Patches {
 	var transactionManager *dt.DistributedTransactionManager
 	return gomonkey.ApplyMethodFunc(transactionManager, "IsLockable", func(ctx context.Context, resourceID, lockKey string) (bool, error) {
+		count++
+		if count < 5 {
+			return false, err
+		}
+		return true, nil
+	})
+}
+
+func isLockableWithXIDPatch() *gomonkey.Patches {
+	var transactionManager *dt.DistributedTransactionManager
+	return gomonkey.ApplyMethodFunc(transactionManager, "IsLockableWithXID", func(ctx context.Context, resourceID, lockKey, xid string) (bool, error) {
 		count++
 		if count < 5 {
 			return false, err

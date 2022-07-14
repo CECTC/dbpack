@@ -149,7 +149,7 @@ func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn
 			err = f.processAfterQueryUpdate(newCtx, bc, stmtNode)
 		case *ast.SelectStmt:
 			if stmtNode.LockInfo != nil && stmtNode.LockInfo.LockType == ast.SelectLockForUpdate {
-				err = f.processSelectForQueryUpdate(ctx, bc, result, stmtNode)
+				err = f.processQuerySelectForUpdate(ctx, bc, result, stmtNode)
 			}
 		default:
 			return nil
@@ -168,7 +168,7 @@ func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn
 			err = f.processAfterPrepareUpdate(newCtx, bc, stmt, stmtNode)
 		case *ast.SelectStmt:
 			if stmtNode.LockInfo != nil && stmtNode.LockInfo.LockType == ast.SelectLockForUpdate {
-				err = f.processSelectForPrepareUpdate(newCtx, bc, result, stmt, stmtNode)
+				err = f.processPrepareSelectForUpdate(newCtx, bc, result, stmt, stmtNode)
 			}
 		default:
 			return nil

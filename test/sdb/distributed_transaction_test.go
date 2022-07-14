@@ -96,27 +96,36 @@ func (suite *_DistributedTransactionSuite) TestDistributedTransactionPrepareRequ
 		if suite.NoErrorf(err, "begin tx error: %v", err) {
 			insertSql := fmt.Sprintf(`INSERT /*+ XID('%s') */ INTO dept_manager ( id, emp_no, dept_no, from_date, to_date ) VALUES (?, ?, ?, ?, ?)`, xid)
 			result, err := tx.Exec(insertSql, 1, 100002, 1002, "2022-01-01", "2024-01-01")
-			if suite.NoErrorf(err, "insert row error: %v", err) {
+			if suite.NoErrorf(err, "insert dept_manager error: %v", err) {
 				affected, err := result.RowsAffected()
-				if suite.NoErrorf(err, "insert row error: %v", err) {
+				if suite.NoErrorf(err, "insert dept_manager error: %v", err) {
+					suite.Equal(int64(1), affected)
+				}
+			}
+
+			updateDeptManagerSql := fmt.Sprintf(`UPDATE /*+ XID('%s') */ dept_manager SET to_date = ? WHERE id = ?`, xid)
+			result, err = tx.Exec(updateDeptManagerSql, "2026-01-01", 1)
+			if suite.NoErrorf(err, "update dept_manager error: %v", err) {
+				affected, err := result.RowsAffected()
+				if suite.NoErrorf(err, "update dept_manager error: %v", err) {
 					suite.Equal(int64(1), affected)
 				}
 			}
 
 			deleteSql := fmt.Sprintf(`DELETE /*+ XID('%s') */ FROM dept_emp WHERE emp_no = ? and dept_no = ?`, xid)
 			result, err = tx.Exec(deleteSql, 100002, 1002)
-			if suite.NoErrorf(err, "delete row error: %v", err) {
+			if suite.NoErrorf(err, "delete dept_emp error: %v", err) {
 				affected, err := result.RowsAffected()
-				if suite.NoErrorf(err, "delete row error: %v", err) {
+				if suite.NoErrorf(err, "delete dept_emp error: %v", err) {
 					suite.Equal(int64(1), affected)
 				}
 			}
 
 			updateSql := fmt.Sprintf(`UPDATE /*+ XID('%s') */ salaries SET salary = ? WHERE emp_no = ?`, xid)
 			result, err = tx.Exec(updateSql, 20000, 100002)
-			if suite.NoErrorf(err, "update row error: %v", err) {
+			if suite.NoErrorf(err, "update salaries error: %v", err) {
 				affected, err := result.RowsAffected()
-				if suite.NoErrorf(err, "update row error: %v", err) {
+				if suite.NoErrorf(err, "update salaries error: %v", err) {
 					suite.Equal(int64(1), affected)
 				}
 			}
@@ -163,27 +172,36 @@ func (suite *_DistributedTransactionSuite) TestDistributedTransactionQueryReques
 		if suite.NoErrorf(err, "begin tx error: %v", err) {
 			insertSql := fmt.Sprintf(`INSERT /*+ XID('%s') */ INTO dept_manager ( id, emp_no, dept_no, from_date, to_date ) VALUES (?, ?, ?, ?, ?)`, xid)
 			result, err := tx.Exec(insertSql, 2, 100002, 1002, "2022-01-01", "2024-01-01")
-			if suite.NoErrorf(err, "insert row error: %v", err) {
+			if suite.NoErrorf(err, "insert dept_manager error: %v", err) {
 				affected, err := result.RowsAffected()
-				if suite.NoErrorf(err, "insert row error: %v", err) {
+				if suite.NoErrorf(err, "insert dept_manager error: %v", err) {
+					suite.Equal(int64(1), affected)
+				}
+			}
+
+			updateDeptManagerSql := fmt.Sprintf(`UPDATE /*+ XID('%s') */ dept_manager SET to_date = ? WHERE id = ?`, xid)
+			result, err = tx.Exec(updateDeptManagerSql, "2026-01-01", 2)
+			if suite.NoErrorf(err, "update dept_manager error: %v", err) {
+				affected, err := result.RowsAffected()
+				if suite.NoErrorf(err, "update dept_manager error: %v", err) {
 					suite.Equal(int64(1), affected)
 				}
 			}
 
 			deleteSql := fmt.Sprintf(`DELETE /*+ XID('%s') */ FROM dept_emp WHERE emp_no = ? and dept_no = ?`, xid)
 			result, err = tx.Exec(deleteSql, 100002, 1002)
-			if suite.NoErrorf(err, "delete row error: %v", err) {
+			if suite.NoErrorf(err, "delete dept_emp error: %v", err) {
 				affected, err := result.RowsAffected()
-				if suite.NoErrorf(err, "delete row error: %v", err) {
+				if suite.NoErrorf(err, "delete dept_emp error: %v", err) {
 					suite.Equal(int64(1), affected)
 				}
 			}
 
 			updateSql := fmt.Sprintf(`UPDATE /*+ XID('%s') */ salaries SET salary = ? WHERE emp_no = ?`, xid)
 			result, err = tx.Exec(updateSql, 20000, 100002)
-			if suite.NoErrorf(err, "update row error: %v", err) {
+			if suite.NoErrorf(err, "update salaries error: %v", err) {
 				affected, err := result.RowsAffected()
-				if suite.NoErrorf(err, "update row error: %v", err) {
+				if suite.NoErrorf(err, "update salaries error: %v", err) {
 					suite.Equal(int64(1), affected)
 				}
 			}

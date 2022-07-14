@@ -32,8 +32,14 @@ type Executor interface {
 	GetTableName() string
 }
 
-type Executable interface {
+type GlobalLockExecutor interface {
 	Executable(ctx context.Context, lockRetryInterval time.Duration, lockRetryTimes int) (bool, error)
+	GetTableMeta(ctx context.Context) (schema.TableMeta, error)
+	GetTableName() string
+}
+
+type Executable interface {
+	Executable(ctx context.Context, xid string, lockRetryInterval time.Duration, lockRetryTimes int) (bool, error)
 	GetTableMeta(ctx context.Context) (schema.TableMeta, error)
 	GetTableName() string
 }
