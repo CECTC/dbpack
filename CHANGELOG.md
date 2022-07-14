@@ -90,3 +90,10 @@
 ### Bug Fixes
 
 * in tcc mode, json.Unmarshal requestContext.Headers failed ([194](https://github.com/CECTC/dbpack/issues/194)) ([6e1f8c3](https://github.com/CECTC/dbpack/commit/6e1f8c3b7a9b558e72ed84807cfb0364e1fc89c0))
+
+## v0.2.2
+
+### Changes
+
+* refactor: AuditLog filter PreHandle support more stmtnode type ([198](https://github.com/CECTC/dbpack/pull/198)) ([bb408a5](https://github.com/CECTC/dbpack/commit/bb408a5f7f1f22e5c5a5927e24b0f0316e0b6e12))
+* refactor: support manipulating the same data in different transaction… ([199](https://github.com/CECTC/dbpack/issues/199)) ([040b4d1](https://github.com/CECTC/dbpack/commit/040b4d14968ab96c5933fc6dad5968668c151e45))
