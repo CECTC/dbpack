@@ -20,13 +20,18 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/log"
+	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/proto"
+	"github.com/cectc/dbpack/pkg/visitor"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 	"github.com/cectc/dbpack/third_party/parser/format"
 )
@@ -164,9 +169,12 @@ func (c OrderByCells) Swap(i, j int) {
 	c[i], c[j] = c[j], c[i]
 }
 
-func mergeResult(ctx context.Context, results []*ResultWithErr, orderBy *ast.OrderByClause, limit *Limit) (*mysql.MergeResult, uint16) {
+func mergeResult(ctx context.Context,
+	results []*ResultWithErr,
+	orderBy *ast.OrderByClause,
+	limit *Limit) (*mysql.MergeResult, uint16) {
 	if orderBy == nil && limit == nil {
-		return mergeResultWithOutOrderByAndLimit(ctx, results)
+		return mergeResultWithoutOrderByAndLimit(ctx, results)
 	}
 	if orderBy != nil && limit != nil {
 		return mergeResultWithOrderByAndLimit(ctx, results, orderBy, limit)
@@ -180,7 +188,9 @@ func mergeResult(ctx context.Context, results []*ResultWithErr, orderBy *ast.Ord
 	return nil, 0
 }
 
-func mergeResultWithOutOrderByAndLimit(ctx context.Context, results []*ResultWithErr) (*mysql.MergeResult, uint16) {
+// mergeResultWithOutOrderByAndLimit e.g. select * from t where id between ? and ?
+func mergeResultWithoutOrderByAndLimit(ctx context.Context,
+	results []*ResultWithErr) (*mysql.MergeResult, uint16) {
 	var (
 		fields      []*mysql.Field
 		warning     uint16 = 0
@@ -206,10 +216,16 @@ func mergeResultWithOutOrderByAndLimit(ctx context.Context, results []*ResultWit
 			}
 			pop += 1
 			if commandType == constant.ComQuery {
-				binaryRow := &mysql.TextRow{Row: row}
-				rows = append(rows, binaryRow)
+				textRow := &mysql.TextRow{Row: row}
+				if _, err := textRow.Decode(); err != nil {
+					log.Panic(err)
+				}
+				rows = append(rows, textRow)
 			} else {
 				binaryRow := &mysql.BinaryRow{Row: row}
+				if _, err := binaryRow.Decode(); err != nil {
+					log.Panic(err)
+				}
 				rows = append(rows, binaryRow)
 			}
 		}
@@ -227,7 +243,10 @@ func mergeResultWithOutOrderByAndLimit(ctx context.Context, results []*ResultWit
 	return result, warning
 }
 
-func mergeResultWithLimit(ctx context.Context, results []*ResultWithErr, limit *Limit) (*mysql.MergeResult, uint16) {
+// mergeResultWithLimit e.g. select * from t where id between ? and ? limit ?,?
+func mergeResultWithLimit(ctx context.Context,
+	results []*ResultWithErr,
+	limit *Limit) (*mysql.MergeResult, uint16) {
 	var (
 		fields      []*mysql.Field
 		warning     uint16 = 0
@@ -265,10 +284,16 @@ func mergeResultWithLimit(ctx context.Context, results []*ResultWithErr, limit *
 					continue
 				}
 				if commandType == constant.ComQuery {
-					binaryRow := &mysql.TextRow{Row: row}
-					rows = append(rows, binaryRow)
+					textRow := &mysql.TextRow{Row: row}
+					if _, err := textRow.Decode(); err != nil {
+						log.Panic(err)
+					}
+					rows = append(rows, textRow)
 				} else {
 					binaryRow := &mysql.BinaryRow{Row: row}
+					if _, err := binaryRow.Decode(); err != nil {
+						log.Panic(err)
+					}
 					rows = append(rows, binaryRow)
 				}
 			}
@@ -287,7 +312,11 @@ func mergeResultWithLimit(ctx context.Context, results []*ResultWithErr, limit *
 	return result, warning
 }
 
-func mergeResultWithOrderByAndLimit(ctx context.Context, results []*ResultWithErr, orderBy *ast.OrderByClause, limit *Limit) (*mysql.MergeResult, uint16) {
+// mergeResultWithOrderByAndLimit e.g. select * from t where id between ? and ? order by id desc limit ?,?
+func mergeResultWithOrderByAndLimit(ctx context.Context,
+	results []*ResultWithErr,
+	orderBy *ast.OrderByClause,
+	limit *Limit) (*mysql.MergeResult, uint16) {
 	var (
 		fields        []*mysql.Field
 		orderByFields []*OrderField
@@ -387,7 +416,10 @@ func mergeResultWithOrderByAndLimit(ctx context.Context, results []*ResultWithEr
 	return result, warning
 }
 
-func mergeResultWithOrderBy(ctx context.Context, results []*ResultWithErr, orderBy *ast.OrderByClause) (*mysql.MergeResult, uint16) {
+// mergeResultWithOrderBy e.g. select * from t where id between ? and ? order by id desc
+func mergeResultWithOrderBy(ctx context.Context,
+	results []*ResultWithErr,
+	orderBy *ast.OrderByClause) (*mysql.MergeResult, uint16) {
 	var (
 		fields        []*mysql.Field
 		orderByFields []*OrderField
@@ -476,6 +508,50 @@ func mergeResultWithOrderBy(ctx context.Context, results []*ResultWithErr, order
 	return result, warning
 }
 
+func aggregateResult(ctx context.Context, result *mysql.MergeResult) {
+	sqlText := proto.SqlText(ctx)
+	funcColumns := proto.Variable(ctx, FuncColumns)
+	if funcColumns == nil {
+		return
+	}
+	funcColumnList := funcColumns.([]*visitor.FuncColumn)
+	if len(funcColumnList) == 0 {
+		return
+	}
+	if len(funcColumnList) > 1 {
+		log.Warnf("unsupported multiple aggregated columns, sql: %s", sqlText)
+	}
+	switch funcColumnList[0].FuncName {
+	case ast.AggFuncCount:
+		var count int64 = 0
+		for _, row := range result.Rows {
+			val, err := castCountCellToInt64(row)
+			if err != nil {
+				log.Warn(err)
+				return
+			}
+			count += val
+		}
+		if err := writeCountToRow(result.Rows[0], count); err != nil {
+			log.Warn(err)
+			return
+		}
+		result.Rows = []proto.Row{
+			result.Rows[0],
+		}
+	case ast.AggFuncSum:
+		// todo
+	case ast.AggFuncAvg:
+		// todo
+	case ast.AggFuncMin:
+		// todo
+	case ast.AggFuncMax:
+		// todo
+	default:
+		log.Warnf("unsupported aggregate type, sql: %s", sqlText)
+	}
+}
+
 func countOrderByCells(cells []*OrderByCell) int {
 	count := 0
 	for _, cell := range cells {
@@ -546,4 +622,42 @@ func generateStatement(sql string, stmtNode ast.StmtNode, args []interface{}) *p
 		stmt.BindVars[parameterID] = arg
 	}
 	return stmt
+}
+
+func visitFuncColumn(stmt *ast.SelectStmt) []*visitor.FuncColumn {
+	funcVisitor := &visitor.FuncVisitor{FuncColumns: make([]*visitor.FuncColumn, 0)}
+	stmt.Accept(funcVisitor)
+	return funcVisitor.FuncColumns
+}
+
+func castCountCellToInt64(row proto.Row) (int64, error) {
+	switch r := row.(type) {
+	case *mysql.TextRow:
+		val, err := strconv.ParseInt(fmt.Sprintf("%s", r.Values[0].Val), 10, 64)
+		if err != nil {
+			return 0, err
+		}
+		return val, nil
+	case *mysql.BinaryRow:
+		if v, ok := r.Values[0].Val.(int64); ok {
+			return v, nil
+		}
+		return 0, errors.New("count column value must be of type int64")
+	default:
+		return 0, errors.New("unsupported row type")
+	}
+}
+
+func writeCountToRow(row proto.Row, count int64) error {
+	switch r := row.(type) {
+	case *mysql.TextRow:
+		var out []byte
+		misc.WriteUint64(out, 0, uint64(count))
+		r.Values[0].Val = out
+	case *mysql.BinaryRow:
+		r.Values[0].Val = count
+	default:
+		return errors.New("unsupported row type")
+	}
+	return nil
 }

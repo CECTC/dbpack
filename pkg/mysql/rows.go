@@ -130,8 +130,8 @@ func (row *Row) Decode() ([]*proto.Value, error) {
 	return nil, nil
 }
 
-func (rows *TextRow) Decode() ([]*proto.Value, error) {
-	dest := make([]*proto.Value, len(rows.ResultSet.Columns))
+func (row *TextRow) Decode() ([]*proto.Value, error) {
+	dest := make([]*proto.Value, len(row.ResultSet.Columns))
 
 	// RowSet Packet
 	var val []byte
@@ -140,11 +140,11 @@ func (rows *TextRow) Decode() ([]*proto.Value, error) {
 	var err error
 	pos := 0
 
-	for i := 0; i < len(rows.ResultSet.Columns); i++ {
-		field := rows.ResultSet.Columns[i]
+	for i := 0; i < len(row.ResultSet.Columns); i++ {
+		field := row.ResultSet.Columns[i]
 
 		// Read bytes and convert to string
-		val, isNull, n, err = misc.ReadLengthEncodedString(rows.Content[pos:])
+		val, isNull, n, err = misc.ReadLengthEncodedString(row.Content[pos:])
 		dest[i] = &proto.Value{
 			Typ:   field.FieldType,
 			Flags: field.Flags,
@@ -175,22 +175,22 @@ func (rows *TextRow) Decode() ([]*proto.Value, error) {
 		}
 		return nil, err // err != nil
 	}
-	rows.Values = dest
+	row.Values = dest
 	return dest, nil
 }
 
-func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
-	dest := make([]*proto.Value, len(rows.ResultSet.Columns))
+func (row *BinaryRow) Decode() ([]*proto.Value, error) {
+	dest := make([]*proto.Value, len(row.ResultSet.Columns))
 
-	if rows.Content[0] != constant.OKPacket {
-		return nil, errors.NewSQLError(constant.CRMalformedPacket, constant.SSUnknownSQLState, "read binary rows (%v) failed", rows)
+	if row.Content[0] != constant.OKPacket {
+		return nil, errors.NewSQLError(constant.CRMalformedPacket, constant.SSUnknownSQLState, "read binary row (%v) failed", row)
 	}
 
 	// NULL-bitmap,  [(column-count + 7 + 2) / 8 bytes]
 	pos := 1 + (len(dest)+7+2)>>3
-	nullMask := rows.Content[1:pos]
+	nullMask := row.Content[1:pos]
 
-	for i := 0; i < len(rows.ResultSet.Columns); i++ {
+	for i := 0; i < len(row.ResultSet.Columns); i++ {
 		// Field is NULL
 		// (byte >> bit-pos) % 2 == 1
 		if ((nullMask[(i+2)>>3] >> uint((i+2)&7)) & 1) == 1 {
@@ -198,7 +198,7 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 			continue
 		}
 
-		field := rows.ResultSet.Columns[i]
+		field := row.ResultSet.Columns[i]
 		// Convert to byte-coded string
 		switch field.FieldType {
 		case constant.FieldTypeNULL:
@@ -217,8 +217,8 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 				Typ:   field.FieldType,
 				Flags: field.Flags,
 				Len:   1,
-				Val:   int64(int8(rows.Content[pos])),
-				Raw:   rows.Content[pos : pos+1],
+				Val:   int64(int8(row.Content[pos])),
+				Raw:   row.Content[pos : pos+1],
 			}
 			pos++
 			continue
@@ -228,8 +228,8 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 				Typ:   field.FieldType,
 				Flags: field.Flags,
 				Len:   1,
-				Val:   int64(rows.Content[pos]),
-				Raw:   rows.Content[pos : pos+1],
+				Val:   int64(row.Content[pos]),
+				Raw:   row.Content[pos : pos+1],
 			}
 			pos++
 			continue
@@ -239,8 +239,8 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 				Typ:   field.FieldType,
 				Flags: field.Flags,
 				Len:   2,
-				Val:   int64(int16(binary.LittleEndian.Uint16(rows.Content[pos : pos+2]))),
-				Raw:   rows.Content[pos : pos+1],
+				Val:   int64(int16(binary.LittleEndian.Uint16(row.Content[pos : pos+2]))),
+				Raw:   row.Content[pos : pos+1],
 			}
 			pos += 2
 			continue
@@ -250,8 +250,8 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 				Typ:   field.FieldType,
 				Flags: field.Flags,
 				Len:   2,
-				Val:   int64(binary.LittleEndian.Uint16(rows.Content[pos : pos+2])),
-				Raw:   rows.Content[pos : pos+1],
+				Val:   int64(binary.LittleEndian.Uint16(row.Content[pos : pos+2])),
+				Raw:   row.Content[pos : pos+1],
 			}
 			pos += 2
 			continue
@@ -261,8 +261,8 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 				Typ:   field.FieldType,
 				Flags: field.Flags,
 				Len:   4,
-				Val:   int64(int32(binary.LittleEndian.Uint32(rows.Content[pos : pos+4]))),
-				Raw:   rows.Content[pos : pos+4],
+				Val:   int64(int32(binary.LittleEndian.Uint32(row.Content[pos : pos+4]))),
+				Raw:   row.Content[pos : pos+4],
 			}
 			pos += 4
 			continue
@@ -272,8 +272,8 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 				Typ:   field.FieldType,
 				Flags: field.Flags,
 				Len:   4,
-				Val:   int64(binary.LittleEndian.Uint32(rows.Content[pos : pos+4])),
-				Raw:   rows.Content[pos : pos+4],
+				Val:   int64(binary.LittleEndian.Uint32(row.Content[pos : pos+4])),
+				Raw:   row.Content[pos : pos+4],
 			}
 			pos += 4
 			continue
@@ -283,21 +283,21 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 				Typ:   field.FieldType,
 				Flags: field.Flags,
 				Len:   8,
-				Val:   int64(binary.LittleEndian.Uint64(rows.Content[pos : pos+8])),
-				Raw:   rows.Content[pos : pos+8],
+				Val:   int64(binary.LittleEndian.Uint64(row.Content[pos : pos+8])),
+				Raw:   row.Content[pos : pos+8],
 			}
 			pos += 8
 			continue
 
 		case constant.FieldTypeUint64:
-			val := binary.LittleEndian.Uint64(rows.Content[pos : pos+8])
+			val := binary.LittleEndian.Uint64(row.Content[pos : pos+8])
 			if val > math.MaxInt64 {
 				dest[i] = &proto.Value{
 					Typ:   field.FieldType,
 					Flags: field.Flags,
 					Len:   8,
 					Val:   misc.Uint64ToString(val),
-					Raw:   rows.Content[pos : pos+8],
+					Raw:   row.Content[pos : pos+8],
 				}
 			} else {
 				dest[i] = &proto.Value{
@@ -305,7 +305,7 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 					Flags: field.Flags,
 					Len:   8,
 					Val:   int64(val),
-					Raw:   rows.Content[pos : pos+8],
+					Raw:   row.Content[pos : pos+8],
 				}
 			}
 			pos += 8
@@ -316,8 +316,8 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 				Typ:   field.FieldType,
 				Flags: field.Flags,
 				Len:   4,
-				Val:   math.Float32frombits(binary.LittleEndian.Uint32(rows.Content[pos : pos+4])),
-				Raw:   rows.Content[pos : pos+4],
+				Val:   math.Float32frombits(binary.LittleEndian.Uint32(row.Content[pos : pos+4])),
+				Raw:   row.Content[pos : pos+4],
 			}
 			pos += 4
 			continue
@@ -327,8 +327,8 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 				Typ:   field.FieldType,
 				Flags: field.Flags,
 				Len:   8,
-				Val:   math.Float64frombits(binary.LittleEndian.Uint64(rows.Content[pos : pos+8])),
-				Raw:   rows.Content[pos : pos+8],
+				Val:   math.Float64frombits(binary.LittleEndian.Uint64(row.Content[pos : pos+8])),
+				Raw:   row.Content[pos : pos+8],
 			}
 			pos += 8
 			continue
@@ -342,13 +342,13 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 			var isNull bool
 			var n int
 			var err error
-			val, isNull, n, err = misc.ReadLengthEncodedString(rows.Content[pos:])
+			val, isNull, n, err = misc.ReadLengthEncodedString(row.Content[pos:])
 			dest[i] = &proto.Value{
 				Typ:   field.FieldType,
 				Flags: field.Flags,
 				Len:   n,
 				Val:   val,
-				Raw:   rows.Content[pos : pos+n],
+				Raw:   row.Content[pos : pos+n],
 			}
 			pos += n
 			if err == nil {
@@ -366,7 +366,7 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 			constant.FieldTypeTime,                                  // Time [-][H]HH:MM:SS[.fractal]
 			constant.FieldTypeTimestamp, constant.FieldTypeDateTime: // Timestamp YYYY-MM-DD HH:MM:SS[.fractal]
 
-			num, isNull, n := misc.ReadLengthEncodedInteger(rows.Content[pos:])
+			num, isNull, n := misc.ReadLengthEncodedInteger(row.Content[pos:])
 			pos += n
 
 			var val interface{}
@@ -389,22 +389,22 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 						field.Decimals,
 					)
 				}
-				val, err = misc.FormatBinaryTime(rows.Content[pos:pos+int(num)], dstLen)
+				val, err = misc.FormatBinaryTime(row.Content[pos:pos+int(num)], dstLen)
 				dest[i] = &proto.Value{
 					Typ:   field.FieldType,
 					Flags: field.Flags,
-					Len:   n,
+					Len:   int(num),
 					Val:   val,
-					Raw:   rows.Content[pos : pos+n],
+					Raw:   row.Content[pos : pos+n],
 				}
 			default:
-				val, err = misc.ParseBinaryDateTime(num, rows.Content[pos:], time.Local)
+				val, err = misc.ParseBinaryDateTime(num, row.Content[pos:], time.Local)
 				dest[i] = &proto.Value{
 					Typ:   field.FieldType,
 					Flags: field.Flags,
-					Len:   n,
+					Len:   int(num),
 					Val:   val,
-					Raw:   rows.Content[pos : pos+n],
+					Raw:   row.Content[pos : pos+n],
 				}
 				if err == nil {
 					break
@@ -426,13 +426,13 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 						)
 					}
 				}
-				val, err = misc.FormatBinaryDateTime(rows.Content[pos:pos+int(num)], dstlen)
+				val, err = misc.FormatBinaryDateTime(row.Content[pos:pos+int(num)], dstlen)
 				dest[i] = &proto.Value{
 					Typ:   field.FieldType,
 					Flags: field.Flags,
-					Len:   n,
+					Len:   int(num),
 					Val:   val,
-					Raw:   rows.Content[pos : pos+n],
+					Raw:   row.Content[pos : pos+n],
 				}
 			}
 
@@ -448,6 +448,6 @@ func (rows *BinaryRow) Decode() ([]*proto.Value, error) {
 			return nil, fmt.Errorf("unknown field type %d", field.FieldType)
 		}
 	}
-	rows.Values = dest
+	row.Values = dest
 	return dest, nil
 }

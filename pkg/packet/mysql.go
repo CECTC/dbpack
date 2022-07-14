@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -347,7 +348,7 @@ func ParseStmtArgs(data []byte, typ constant.FieldType, pos int) (interface{}, i
 	}
 }
 
-func Val2MySQL(v *proto.Value) ([]byte, error) {
+func TextVal2MySQL(v *proto.Value) ([]byte, error) {
 	var out []byte
 	pos := 0
 	if v == nil {
@@ -662,7 +663,150 @@ func Val2MySQL(v *proto.Value) ([]byte, error) {
 	return out, nil
 }
 
-func Val2MySQLLen(v *proto.Value) (int, error) {
+func BinaryVal2MySQL(v *proto.Value) ([]byte, error) {
+	var out []byte
+	pos := 0
+	if v == nil {
+		return out, nil
+	}
+
+	switch v.Typ {
+	case constant.FieldTypeNULL:
+		// no-op
+	case constant.FieldTypeTiny:
+		val := v.Val.(int64)
+		out = make([]byte, 1)
+		misc.WriteByte(out, pos, uint8(val))
+	case constant.FieldTypeUint8:
+		val := v.Val.(int64)
+		out = make([]byte, 1)
+		misc.WriteByte(out, pos, uint8(val))
+	case constant.FieldTypeUint16:
+		val := v.Val.(int64)
+		out = make([]byte, 2)
+		misc.WriteUint16(out, pos, uint16(val))
+	case constant.FieldTypeShort, constant.FieldTypeYear:
+		val := v.Val.(int64)
+		out = make([]byte, 2)
+		misc.WriteUint16(out, pos, uint16(val))
+	case constant.FieldTypeUint24, constant.FieldTypeUint32:
+		val := v.Val.(int64)
+		out = make([]byte, 4)
+		misc.WriteUint32(out, pos, uint32(val))
+	case constant.FieldTypeInt24, constant.FieldTypeLong:
+		val := v.Val.(int64)
+		out = make([]byte, 4)
+		misc.WriteUint32(out, pos, uint32(val))
+	case constant.FieldTypeFloat:
+		val := v.Val.(float32)
+		bits := math.Float32bits(val)
+		out = make([]byte, 4)
+		misc.WriteUint32(out, pos, bits)
+	case constant.FieldTypeUint64:
+		if val, ok := v.Val.(int64); ok {
+			out = make([]byte, 8)
+			misc.WriteUint64(out, pos, uint64(val))
+		} else {
+			val, err := strconv.ParseUint(fmt.Sprintf("%s", v.Val), 10, 64)
+			if err != nil {
+				return []byte{}, err
+			}
+			out = make([]byte, 8)
+			misc.WriteUint64(out, pos, val)
+		}
+	case constant.FieldTypeLongLong:
+		val := v.Val.(int64)
+		out = make([]byte, 8)
+		misc.WriteUint64(out, pos, uint64(val))
+	case constant.FieldTypeDouble:
+		val := v.Val.(float64)
+		bits := math.Float64bits(val)
+		out = make([]byte, 8)
+		misc.WriteUint64(out, pos, bits)
+	case constant.FieldTypeTimestamp, constant.FieldTypeDate, constant.FieldTypeDateTime:
+		if v.Val == nil {
+			out = make([]byte, 1)
+			out[pos] = 0x00
+		}
+		if _, ok := v.Val.([]byte); ok {
+			out = make([]byte, 1+v.Len)
+			out[pos] = byte(v.Len)
+			pos++
+
+			copy(out[pos:], v.Raw)
+		}
+		if val, ok := v.Val.(time.Time); ok {
+			year := val.Year()
+			month := val.Month()
+			day := val.Day()
+			hour := val.Hour()
+			minute := val.Minute()
+			second := val.Second()
+			microSecond := val.Nanosecond() / int(time.Millisecond)
+
+			if hour == 0 && minute == 0 && second == 0 && microSecond == 0 {
+				out = make([]byte, 1+4)
+				out[pos] = 0x04
+				pos++
+
+				pos = misc.WriteUint16(out, pos, uint16(year))
+				pos = misc.WriteByte(out, pos, byte(month))
+				misc.WriteByte(out, pos, byte(day))
+			} else if microSecond == 0 {
+				out = make([]byte, 1+7)
+				out[pos] = 0x07
+				pos++
+
+				pos = misc.WriteUint16(out, pos, uint16(year))
+				pos = misc.WriteByte(out, pos, byte(month))
+				pos = misc.WriteByte(out, pos, byte(day))
+				pos = misc.WriteByte(out, pos, byte(hour))
+				pos = misc.WriteByte(out, pos, byte(minute))
+				misc.WriteByte(out, pos, byte(second))
+			} else {
+				out = make([]byte, 1+11)
+				out[pos] = 0x0b
+				pos++
+
+				pos = misc.WriteUint16(out, pos, uint16(year))
+				pos = misc.WriteByte(out, pos, byte(month))
+				pos = misc.WriteByte(out, pos, byte(day))
+				pos = misc.WriteByte(out, pos, byte(hour))
+				pos = misc.WriteByte(out, pos, byte(minute))
+				pos = misc.WriteByte(out, pos, byte(second))
+				misc.WriteUint32(out, pos, uint32(microSecond))
+			}
+		}
+	case constant.FieldTypeTime:
+		if v.Val == nil {
+			out = make([]byte, 1)
+			out[pos] = 0x00
+		}
+		if _, ok := v.Val.([]byte); ok {
+			out = make([]byte, 1+v.Len)
+			out[pos] = byte(v.Len)
+			pos++
+
+			copy(out[pos:], v.Raw)
+		}
+	case constant.FieldTypeDecimal, constant.FieldTypeNewDecimal, constant.FieldTypeVarChar, constant.FieldTypeTinyBLOB,
+		constant.FieldTypeMediumBLOB, constant.FieldTypeLongBLOB, constant.FieldTypeBLOB, constant.FieldTypeVarString,
+		constant.FieldTypeString, constant.FieldTypeGeometry, constant.FieldTypeJSON, constant.FieldTypeBit,
+		constant.FieldTypeEnum, constant.FieldTypeSet:
+		val := v.Val.([]byte)
+		l := len(val)
+		length := misc.LenEncIntSize(uint64(l)) + l
+		out = make([]byte, length)
+		pos = misc.WriteLenEncInt(out, pos, uint64(l))
+		copy(out[pos:], val)
+	default:
+		out = make([]byte, len(v.Raw))
+		copy(out, v.Raw)
+	}
+	return out, nil
+}
+
+func TextVal2MySQLLen(v *proto.Value) (int, error) {
 	var length int
 	var err error
 	if v == nil {
@@ -705,6 +849,65 @@ func Val2MySQLLen(v *proto.Value) (int, error) {
 		constant.FieldTypeString, constant.FieldTypeGeometry, constant.FieldTypeJSON, constant.FieldTypeBit,
 		constant.FieldTypeEnum, constant.FieldTypeSet:
 		l := len(v.Raw)
+		length = misc.LenEncIntSize(uint64(l)) + l
+	default:
+		length = len(v.Raw)
+	}
+	if err != nil {
+		return 0, err
+	}
+	return length, nil
+}
+
+func BinaryVal2MySQLLen(v *proto.Value) (int, error) {
+	var length int
+	var err error
+	if v == nil {
+		return 0, nil
+	}
+
+	switch v.Typ {
+	case constant.FieldTypeNULL:
+		length = 0
+	case constant.FieldTypeTiny, constant.FieldTypeUint8:
+		length = 1
+	case constant.FieldTypeUint16, constant.FieldTypeShort, constant.FieldTypeYear:
+		length = 2
+	case constant.FieldTypeUint24, constant.FieldTypeUint32, constant.FieldTypeInt24, constant.FieldTypeLong, constant.FieldTypeFloat:
+		length = 4
+	case constant.FieldTypeUint64, constant.FieldTypeLongLong, constant.FieldTypeDouble:
+		length = 8
+	case constant.FieldTypeTimestamp, constant.FieldTypeDate, constant.FieldTypeDateTime:
+		if v.Val == nil {
+			length = 1
+		}
+		if _, ok := v.Val.([]byte); ok {
+			length = v.Len + 1
+		}
+		if val, ok := v.Val.(time.Time); ok {
+			if val.Hour() == 0 && val.Minute() == 0 &&
+				val.Second() == 0 && val.Nanosecond() == 0 {
+				length = 5
+			} else if val.Hour() == 0 && val.Minute() == 0 &&
+				val.Second() == 0 {
+				length = 8
+			} else {
+				length = 12
+			}
+		}
+	case constant.FieldTypeTime:
+		if v.Val == nil {
+			length = 1
+		}
+		if _, ok := v.Val.([]byte); ok {
+			length = v.Len + 1
+		}
+	case constant.FieldTypeDecimal, constant.FieldTypeNewDecimal, constant.FieldTypeVarChar, constant.FieldTypeTinyBLOB,
+		constant.FieldTypeMediumBLOB, constant.FieldTypeLongBLOB, constant.FieldTypeBLOB, constant.FieldTypeVarString,
+		constant.FieldTypeString, constant.FieldTypeGeometry, constant.FieldTypeJSON, constant.FieldTypeBit,
+		constant.FieldTypeEnum, constant.FieldTypeSet:
+		val := v.Val.([]byte)
+		l := len(val)
 		length = misc.LenEncIntSize(uint64(l)) + l
 	default:
 		length = len(v.Raw)
