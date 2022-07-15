@@ -185,6 +185,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
 	sql := sb.String()
 	spanCtx = proto.WithSqlText(spanCtx, sql)
 
+	log.Debugf("connectionID: %d, query: %s", connectionID, sql)
 	switch stmt := queryStmt.(type) {
 	case *ast.SetStmt:
 		if shouldStartTransaction(stmt) {
@@ -308,6 +309,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComStmtExecute(
 	}()
 
 	connectionID := proto.ConnectionID(spanCtx)
+	log.Debugf("connectionID: %d, prepare: %s", connectionID, stmt.SqlText)
 	txi, ok := executor.localTransactionMap.Load(connectionID)
 	if ok {
 		// in local transaction

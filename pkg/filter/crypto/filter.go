@@ -85,43 +85,69 @@ func (f *_filter) PreHandle(ctx context.Context) error {
 	switch commandType {
 	case constant.ComQuery:
 		stmt := proto.QueryStmt(ctx)
-		if stmtNode, ok := stmt.(*ast.InsertStmt); ok {
-			config, err := f.checkColumnConfig(stmtNode)
+		switch stmtNode := stmt.(type) {
+		case *ast.InsertStmt:
+			config, err := f.checkInsertColumn(stmtNode)
 			if err != nil {
 				return err
 			}
 			if config != nil {
-				columns, err := checkInsertColumns(stmtNode, config)
+				columns, err := retrieveNeedEncryptionInsertColumns(stmtNode, config)
 				if err != nil {
 					return err
 				}
 				if len(columns) != 0 {
-					valueEncrypt(columns, config, stmtNode.Lists)
+					return encryptInsertValues(columns, config, stmtNode.Lists)
 				}
 			}
+		case *ast.UpdateStmt:
+			config, err := f.checkUpdateColumn(stmtNode)
+			if err != nil {
+				return err
+			}
+			if config != nil {
+				return encryptUpdateValues(stmtNode, config)
+			}
+		default:
+			return nil
 		}
-		return nil
 	case constant.ComStmtExecute:
 		stmt := proto.PrepareStmt(ctx)
 		if stmt == nil {
 			return errors.New("prepare stmt should not be nil")
 		}
-		if stmtNode, ok := stmt.StmtNode.(*ast.InsertStmt); ok {
-			config, err := f.checkColumnConfig(stmtNode)
+		switch stmtNode := stmt.StmtNode.(type) {
+		case *ast.InsertStmt:
+			config, err := f.checkInsertColumn(stmtNode)
 			if err != nil {
 				return err
 			}
 			if config != nil {
-				columns, err := checkInsertColumns(stmtNode, config)
+				columns, err := retrieveNeedEncryptionInsertColumns(stmtNode, config)
 				if err != nil {
 					return err
 				}
 				if len(columns) != 0 {
-					columnEncrypt(columns, config, &stmt.BindVars)
+					encryptBindVars(columns, config, &stmt.BindVars)
 				}
 			}
+		case *ast.UpdateStmt:
+			config, err := f.checkUpdateColumn(stmtNode)
+			if err != nil {
+				return err
+			}
+			if config != nil {
+				columns, err := retrieveNeedEncryptionUpdateColumns(stmtNode, config)
+				if err != nil {
+					return err
+				}
+				if len(columns) != 0 {
+					encryptBindVars(columns, config, &stmt.BindVars)
+				}
+			}
+		default:
+			return nil
 		}
-		return nil
 	}
 	return nil
 }
@@ -130,8 +156,7 @@ func (f *_filter) PostHandle(ctx context.Context, result proto.Result) error {
 	return nil
 }
 
-func (f _filter) checkColumnConfig(insertStmt *ast.InsertStmt) (*ColumnCrypto, error) {
-	//if insertStmt.Table.TableRefs.
+func (f _filter) checkInsertColumn(insertStmt *ast.InsertStmt) (*ColumnCrypto, error) {
 	var sb strings.Builder
 	if err := insertStmt.Table.TableRefs.Left.Restore(
 		format.NewRestoreCtx(format.RestoreStringSingleQuotes|format.RestoreKeyWordUppercase, &sb)); err != nil {
@@ -146,7 +171,22 @@ func (f _filter) checkColumnConfig(insertStmt *ast.InsertStmt) (*ColumnCrypto, e
 	return nil, nil
 }
 
-func checkInsertColumns(insertStmt *ast.InsertStmt, config *ColumnCrypto) ([]*columnIndex, error) {
+func (f _filter) checkUpdateColumn(updateStmt *ast.UpdateStmt) (*ColumnCrypto, error) {
+	var sb strings.Builder
+	if err := updateStmt.TableRefs.TableRefs.Left.Restore(
+		format.NewRestoreCtx(format.RestoreStringSingleQuotes|format.RestoreKeyWordUppercase, &sb)); err != nil {
+		return nil, err
+	}
+	tableName := sb.String()
+	for _, config := range f.ColumnConfigs {
+		if strings.EqualFold(config.Table, tableName) {
+			return config, nil
+		}
+	}
+	return nil, nil
+}
+
+func retrieveNeedEncryptionInsertColumns(insertStmt *ast.InsertStmt, config *ColumnCrypto) ([]*columnIndex, error) {
 	if insertStmt.Columns == nil {
 		return nil, errors.New("The column to be inserted must be specified")
 	}
@@ -162,7 +202,22 @@ func checkInsertColumns(insertStmt *ast.InsertStmt, config *ColumnCrypto) ([]*co
 	return result, nil
 }
 
-func valueEncrypt(columns []*columnIndex, config *ColumnCrypto, valueList [][]ast.ExprNode) {
+func retrieveNeedEncryptionUpdateColumns(updateStmt *ast.UpdateStmt, config *ColumnCrypto) ([]*columnIndex, error) {
+	var result []*columnIndex
+	for i, column := range updateStmt.List {
+		columnName := column.Column.Name.O
+		if contains(config.Columns, columnName) {
+			result = append(result, &columnIndex{
+				Column: columnName,
+				Index:  i,
+			})
+		}
+	}
+	return result, nil
+}
+
+// encryptInsertValues for com_query
+func encryptInsertValues(columns []*columnIndex, config *ColumnCrypto, valueList [][]ast.ExprNode) error {
 	for _, values := range valueList {
 		for _, column := range columns {
 			arg := values[column.Index]
@@ -171,7 +226,7 @@ func valueEncrypt(columns []*columnIndex, config *ColumnCrypto, valueList [][]as
 				if len(value) != 0 {
 					encoded, err := misc.AesEncryptCBC(value, []byte(config.AesKey), []byte(aesIV))
 					if err != nil {
-						log.Debugf("Encryption of %s failed: %v", column.Column, err)
+						return errors.Wrapf(err, "Encryption of %s failed", column.Column)
 					}
 					val := hex.EncodeToString(encoded)
 					param.SetBytes([]byte(val))
@@ -179,9 +234,33 @@ func valueEncrypt(columns []*columnIndex, config *ColumnCrypto, valueList [][]as
 			}
 		}
 	}
+	return nil
 }
 
-func columnEncrypt(columns []*columnIndex, config *ColumnCrypto, args *map[string]interface{}) {
+// encryptUpdateValues for com_query
+func encryptUpdateValues(updateStmt *ast.UpdateStmt, config *ColumnCrypto) error {
+	for _, column := range updateStmt.List {
+		columnName := column.Column.Name.O
+		if contains(config.Columns, columnName) {
+			arg := column.Expr
+			if param, ok := arg.(*driver.ValueExpr); ok {
+				value := param.GetBytes()
+				if len(value) != 0 {
+					encoded, err := misc.AesEncryptCBC(value, []byte(config.AesKey), []byte(aesIV))
+					if err != nil {
+						return errors.Wrapf(err, "Encryption of %s failed", column.Column)
+					}
+					val := hex.EncodeToString(encoded)
+					param.SetBytes([]byte(val))
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// encryptBindVars for com_stmt_execute
+func encryptBindVars(columns []*columnIndex, config *ColumnCrypto, args *map[string]interface{}) {
 	for _, column := range columns {
 		parameterID := fmt.Sprintf("v%d", column.Index+1)
 		param := (*args)[parameterID]

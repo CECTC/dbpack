@@ -34,6 +34,7 @@ const (
 	insertDepartment = `INSERT INTO departments( id, dept_no, dept_name ) values (?, ?, ?)`
 	selectEmployee   = `SELECT emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
 	updateEmployee   = `UPDATE employees set last_name = ? where emp_no = ?`
+	updateDepartment = `UPDATE departments SET dept_name = ? WHERE id = ?`
 	deleteEmployee   = `DELETE FROM employees WHERE emp_no = ?`
 )
 
@@ -113,6 +114,16 @@ func (suite *_CRUDSuite) TestUpdate() {
 	if suite.NoErrorf(err, "update row error: %v", err) {
 		affected, err := result.RowsAffected()
 		if suite.NoErrorf(err, "update row error: %v", err) {
+			suite.Equal(int64(1), affected)
+		}
+	}
+}
+
+func (suite *_CRUDSuite) TestUpdateEncryption() {
+	result, err := suite.db.Exec(updateDepartment, "moonlight", 1)
+	if suite.NoErrorf(err, "update department error: %v", err) {
+		affected, err := result.RowsAffected()
+		if suite.NoErrorf(err, "update department error: %v", err) {
 			suite.Equal(int64(1), affected)
 		}
 	}
