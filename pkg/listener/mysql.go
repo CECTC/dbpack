@@ -539,28 +539,27 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 	case constant.ComQuery:
 		err := func() error {
 			c.StartWriterBuffering()
+			defer func() {
+				if err := c.EndWriterBuffering(); err != nil {
+					log.Errorf("conn %v: flush() failed: %v", c.ID(), err)
+				}
+			}()
 			query := string(data[1:])
 			c.RecycleReadPacket()
 			p := parser.New()
 			stmt, err := p.ParseOneStmt(query, "", "")
-			traceCtx := tracing.BuildContextFromSQLHint(ctx, stmt)
-			newCtx, span := tracing.GetTraceSpan(traceCtx, "mysql_com_query")
-			defer span.End()
-			defer func() {
-				if err := c.EndWriterBuffering(); err != nil {
-					log.Errorf("conn %v: flush() failed: %v", c.ID(), err)
-					tracing.RecordErrorSpan(span, err)
-				}
-			}()
-
 			if err != nil {
 				if writeErr := c.WriteErrorPacketFromError(err); writeErr != nil {
 					log.Error("Error writing query error to client %v: %v", l.connectionID, writeErr)
-					tracing.RecordErrorSpan(span, writeErr)
 					return writeErr
 				}
 				return nil
 			}
+
+			traceCtx := tracing.BuildContextFromSQLHint(ctx, stmt)
+			newCtx, span := tracing.GetTraceSpan(traceCtx, tracing.MySQLComQuery)
+			defer span.End()
+
 			stmt.Accept(&visitor.ParamVisitor{})
 			ctx = proto.WithCommandType(newCtx, commandType)
 			ctx = proto.WithQueryStmt(ctx, stmt)
@@ -569,7 +568,6 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 			if err != nil {
 				if writeErr := c.WriteErrorPacketFromError(err); writeErr != nil {
 					log.Error("Error writing query error to client %v: %v", l.connectionID, writeErr)
-					tracing.RecordErrorSpan(span, writeErr)
 					return writeErr
 				}
 				return nil

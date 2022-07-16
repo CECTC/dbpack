@@ -104,7 +104,7 @@ func (l *HttpListener) Listen() {
 	if err := fasthttp.Serve(l.listener, func(fastHttpCtx *fasthttp.RequestCtx) {
 		fastHttpCtx.SetUserValue(dt.VarHost, l.conf.BackendHost)
 		ctx := extractTraceContext(context.Background(), &fastHttpCtx.Request)
-		newCtx, span := tracing.GetTraceSpan(ctx, "http_listener_servce")
+		newCtx, span := tracing.GetTraceSpan(ctx, "http_proxy_servce")
 		defer span.End()
 
 		if err := l.doPreFilter(newCtx, fastHttpCtx); err != nil {
@@ -114,6 +114,14 @@ func (l *HttpListener) Listen() {
 		}
 		request := &fasthttp.Request{}
 		fastHttpCtx.Request.CopyTo(request)
+
+		// inject trace info.
+		carrier := propagation.MapCarrier{}
+		injectTraceContext(ctx, carrier)
+		for k, v := range carrier {
+			request.Header.Set(k, v)
+		}
+
 		request.SetHost(l.conf.BackendHost)
 		if err := fasthttp.Do(request, &fastHttpCtx.Response); err != nil {
 			log.Error(err)
@@ -137,13 +145,10 @@ func (l *HttpListener) Close() {
 }
 
 func (l *HttpListener) doPreFilter(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error {
-	newCtx, span := tracing.GetTraceSpan(ctx, "http_listener_do_pre_filter")
-	defer span.End()
 	for i := 0; i < len(l.preFilters); i++ {
 		f := l.preFilters[i]
-		err := f.PreHandle(newCtx, fastHttpCtx)
+		err := f.PreHandle(ctx, fastHttpCtx)
 		if err != nil {
-			tracing.RecordErrorSpan(span, err)
 			return err
 		}
 	}
@@ -151,11 +156,9 @@ func (l *HttpListener) doPreFilter(ctx context.Context, fastHttpCtx *fasthttp.Re
 }
 
 func (l *HttpListener) doPostFilter(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error {
-	newCtx, span := tracing.GetTraceSpan(ctx, "http_listener_do_post_filter")
-	defer span.End()
 	for i := 0; i < len(l.postFilters); i++ {
 		f := l.postFilters[i]
-		err := f.PostHandle(newCtx, fastHttpCtx)
+		err := f.PostHandle(ctx, fastHttpCtx)
 		if err != nil {
 			return err
 		}
@@ -172,6 +175,11 @@ func extractTraceContext(ctx context.Context, req *fasthttp.Request) context.Con
 		carrier.Set(traceParentHeader, h)
 	}
 	return tc.Extract(ctx, carrier)
+}
+
+func injectTraceContext(ctx context.Context, carrier propagation.MapCarrier) {
+	tc := propagation.TraceContext{}
+	tc.Inject(ctx, carrier)
 }
 
 func getRequestHeader(req *fasthttp.Request, name string) (string, bool) {

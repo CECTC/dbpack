@@ -184,6 +184,9 @@ func (f *_mysqlFilter) registerBranchTransaction(ctx context.Context, xid, resou
 		branchID int64
 		err      error
 	)
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.BranchTransactionRegister)
+	defer span.End()
+
 	br := &api.BranchRegisterRequest{
 		XID:             xid,
 		ResourceID:      resourceID,
@@ -192,7 +195,7 @@ func (f *_mysqlFilter) registerBranchTransaction(ctx context.Context, xid, resou
 		ApplicationData: nil,
 	}
 	for retryCount := 0; retryCount < f.lockRetryTimes; retryCount++ {
-		_, branchID, err = dt.GetDistributedTransactionManager().BranchRegister(ctx, br)
+		_, branchID, err = dt.GetDistributedTransactionManager().BranchRegister(newCtx, br)
 		if err == nil {
 			break
 		}

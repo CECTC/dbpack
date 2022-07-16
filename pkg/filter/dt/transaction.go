@@ -33,7 +33,7 @@ import (
 // handleHttp1GlobalBegin return bool, represent whether continue
 func (f *_httpFilter) handleHttp1GlobalBegin(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx, transactionInfo *TransactionInfo) (bool, error) {
 	// todo support transaction isolation level
-	newCtx, span := tracing.GetTraceSpan(ctx, "http_filter_handle_global_session")
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionBegin)
 	defer span.End()
 	transactionManager := dt.GetDistributedTransactionManager()
 	xid, err := transactionManager.Begin(newCtx, string(fastHttpCtx.Request.RequestURI()), transactionInfo.Timeout)
@@ -52,7 +52,7 @@ func (f *_httpFilter) handleHttp1GlobalBegin(ctx context.Context, fastHttpCtx *f
 }
 
 func (f *_httpFilter) handleHttp1GlobalEnd(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error {
-	newCtx, span := tracing.GetTraceSpan(ctx, "http_filter_handle_global_session_end")
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionEnd)
 	defer span.End()
 	xidParam := fastHttpCtx.UserValue(XID)
 	xid := xidParam.(string)
@@ -75,7 +75,7 @@ func (f *_httpFilter) handleHttp1GlobalEnd(ctx context.Context, fastHttpCtx *fas
 
 // handleHttp1BranchRegister return bool, represent whether continue
 func (f *_httpFilter) handleHttp1BranchRegister(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx, tccResource *TccResourceInfo) (bool, error) {
-	newCtx, span := tracing.GetTraceSpan(ctx, "http_filter_handle_branch_session_register")
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.BranchTransactionRegister)
 	defer span.End()
 	xid := fastHttpCtx.Request.Header.Peek(XID)
 	if string(xid) == "" {
@@ -137,7 +137,7 @@ func (f *_httpFilter) handleHttp1BranchRegister(ctx context.Context, fastHttpCtx
 }
 
 func (f *_httpFilter) handleHttp1BranchEnd(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error {
-	newCtx, span := tracing.GetTraceSpan(ctx, "http_filter_handle_branch_session_end")
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.BranchTransactionEnd)
 	defer span.End()
 	branchIDParam := fastHttpCtx.UserValue(BranchID)
 	branchID := branchIDParam.(string)
@@ -159,8 +159,14 @@ func (f *_httpFilter) globalCommit(ctx context.Context, xid string) error {
 		status api.GlobalSession_GlobalStatus
 	)
 
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionCommit)
+	defer span.End()
+
 	transactionManager := dt.GetDistributedTransactionManager()
-	status, err = transactionManager.Commit(ctx, xid)
+	status, err = transactionManager.Commit(newCtx, xid)
+	if err != nil {
+		tracing.RecordErrorSpan(span, err)
+	}
 	log.Infof("[%s] commit status: %s", xid, status.String())
 	return err
 }
@@ -170,9 +176,14 @@ func (f *_httpFilter) globalRollback(ctx context.Context, xid string) error {
 		err    error
 		status api.GlobalSession_GlobalStatus
 	)
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionRollback)
+	defer span.End()
 
 	transactionManager := dt.GetDistributedTransactionManager()
-	status, err = transactionManager.Rollback(ctx, xid)
+	status, err = transactionManager.Rollback(newCtx, xid)
+	if err != nil {
+		tracing.RecordErrorSpan(span, err)
+	}
 	log.Infof("[%s] rollback status: %s", xid, status.String())
 	return err
 }

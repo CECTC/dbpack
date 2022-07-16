@@ -29,6 +29,7 @@ import (
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
+	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 	"github.com/cectc/dbpack/third_party/parser/format"
 )
@@ -58,19 +59,23 @@ func (executor *prepareInsertExecutor) BeforeImage(ctx context.Context) (*schema
 }
 
 func (executor *prepareInsertExecutor) AfterImage(ctx context.Context) (*schema.TableRecords, error) {
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.ExecutorFetchAfterImage)
+	defer span.End()
 	var afterImage *schema.TableRecords
 	var err error
 	pkValues, err := executor.getPKValuesByColumn(ctx)
 	if err != nil {
+		tracing.RecordErrorSpan(span, err)
 		return nil, err
 	}
 	if executor.getPKIndex(ctx) >= 0 {
-		afterImage, err = executor.buildTableRecords(ctx, pkValues)
+		afterImage, err = executor.buildTableRecords(newCtx, pkValues)
 	} else {
 		pk, _ := executor.result.LastInsertId()
-		afterImage, err = executor.buildTableRecords(ctx, []interface{}{pk})
+		afterImage, err = executor.buildTableRecords(newCtx, []interface{}{pk})
 	}
 	if err != nil {
+		tracing.RecordErrorSpan(span, err)
 		return nil, err
 	}
 	return afterImage, nil

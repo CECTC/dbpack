@@ -34,11 +34,9 @@ import (
 )
 
 func (f *_mysqlFilter) processBeforeQueryDelete(ctx context.Context, conn *driver.BackendConnection, deleteStmt *ast.DeleteStmt) error {
-	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_process_before_query_delete")
-	defer span.End()
 	if misc.HasGlobalLockHint(deleteStmt.TableHints) {
 		executor := exec.NewQueryGlobalLockExecutor(conn, false, deleteStmt, nil)
-		result, err := executor.Executable(newCtx, f.lockRetryInterval, f.lockRetryTimes)
+		result, err := executor.Executable(ctx, f.lockRetryInterval, f.lockRetryTimes)
 		if err != nil {
 			return err
 		}
@@ -51,22 +49,20 @@ func (f *_mysqlFilter) processBeforeQueryDelete(ctx context.Context, conn *drive
 		return nil
 	}
 	executor := exec.NewQueryDeleteExecutor(conn, deleteStmt)
-	bi, err := executor.BeforeImage(newCtx)
+	bi, err := executor.BeforeImage(ctx)
 	if err != nil {
 		return err
 	}
-	if !proto.WithVariable(newCtx, beforeImage, bi) {
+	if !proto.WithVariable(ctx, beforeImage, bi) {
 		return errors.New("set before image failed")
 	}
 	return nil
 }
 
 func (f *_mysqlFilter) processBeforeQueryUpdate(ctx context.Context, conn *driver.BackendConnection, updateStmt *ast.UpdateStmt) error {
-	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_process_before_query_update")
-	defer span.End()
 	if misc.HasGlobalLockHint(updateStmt.TableHints) {
 		executor := exec.NewQueryGlobalLockExecutor(conn, true, nil, updateStmt)
-		result, err := executor.Executable(newCtx, f.lockRetryInterval, f.lockRetryTimes)
+		result, err := executor.Executable(ctx, f.lockRetryInterval, f.lockRetryTimes)
 		if err != nil {
 			return err
 		}
@@ -79,7 +75,7 @@ func (f *_mysqlFilter) processBeforeQueryUpdate(ctx context.Context, conn *drive
 		return nil
 	}
 	executor := exec.NewQueryUpdateExecutor(conn, updateStmt, nil)
-	bi, err := executor.BeforeImage(newCtx)
+	bi, err := executor.BeforeImage(ctx)
 	if err != nil {
 		return err
 	}
@@ -122,18 +118,16 @@ func (f *_mysqlFilter) processAfterQueryDelete(ctx context.Context, conn *driver
 
 func (f *_mysqlFilter) processAfterQueryInsert(ctx context.Context, conn *driver.BackendConnection, result proto.Result, insertStmt *ast.InsertStmt) error {
 	has, xid := misc.HasXIDHint(insertStmt.TableHints)
-	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_process_after_query_insert")
-	defer span.End()
 	if !has {
 		return nil
 	}
 
 	executor := exec.NewQueryInsertExecutor(conn, insertStmt, result)
-	afterImage, err := executor.AfterImage(newCtx)
+	afterImage, err := executor.AfterImage(ctx)
 	if err != nil {
 		return err
 	}
-	schemaName := proto.Schema(newCtx)
+	schemaName := proto.Schema(ctx)
 	if schemaName == "" {
 		return errors.New("schema name should not be nil")
 	}
@@ -142,7 +136,7 @@ func (f *_mysqlFilter) processAfterQueryInsert(ctx context.Context, conn *driver
 	log.Debugf("insert, lockKey: %s", lockKeys)
 	undoLog := exec.BuildUndoItem(false, constant.SQLType_INSERT, schemaName, executor.GetTableName(), lockKeys, nil, afterImage)
 
-	branchID, err := f.registerBranchTransaction(newCtx, xid, conn.DataSourceName(), lockKeys)
+	branchID, err := f.registerBranchTransaction(ctx, xid, conn.DataSourceName(), lockKeys)
 	if err != nil {
 		return err
 	}
@@ -152,22 +146,20 @@ func (f *_mysqlFilter) processAfterQueryInsert(ctx context.Context, conn *driver
 
 func (f *_mysqlFilter) processAfterQueryUpdate(ctx context.Context, conn *driver.BackendConnection, updateStmt *ast.UpdateStmt) error {
 	has, xid := misc.HasXIDHint(updateStmt.TableHints)
-	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_process_after_query_update")
-	defer span.End()
 	if !has {
 		return nil
 	}
-	bi := proto.Variable(newCtx, beforeImage)
+	bi := proto.Variable(ctx, beforeImage)
 	if bi == nil {
 		return errors.New("before image should not be nil")
 	}
 	beforeImage := bi.(*schema.TableRecords)
 	executor := exec.NewQueryUpdateExecutor(conn, updateStmt, beforeImage)
-	afterImage, err := executor.AfterImage(newCtx)
+	afterImage, err := executor.AfterImage(ctx)
 	if err != nil {
 		return err
 	}
-	schemaName := proto.Schema(newCtx)
+	schemaName := proto.Schema(ctx)
 	if schemaName == "" {
 		return errors.New("schema name should not be nil")
 	}
@@ -176,7 +168,7 @@ func (f *_mysqlFilter) processAfterQueryUpdate(ctx context.Context, conn *driver
 	log.Debugf("update, lockKey: %s", lockKeys)
 	undoLog := exec.BuildUndoItem(false, constant.SQLType_UPDATE, schemaName, executor.GetTableName(), lockKeys, beforeImage, afterImage)
 
-	branchID, err := f.registerBranchTransaction(newCtx, xid, conn.DataSourceName(), lockKeys)
+	branchID, err := f.registerBranchTransaction(ctx, xid, conn.DataSourceName(), lockKeys)
 	if err != nil {
 		return err
 	}
@@ -190,8 +182,6 @@ func (f *_mysqlFilter) processQuerySelectForUpdate(ctx context.Context, conn *dr
 	if !has {
 		return nil
 	}
-	_, span := tracing.GetTraceSpan(ctx, "mysql_process_select_for_query_update")
-	defer span.End()
 	executor := exec.NewQuerySelectForUpdateExecutor(conn, selectStmt, result)
 	_, err := executor.Executable(ctx, xid, f.lockRetryInterval, f.lockRetryTimes)
 	return err

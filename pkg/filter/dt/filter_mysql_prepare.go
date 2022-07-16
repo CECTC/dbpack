@@ -34,11 +34,9 @@ import (
 )
 
 func (f *_mysqlFilter) processBeforePrepareDelete(ctx context.Context, conn *driver.BackendConnection, stmt *proto.Stmt, deleteStmt *ast.DeleteStmt) error {
-	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_process_before_prepare_delete")
-	defer span.End()
 	if misc.HasGlobalLockHint(deleteStmt.TableHints) {
 		executor := exec.NewPrepareGlobalLockExecutor(conn, false, deleteStmt, nil, stmt.BindVars)
-		result, err := executor.Executable(newCtx, f.lockRetryInterval, f.lockRetryTimes)
+		result, err := executor.Executable(ctx, f.lockRetryInterval, f.lockRetryTimes)
 		if err != nil {
 			return err
 		}
@@ -51,22 +49,20 @@ func (f *_mysqlFilter) processBeforePrepareDelete(ctx context.Context, conn *dri
 		return nil
 	}
 	executor := exec.NewPrepareDeleteExecutor(conn, deleteStmt, stmt.BindVars)
-	bi, err := executor.BeforeImage(newCtx)
+	bi, err := executor.BeforeImage(ctx)
 	if err != nil {
 		return err
 	}
-	if !proto.WithVariable(newCtx, beforeImage, bi) {
+	if !proto.WithVariable(ctx, beforeImage, bi) {
 		return errors.New("set before image failed")
 	}
 	return nil
 }
 
 func (f *_mysqlFilter) processBeforePrepareUpdate(ctx context.Context, conn *driver.BackendConnection, stmt *proto.Stmt, updateStmt *ast.UpdateStmt) error {
-	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_process_before_prepare_update")
-	defer span.End()
 	if misc.HasGlobalLockHint(updateStmt.TableHints) {
 		executor := exec.NewPrepareGlobalLockExecutor(conn, true, nil, updateStmt, stmt.BindVars)
-		result, err := executor.Executable(newCtx, f.lockRetryInterval, f.lockRetryTimes)
+		result, err := executor.Executable(ctx, f.lockRetryInterval, f.lockRetryTimes)
 		if err != nil {
 			return err
 		}
@@ -79,11 +75,11 @@ func (f *_mysqlFilter) processBeforePrepareUpdate(ctx context.Context, conn *dri
 		return nil
 	}
 	executor := exec.NewPrepareUpdateExecutor(conn, updateStmt, stmt.BindVars, nil)
-	bi, err := executor.BeforeImage(newCtx)
+	bi, err := executor.BeforeImage(ctx)
 	if err != nil {
 		return err
 	}
-	if !proto.WithVariable(newCtx, beforeImage, bi) {
+	if !proto.WithVariable(ctx, beforeImage, bi) {
 		return errors.New("set before image failed")
 	}
 	return nil
@@ -91,8 +87,6 @@ func (f *_mysqlFilter) processBeforePrepareUpdate(ctx context.Context, conn *dri
 
 func (f *_mysqlFilter) processAfterPrepareDelete(ctx context.Context, conn *driver.BackendConnection,
 	stmt *proto.Stmt, deleteStmt *ast.DeleteStmt) error {
-	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_process_after_prepare_delete")
-	defer span.End()
 	has, xid := misc.HasXIDHint(deleteStmt.TableHints)
 	if !has {
 		return nil
@@ -104,7 +98,7 @@ func (f *_mysqlFilter) processAfterPrepareDelete(ctx context.Context, conn *driv
 		return errors.New("before image should not be nil")
 	}
 	biValue := bi.(*schema.TableRecords)
-	schemaName := proto.Schema(newCtx)
+	schemaName := proto.Schema(ctx)
 	if schemaName == "" {
 		return errors.New("schema name should not be nil")
 	}
@@ -113,7 +107,7 @@ func (f *_mysqlFilter) processAfterPrepareDelete(ctx context.Context, conn *driv
 	log.Debugf("delete, lockKey: %s", lockKeys)
 	undoLog := exec.BuildUndoItem(true, constant.SQLType_DELETE, schemaName, executor.GetTableName(), lockKeys, biValue, nil)
 
-	branchID, err := f.registerBranchTransaction(newCtx, xid, conn.DataSourceName(), lockKeys)
+	branchID, err := f.registerBranchTransaction(ctx, xid, conn.DataSourceName(), lockKeys)
 	if err != nil {
 		return err
 	}
@@ -155,8 +149,6 @@ func (f *_mysqlFilter) processAfterPrepareInsert(ctx context.Context, conn *driv
 func (f *_mysqlFilter) processAfterPrepareUpdate(ctx context.Context, conn *driver.BackendConnection,
 	stmt *proto.Stmt, updateStmt *ast.UpdateStmt) error {
 	has, xid := misc.HasXIDHint(updateStmt.TableHints)
-	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_process_after_prepare_update")
-	defer span.End()
 	if !has {
 		return nil
 	}
@@ -166,11 +158,11 @@ func (f *_mysqlFilter) processAfterPrepareUpdate(ctx context.Context, conn *driv
 	}
 	beforeImage := bi.(*schema.TableRecords)
 	executor := exec.NewPrepareUpdateExecutor(conn, updateStmt, stmt.BindVars, beforeImage)
-	afterImage, err := executor.AfterImage(newCtx)
+	afterImage, err := executor.AfterImage(ctx)
 	if err != nil {
 		return err
 	}
-	schemaName := proto.Schema(newCtx)
+	schemaName := proto.Schema(ctx)
 	if schemaName == "" {
 		return errors.New("schema name should not be nil")
 	}
@@ -179,7 +171,7 @@ func (f *_mysqlFilter) processAfterPrepareUpdate(ctx context.Context, conn *driv
 	log.Debugf("update, lockKey: %s", lockKeys)
 	undoLog := exec.BuildUndoItem(true, constant.SQLType_UPDATE, schemaName, executor.GetTableName(), lockKeys, beforeImage, afterImage)
 
-	branchID, err := f.registerBranchTransaction(newCtx, xid, conn.DataSourceName(), lockKeys)
+	branchID, err := f.registerBranchTransaction(ctx, xid, conn.DataSourceName(), lockKeys)
 	if err != nil {
 		return err
 	}
@@ -193,9 +185,8 @@ func (f *_mysqlFilter) processPrepareSelectForUpdate(ctx context.Context, conn *
 	if !has {
 		return nil
 	}
-	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_process_select_for_update")
-	defer span.End()
+
 	executor := exec.NewPrepareSelectForUpdateExecutor(conn, selectStmt, stmt.BindVars, result)
-	_, err := executor.Executable(newCtx, xid, f.lockRetryInterval, f.lockRetryTimes)
+	_, err := executor.Executable(ctx, xid, f.lockRetryInterval, f.lockRetryTimes)
 	return err
 }
