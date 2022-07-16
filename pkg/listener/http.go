@@ -104,7 +104,7 @@ func (l *HttpListener) Listen() {
 	if err := fasthttp.Serve(l.listener, func(fastHttpCtx *fasthttp.RequestCtx) {
 		fastHttpCtx.SetUserValue(dt.VarHost, l.conf.BackendHost)
 		ctx := extractTraceContext(context.Background(), &fastHttpCtx.Request)
-		newCtx, span := tracing.GetTraceSpan(ctx, "http_proxy_servce")
+		newCtx, span := tracing.GetTraceSpan(ctx, tracing.HTTPProxyService)
 		defer span.End()
 
 		if err := l.doPreFilter(newCtx, fastHttpCtx); err != nil {
