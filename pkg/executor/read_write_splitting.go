@@ -153,7 +153,7 @@ func (executor *ReadWriteSplittingExecutor) ExecuteFieldList(ctx context.Context
 }
 
 func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context, sql string) (proto.Result, uint16, error) {
-	newCtx, span := tracing.GetTraceSpan(ctx, "rw_execute_com_query")
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.RWExecComQuery)
 	defer span.End()
 	var (
 		db     *DataSourceBrief
@@ -272,7 +272,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 }
 
 func (executor *ReadWriteSplittingExecutor) ExecutorComStmtExecute(ctx context.Context, stmt *proto.Stmt) (proto.Result, uint16, error) {
-	newCtx, span := tracing.GetTraceSpan(ctx, "executor_com_stmt_execute")
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.RWExecComStmt)
 	defer span.End()
 	connectionID := proto.ConnectionID(newCtx)
 	txi, ok := executor.localTransactionMap.Load(connectionID)

@@ -202,7 +202,7 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 		plan proto.Plan
 		err  error
 	)
-	newCtx, span := tracing.GetTraceSpan(ctx, "sharding_com_query")
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.ShardExecComQuery)
 	defer span.End()
 
 	log.Debugf("query: %s", sql)
@@ -245,7 +245,7 @@ func (executor *ShardingExecutor) ExecutorComStmtExecute(ctx context.Context, st
 		plan proto.Plan
 		err  error
 	)
-	newCtx, span := tracing.GetTraceSpan(ctx, "sharding_com_stmt_execute")
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.ShardExecComStmt)
 	defer span.End()
 
 	for i := 0; i < len(stmt.BindVars); i++ {

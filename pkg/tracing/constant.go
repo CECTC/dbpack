@@ -35,4 +35,23 @@ const (
 	// executor
 	ExecutorFetchBeforeImage = "executor_fetch_before_image"
 	ExecutorFetchAfterImage  = "executor_fetch_after_image"
+
+	// db execute
+	DBExecSQL          = "db_exec_sql"
+	DBExecStmt         = "db_exec_stmt"
+	DBQuery            = "db_query"
+	DBExecFieldList    = "db_exec_field_list"
+	DBUse              = "db_use"
+	DBTransactionBegin = "db_transaction_begin"
+
+	// single db
+	SDBExecComQuery = "sdb_exec_com_query"
+
+	// read write splitting
+	RWExecComQuery = "rw_exec_com_query"
+	RWExecComStmt  = "rw_exec_com_stmt"
+
+	// sharding
+	ShardExecComQuery = "shard_exec_com_query"
+	ShardExecComStmt  = "shard_exec_com_stmt"
 )

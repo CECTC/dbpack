@@ -128,7 +128,7 @@ func (executor *SingleDBExecutor) ExecutorComQuery(ctx context.Context, sql stri
 		result proto.Result
 		err    error
 	)
-	newCtx, span := tracing.GetTraceSpan(ctx, "sdb_execute_com_query")
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.SDBExecComQuery)
 	defer span.End()
 	connectionID := proto.ConnectionID(newCtx)
 	queryStmt := proto.QueryStmt(newCtx)
