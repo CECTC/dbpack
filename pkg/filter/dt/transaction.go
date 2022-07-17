@@ -27,38 +27,46 @@ import (
 	"github.com/cectc/dbpack/pkg/dt"
 	"github.com/cectc/dbpack/pkg/dt/api"
 	"github.com/cectc/dbpack/pkg/log"
+	"github.com/cectc/dbpack/pkg/tracing"
 )
 
 // handleHttp1GlobalBegin return bool, represent whether continue
-func (f *_httpFilter) handleHttp1GlobalBegin(ctx *fasthttp.RequestCtx, transactionInfo *TransactionInfo) (bool, error) {
+func (f *_httpFilter) handleHttp1GlobalBegin(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx, transactionInfo *TransactionInfo) (bool, error) {
 	// todo support transaction isolation level
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionBegin)
+	defer span.End()
 	transactionManager := dt.GetDistributedTransactionManager()
-	xid, err := transactionManager.Begin(ctx, string(ctx.Request.RequestURI()), transactionInfo.Timeout)
+	xid, err := transactionManager.Begin(newCtx, string(fastHttpCtx.Request.RequestURI()), transactionInfo.Timeout)
 	if err != nil {
-		ctx.Response.Reset()
-		ctx.SetStatusCode(http.StatusInternalServerError)
-		ctx.SetBodyString(fmt.Sprintf(`{"success":false,"error":"failed to begin global transaction, %v"}`, err))
+		tracing.RecordErrorSpan(span, err)
+		fastHttpCtx.Response.Reset()
+		fastHttpCtx.SetStatusCode(http.StatusInternalServerError)
+		fastHttpCtx.SetBodyString(fmt.Sprintf(`{"success":false,"error":"failed to begin global transaction, %v"}`, err))
 
 		return false, errors.Errorf("failed to begin global transaction, transaction info: %v, err: %v",
 			transactionInfo, err)
 	}
-	ctx.SetUserValue(XID, xid)
-	ctx.Request.Header.Add(XID, xid)
+	fastHttpCtx.SetUserValue(XID, xid)
+	fastHttpCtx.Request.Header.Add(XID, xid)
 	return true, nil
 }
 
-func (f *_httpFilter) handleHttp1GlobalEnd(ctx *fasthttp.RequestCtx) error {
-	xidParam := ctx.UserValue(XID)
+func (f *_httpFilter) handleHttp1GlobalEnd(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error {
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionEnd)
+	defer span.End()
+	xidParam := fastHttpCtx.UserValue(XID)
 	xid := xidParam.(string)
 
-	if ctx.Response.StatusCode() == http.StatusOK {
-		err := f.globalCommit(ctx, xid)
+	if fastHttpCtx.Response.StatusCode() == http.StatusOK {
+		err := f.globalCommit(newCtx, xid)
 		if err != nil {
+			tracing.RecordErrorSpan(span, err)
 			return errors.WithStack(err)
 		}
 	} else {
-		err := f.globalRollback(ctx, xid)
+		err := f.globalRollback(newCtx, xid)
 		if err != nil {
+			tracing.RecordErrorSpan(span, err)
 			return errors.WithStack(err)
 		}
 	}
@@ -66,17 +74,19 @@ func (f *_httpFilter) handleHttp1GlobalEnd(ctx *fasthttp.RequestCtx) error {
 }
 
 // handleHttp1BranchRegister return bool, represent whether continue
-func (f *_httpFilter) handleHttp1BranchRegister(ctx *fasthttp.RequestCtx, tccResource *TccResourceInfo) (bool, error) {
-	xid := ctx.Request.Header.Peek(XID)
+func (f *_httpFilter) handleHttp1BranchRegister(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx, tccResource *TccResourceInfo) (bool, error) {
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.BranchTransactionRegister)
+	defer span.End()
+	xid := fastHttpCtx.Request.Header.Peek(XID)
 	if string(xid) == "" {
-		ctx.Response.Reset()
-		ctx.SetStatusCode(http.StatusInternalServerError)
-		ctx.SetBodyString(`{"success":false,"error":"failed to get XID from request header"}`)
+		fastHttpCtx.Response.Reset()
+		fastHttpCtx.SetStatusCode(http.StatusInternalServerError)
+		fastHttpCtx.SetBodyString(`{"success":false,"error":"failed to get XID from request header"}`)
 
 		return false, errors.New("failed to get XID from request header")
 	}
 
-	bodyBytes := ctx.PostBody()
+	bodyBytes := fastHttpCtx.PostBody()
 
 	requestContext := &dt.RequestContext{
 		ActionContext: make(map[string]string),
@@ -84,55 +94,59 @@ func (f *_httpFilter) handleHttp1BranchRegister(ctx *fasthttp.RequestCtx, tccRes
 		Body:          bodyBytes,
 	}
 
-	ctx.Request.Header.VisitAll(func(key, value []byte) {
+	fastHttpCtx.Request.Header.VisitAll(func(key, value []byte) {
 		requestContext.Headers[string(key)] = string(value)
 	})
 
-	requestContext.ActionContext[dt.VarHost] = ctx.UserValue(dt.VarHost).(string)
+	requestContext.ActionContext[dt.VarHost] = fastHttpCtx.UserValue(dt.VarHost).(string)
 	requestContext.ActionContext[dt.CommitRequestPath] = tccResource.CommitRequestPath
 	requestContext.ActionContext[dt.RollbackRequestPath] = tccResource.RollbackRequestPath
-	queryString := ctx.QueryArgs().QueryString()
+	queryString := fastHttpCtx.QueryArgs().QueryString()
+
 	if string(queryString) != "" {
 		requestContext.ActionContext[dt.VarQueryString] = string(queryString)
 	}
 
 	data, err := requestContext.Encode()
 	if err != nil {
-		ctx.Response.Reset()
-		ctx.SetStatusCode(http.StatusInternalServerError)
-		ctx.SetBodyString(fmt.Sprintf(`{"success":false,"error":"encode request context failed, %v"}`, err))
-
+		fastHttpCtx.Response.Reset()
+		fastHttpCtx.SetStatusCode(http.StatusInternalServerError)
+		fastHttpCtx.SetBodyString(fmt.Sprintf(`{"success":false,"error":"encode request context failed, %v"}`, err))
+		tracing.RecordErrorSpan(span, err)
 		return false, errors.Errorf("encode request context failed, request context: %v, err: %v", requestContext, err)
 	}
 
 	transactionManager := dt.GetDistributedTransactionManager()
-	branchID, _, err := transactionManager.BranchRegister(ctx, &api.BranchRegisterRequest{
+	branchID, _, err := transactionManager.BranchRegister(newCtx, &api.BranchRegisterRequest{
 		XID:             string(xid),
-		ResourceID:      string(ctx.Request.RequestURI()),
+		ResourceID:      string(fastHttpCtx.Request.RequestURI()),
 		LockKey:         "",
 		BranchType:      api.TCC,
 		ApplicationData: data,
 	})
 	if err != nil {
-		ctx.Response.Reset()
-		ctx.SetStatusCode(http.StatusInternalServerError)
-		ctx.SetBodyString(fmt.Sprintf(`{"success":false,"error":"branch transaction register failed, %v"}`, err))
-
+		fastHttpCtx.Response.Reset()
+		fastHttpCtx.SetStatusCode(http.StatusInternalServerError)
+		fastHttpCtx.SetBodyString(fmt.Sprintf(`{"success":false,"error":"branch transaction register failed, %v"}`, err))
+		tracing.RecordErrorSpan(span, err)
 		return false, errors.Errorf("branch transaction register failed, XID: %s, err: %v", xid, err)
 	}
-	ctx.SetUserValue(XID, string(xid))
-	ctx.SetUserValue(BranchID, branchID)
+	fastHttpCtx.SetUserValue(XID, string(xid))
+	fastHttpCtx.SetUserValue(BranchID, branchID)
 	return true, nil
 }
 
-func (f *_httpFilter) handleHttp1BranchEnd(ctx *fasthttp.RequestCtx) error {
-	branchIDParam := ctx.UserValue(BranchID)
+func (f *_httpFilter) handleHttp1BranchEnd(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error {
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.BranchTransactionEnd)
+	defer span.End()
+	branchIDParam := fastHttpCtx.UserValue(BranchID)
 	branchID := branchIDParam.(string)
 
-	if ctx.Response.StatusCode() != http.StatusOK {
+	if fastHttpCtx.Response.StatusCode() != http.StatusOK {
 		transactionManager := dt.GetDistributedTransactionManager()
-		err := transactionManager.BranchReport(ctx, branchID, api.PhaseOneFailed)
+		err := transactionManager.BranchReport(newCtx, branchID, api.PhaseOneFailed)
 		if err != nil {
+			tracing.RecordErrorSpan(span, err)
 			return errors.WithStack(err)
 		}
 	}
@@ -145,8 +159,14 @@ func (f *_httpFilter) globalCommit(ctx context.Context, xid string) error {
 		status api.GlobalSession_GlobalStatus
 	)
 
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionCommit)
+	defer span.End()
+
 	transactionManager := dt.GetDistributedTransactionManager()
-	status, err = transactionManager.Commit(ctx, xid)
+	status, err = transactionManager.Commit(newCtx, xid)
+	if err != nil {
+		tracing.RecordErrorSpan(span, err)
+	}
 	log.Infof("[%s] commit status: %s", xid, status.String())
 	return err
 }
@@ -156,9 +176,14 @@ func (f *_httpFilter) globalRollback(ctx context.Context, xid string) error {
 		err    error
 		status api.GlobalSession_GlobalStatus
 	)
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionRollback)
+	defer span.End()
 
 	transactionManager := dt.GetDistributedTransactionManager()
-	status, err = transactionManager.Rollback(ctx, xid)
+	status, err = transactionManager.Rollback(newCtx, xid)
+	if err != nil {
+		tracing.RecordErrorSpan(span, err)
+	}
 	log.Infof("[%s] rollback status: %s", xid, status.String())
 	return err
 }

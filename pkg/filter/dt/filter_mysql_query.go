@@ -29,6 +29,7 @@ import (
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/proto"
+	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 )
 
@@ -86,17 +87,19 @@ func (f *_mysqlFilter) processBeforeQueryUpdate(ctx context.Context, conn *drive
 
 func (f *_mysqlFilter) processAfterQueryDelete(ctx context.Context, conn *driver.BackendConnection, deleteStmt *ast.DeleteStmt) error {
 	has, xid := misc.HasXIDHint(deleteStmt.TableHints)
+	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_process_after_query_delete")
+	defer span.End()
 	if !has {
 		return nil
 	}
 
 	executor := exec.NewQueryDeleteExecutor(conn, deleteStmt)
-	bi := proto.Variable(ctx, beforeImage)
+	bi := proto.Variable(newCtx, beforeImage)
 	if bi == nil {
 		return errors.New("before image should not be nil")
 	}
 	biValue := bi.(*schema.TableRecords)
-	schemaName := proto.Schema(ctx)
+	schemaName := proto.Schema(newCtx)
 	if schemaName == "" {
 		return errors.New("schema name should not be nil")
 	}
@@ -105,7 +108,7 @@ func (f *_mysqlFilter) processAfterQueryDelete(ctx context.Context, conn *driver
 	log.Debugf("delete, lockKey: %s", lockKeys)
 	undoLog := exec.BuildUndoItem(false, constant.SQLType_DELETE, schemaName, executor.GetTableName(), lockKeys, biValue, nil)
 
-	branchID, err := f.registerBranchTransaction(ctx, xid, conn.DataSourceName(), lockKeys)
+	branchID, err := f.registerBranchTransaction(newCtx, xid, conn.DataSourceName(), lockKeys)
 	if err != nil {
 		return err
 	}
@@ -113,8 +116,7 @@ func (f *_mysqlFilter) processAfterQueryDelete(ctx context.Context, conn *driver
 	return dt.GetUndoLogManager().InsertUndoLogWithNormal(conn, xid, branchID, undoLog)
 }
 
-func (f *_mysqlFilter) processAfterQueryInsert(ctx context.Context, conn *driver.BackendConnection,
-	result proto.Result, insertStmt *ast.InsertStmt) error {
+func (f *_mysqlFilter) processAfterQueryInsert(ctx context.Context, conn *driver.BackendConnection, result proto.Result, insertStmt *ast.InsertStmt) error {
 	has, xid := misc.HasXIDHint(insertStmt.TableHints)
 	if !has {
 		return nil

@@ -29,6 +29,7 @@ import (
 	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
+	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 	"github.com/cectc/dbpack/third_party/parser/format"
 )
@@ -51,7 +52,9 @@ func NewQuerySelectForUpdateExecutor(
 }
 
 func (executor *querySelectForUpdateExecutor) Executable(ctx context.Context, xid string, lockRetryInterval time.Duration, lockRetryTimes int) (bool, error) {
-	tableMeta, err := executor.GetTableMeta(ctx)
+	newCtx, span := tracing.GetTraceSpan(ctx, "executable")
+	defer span.End()
+	tableMeta, err := executor.GetTableMeta(newCtx)
 	if err != nil {
 		return false, err
 	}
@@ -67,7 +70,7 @@ func (executor *querySelectForUpdateExecutor) Executable(ctx context.Context, xi
 			err      error
 		)
 		for i := 0; i < lockRetryTimes; i++ {
-			lockable, err = dt.GetDistributedTransactionManager().IsLockableWithXID(ctx,
+			lockable, err = dt.GetDistributedTransactionManager().IsLockableWithXID(newCtx,
 				executor.conn.DataSourceName(), lockKeys, xid)
 			if lockable && err == nil {
 				break
@@ -75,6 +78,7 @@ func (executor *querySelectForUpdateExecutor) Executable(ctx context.Context, xi
 			time.Sleep(lockRetryInterval)
 		}
 		if err != nil {
+			tracing.RecordErrorSpan(span, err)
 			return false, err
 		}
 	}

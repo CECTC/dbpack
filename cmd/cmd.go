@@ -46,6 +46,7 @@ import (
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/pkg/server"
+	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/third_party/pools"
 	_ "github.com/cectc/dbpack/third_party/types/parser_driver"
 )
@@ -154,12 +155,6 @@ var (
 				}
 			}
 
-			// temporarily turn off tracer output
-			//tracingMgr, err := tracing.NewTracer(Version, "console")
-			//if err != nil {
-			//	log.Fatalf("could not setup tracing manager: %s", err.Error())
-			//}
-
 			ctx, cancel := context.WithCancel(context.Background())
 			c := make(chan os.Signal, 2)
 			signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -172,7 +167,6 @@ var (
 					cancel()
 				}()
 				<-c
-				//_ = tracingMgr.Shutdown(ctx)
 				os.Exit(1) // second signal. Exit directly.
 			}()
 
@@ -189,7 +183,12 @@ var (
 			if lisErr != nil {
 				log.Fatalf("unable init metrics server: %+v", lisErr)
 			}
+
 			go initServer(ctx, lis)
+
+			if conf.Trace != nil {
+				go initTracing(ctx, conf.Trace.JaegerEndpoint)
+			}
 
 			dbpack.Start(ctx)
 		},
@@ -200,6 +199,18 @@ var (
 func init() {
 	startCommand.PersistentFlags().StringVarP(&configPath, constant.ConfigPathKey, "c", os.Getenv(constant.EnvDBPackConfig), "Load configuration from `FILE`")
 	rootCommand.AddCommand(startCommand)
+}
+
+func initTracing(ctx context.Context, jaegerEndpoint string) {
+	traceCtl, err := tracing.NewTracer(Version, jaegerEndpoint)
+	if err != nil {
+		log.Fatalf("could not setup tracing manager: %s", err.Error())
+	}
+
+	go func() {
+		<-ctx.Done()
+		traceCtl.Shutdown(ctx)
+	}()
 }
 
 func initServer(ctx context.Context, lis net.Listener) {

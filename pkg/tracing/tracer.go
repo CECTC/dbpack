@@ -18,91 +18,100 @@ package tracing
 
 import (
 	"context"
-	"fmt"
-	"os"
+
+	"github.com/cectc/dbpack/pkg/misc"
+	"github.com/cectc/dbpack/third_party/parser/ast"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/sdk/resource"
 	traceSDK "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
-	trace "go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
 	serviceName = "dbpack"
 )
 
-type ExporterType string
+type TracingExporter string
 
 const (
-	ConsoleExporter ExporterType = "console"
-	JaegerExporter  ExporterType = "jaeger"
-	ZipkinExporter  ExporterType = "zipkin"
-	OltpExporter    ExporterType = "oltp"
+	ConsoleExporter TracingExporter = "console"
+	JaegerExporter  TracingExporter = "jaeger"
+	ZipkinExporter  TracingExporter = "zipkin"
+	OltpExporter    TracingExporter = "oltp"
 )
 
 type TracerController struct {
-	tracingResource *resource.Resource
-	file            *os.File
-	tracingProvider *traceSDK.TracerProvider
-	exporterType    string
+	provider *traceSDK.TracerProvider
 }
 
-func NewTracer(version string, exporterType string) (*TracerController, error) {
-	r, err := resource.Merge(
+func createJaegerExporter(endpoint string) (traceSDK.SpanExporter, error) {
+	return jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(endpoint)))
+}
+
+// NewTracer create tracer controller, currently only support jaeger.
+func NewTracer(version string, jaegerEndpoint string) (*TracerController, error) {
+	resource, err := resource.Merge(
 		resource.Default(),
 		resource.NewWithAttributes(
 			semconv.SchemaURL,
 			semconv.ServiceNameKey.String(serviceName),
 			semconv.ServiceVersionKey.String(version),
-			attribute.String("environment", "demo"),
 		),
 	)
 	if err != nil {
 		return nil, err
 	}
-	tracerCtl := &TracerController{tracingResource: r}
-	err = tracerCtl.setupExporter(ExporterType(exporterType))
+
+	exporter, err := createJaegerExporter(jaegerEndpoint)
 	if err != nil {
 		return nil, err
 	}
+
+	provider := traceSDK.NewTracerProvider(
+		traceSDK.WithBatcher(exporter),
+		traceSDK.WithResource(resource),
+	)
+
+	otel.SetTracerProvider(provider)
+
+	tracerCtl := &TracerController{provider: provider}
 	return tracerCtl, nil
 }
 
 func (p TracerController) Shutdown(ctx context.Context) error {
-	return p.tracingProvider.Shutdown(ctx)
-}
-
-func (p TracerController) setupExporter(exporterType ExporterType) error {
-	var exporter traceSDK.SpanExporter
-	var err error
-	switch exporterType {
-	case ConsoleExporter:
-		exporter, err = stdouttrace.New(
-			// Use human readable output.
-			stdouttrace.WithPrettyPrint(),
-			// Do not print timestamps for the demo.
-			stdouttrace.WithoutTimestamps(),
-		)
-		if err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("unknown opentelemetry exporter %s", exporterType)
-	}
-	p.tracingProvider = traceSDK.NewTracerProvider(
-		traceSDK.WithBatcher(exporter),
-		traceSDK.WithResource(p.tracingResource),
-	)
-	otel.SetTracerProvider(p.tracingProvider)
-	return nil
+	return p.provider.Shutdown(ctx)
 }
 
 func GetTraceSpan(ctx context.Context, spanName string) (context.Context, trace.Span) {
 	return otel.Tracer(serviceName).Start(ctx, spanName)
+}
+
+func BuildContextFromSQLHint(ctx context.Context, stmt ast.Node) context.Context {
+	var traceParent string
+	var flag bool
+	switch node := stmt.(type) {
+	case *ast.SelectStmt:
+		flag, traceParent = misc.HasTraceParentHint(node.TableHints)
+	case *ast.InsertStmt:
+		flag, traceParent = misc.HasTraceParentHint(node.TableHints)
+	case *ast.UpdateStmt:
+		flag, traceParent = misc.HasTraceParentHint(node.TableHints)
+	case *ast.DeleteStmt:
+		flag, traceParent = misc.HasTraceParentHint(node.TableHints)
+	}
+
+	sc := trace.SpanContext{}
+	if flag {
+		traceID, err := trace.TraceIDFromHex(traceParent)
+		if err == nil {
+			sc = trace.NewSpanContext(trace.SpanContextConfig{TraceID: traceID})
+		}
+	}
+	return trace.ContextWithSpanContext(ctx, sc)
 }
 
 func RecordErrorSpan(span trace.Span, err error) {

@@ -174,6 +174,7 @@ func (manager MysqlUndoLogManager) DeleteUndoLogByXID(db proto.DB, xid string) e
 }
 
 func (manager MysqlUndoLogManager) DeleteUndoLogByLogCreated(db proto.DB, logCreated time.Time, limitRows int) error {
+	// TODO pass ctx.
 	result, _, err := db.ExecuteSql(context.Background(), DeleteUndoLogByCreateSql, logCreated, limitRows)
 	if err != nil {
 		return err

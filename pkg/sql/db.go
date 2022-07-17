@@ -62,7 +62,7 @@ func NewDB(name string, pingInterval time.Duration,
 }
 
 func (db *DB) UseDB(ctx context.Context, schema string) error {
-	newCtx, span := tracing.GetTraceSpan(ctx, "db_use")
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.DBUse)
 	defer span.End()
 	db.inflightRequests.Inc()
 	defer db.inflightRequests.Dec()
@@ -79,7 +79,7 @@ func (db *DB) UseDB(ctx context.Context, schema string) error {
 }
 
 func (db *DB) ExecuteFieldList(ctx context.Context, table, wildcard string) ([]proto.Field, error) {
-	newCtx, span := tracing.GetTraceSpan(ctx, "db_exec_field_list")
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.DBExecFieldList)
 	defer span.End()
 	db.inflightRequests.Inc()
 	defer db.inflightRequests.Dec()
@@ -109,7 +109,7 @@ func (db *DB) ExecuteFieldList(ctx context.Context, table, wildcard string) ([]p
 }
 
 func (db *DB) Query(ctx context.Context, query string) (proto.Result, uint16, error) {
-	newCtx, span := tracing.GetTraceSpan(ctx, "db_query")
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.DBQuery)
 	defer span.End()
 	db.inflightRequests.Inc()
 	defer db.inflightRequests.Dec()
@@ -125,6 +125,7 @@ func (db *DB) Query(ctx context.Context, query string) (proto.Result, uint16, er
 	if err := db.doConnectionPreFilter(newCtx, conn); err != nil {
 		return nil, 0, err
 	}
+
 	result, warn, err := conn.ExecuteWithWarningCount(query, true)
 	if err != nil {
 		return result, warn, err
@@ -136,6 +137,8 @@ func (db *DB) Query(ctx context.Context, query string) (proto.Result, uint16, er
 }
 
 func (db *DB) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, uint16, error) {
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.DBExecStmt)
+	defer span.End()
 	db.inflightRequests.Inc()
 	defer db.inflightRequests.Dec()
 
@@ -155,7 +158,7 @@ func (db *DB) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, 
 
 	conn := r.(*driver.BackendConnection)
 	query := stmt.StmtNode.Text()
-	if err := db.doConnectionPreFilter(ctx, conn); err != nil {
+	if err := db.doConnectionPreFilter(newCtx, conn); err != nil {
 		return nil, 0, err
 	}
 	if stmt.HasLongDataParam {
@@ -170,14 +173,14 @@ func (db *DB) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, 
 	if err != nil {
 		return result, warn, err
 	}
-	if err := db.doConnectionPostFilter(ctx, result, conn); err != nil {
+	if err := db.doConnectionPostFilter(newCtx, result, conn); err != nil {
 		return nil, 0, err
 	}
 	return result, warn, err
 }
 
 func (db *DB) ExecuteSql(ctx context.Context, sql string, args ...interface{}) (proto.Result, uint16, error) {
-	newCtx, span := tracing.GetTraceSpan(ctx, "db_exec_sql")
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.DBExecSQL)
 	defer span.End()
 	db.inflightRequests.Inc()
 	defer db.inflightRequests.Dec()
@@ -192,6 +195,7 @@ func (db *DB) ExecuteSql(ctx context.Context, sql string, args ...interface{}) (
 	if err := db.doConnectionPreFilter(newCtx, conn); err != nil {
 		return nil, 0, err
 	}
+	// TODO PrepareQueryArgs support ctx
 	result, warn, err := conn.PrepareQueryArgs(sql, args)
 	if err != nil {
 		return result, warn, err
@@ -208,7 +212,7 @@ func (db *DB) Begin(ctx context.Context) (proto.Tx, proto.Result, error) {
 		conn   *driver.BackendConnection
 		err    error
 	)
-	newCtx, span := tracing.GetTraceSpan(ctx, "db_tx_begin")
+	newCtx, span := tracing.GetTraceSpan(ctx, tracing.DBTransactionBegin)
 	defer span.End()
 	r, err := db.pool.Get(newCtx)
 	if err != nil {

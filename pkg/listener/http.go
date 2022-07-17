@@ -17,19 +17,27 @@
 package listener
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
+	"net/textproto"
 
 	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
+	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/cectc/dbpack/pkg/config"
 	"github.com/cectc/dbpack/pkg/dt"
 	"github.com/cectc/dbpack/pkg/filter"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/proto"
+	"github.com/cectc/dbpack/pkg/tracing"
+)
+
+const (
+	traceParentHeader = "traceparent"
 )
 
 type HttpConfig struct {
@@ -93,23 +101,37 @@ func NewHttpListener(conf *config.Listener) (proto.Listener, error) {
 
 func (l *HttpListener) Listen() {
 	log.Infof("start http listener %s", l.listener.Addr())
-	if err := fasthttp.Serve(l.listener, func(ctx *fasthttp.RequestCtx) {
-		ctx.SetUserValue(dt.VarHost, l.conf.BackendHost)
-		if err := l.doPreFilter(ctx); err != nil {
+	if err := fasthttp.Serve(l.listener, func(fastHttpCtx *fasthttp.RequestCtx) {
+		fastHttpCtx.SetUserValue(dt.VarHost, l.conf.BackendHost)
+		ctx := extractTraceContext(context.Background(), &fastHttpCtx.Request)
+		newCtx, span := tracing.GetTraceSpan(ctx, tracing.HTTPProxyService)
+		defer span.End()
+
+		if err := l.doPreFilter(newCtx, fastHttpCtx); err != nil {
+			tracing.RecordErrorSpan(span, err)
 			log.Error(err)
 			return
 		}
 		request := &fasthttp.Request{}
-		ctx.Request.CopyTo(request)
+		fastHttpCtx.Request.CopyTo(request)
+
+		// inject trace info.
+		carrier := propagation.MapCarrier{}
+		injectTraceContext(ctx, carrier)
+		for k, v := range carrier {
+			request.Header.Set(k, v)
+		}
+
 		request.SetHost(l.conf.BackendHost)
-		if err := fasthttp.Do(request, &ctx.Response); err != nil {
+		if err := fasthttp.Do(request, &fastHttpCtx.Response); err != nil {
 			log.Error(err)
 		}
-		if err := l.doPostFilter(ctx); err != nil {
+		if err := l.doPostFilter(newCtx, fastHttpCtx); err != nil {
+			tracing.RecordErrorSpan(span, err)
 			log.Error(err)
-			ctx.Response.Reset()
-			ctx.SetStatusCode(http.StatusInternalServerError)
-			ctx.SetBodyString(fmt.Sprintf(`{"success":false,"error":"%s"}`, err.Error()))
+			fastHttpCtx.Response.Reset()
+			fastHttpCtx.SetStatusCode(http.StatusInternalServerError)
+			fastHttpCtx.SetBodyString(fmt.Sprintf(`{"success":false,"error":"%s"}`, err.Error()))
 		}
 	}); err != nil {
 		log.Error(err)
@@ -122,10 +144,10 @@ func (l *HttpListener) Close() {
 	}
 }
 
-func (l *HttpListener) doPreFilter(ctx *fasthttp.RequestCtx) error {
+func (l *HttpListener) doPreFilter(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error {
 	for i := 0; i < len(l.preFilters); i++ {
 		f := l.preFilters[i]
-		err := f.PreHandle(ctx)
+		err := f.PreHandle(ctx, fastHttpCtx)
 		if err != nil {
 			return err
 		}
@@ -133,13 +155,38 @@ func (l *HttpListener) doPreFilter(ctx *fasthttp.RequestCtx) error {
 	return nil
 }
 
-func (l *HttpListener) doPostFilter(ctx *fasthttp.RequestCtx) error {
+func (l *HttpListener) doPostFilter(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error {
 	for i := 0; i < len(l.postFilters); i++ {
 		f := l.postFilters[i]
-		err := f.PostHandle(ctx)
+		err := f.PostHandle(ctx, fastHttpCtx)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// SpanContextFromRequest extracts a span context from incoming requests.
+func extractTraceContext(ctx context.Context, req *fasthttp.Request) context.Context {
+	h, ok := getRequestHeader(req, traceParentHeader)
+	tc := propagation.TraceContext{}
+	carrier := propagation.MapCarrier{}
+	if ok {
+		carrier.Set(traceParentHeader, h)
+	}
+	return tc.Extract(ctx, carrier)
+}
+
+func injectTraceContext(ctx context.Context, carrier propagation.MapCarrier) {
+	tc := propagation.TraceContext{}
+	tc.Inject(ctx, carrier)
+}
+
+func getRequestHeader(req *fasthttp.Request, name string) (string, bool) {
+	s := string(req.Header.Peek(textproto.CanonicalMIMEHeaderKey(name)))
+	if s == "" {
+		return "", false
+	}
+
+	return s, true
 }

@@ -29,8 +29,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/cectc/dbpack/pkg/tracing"
-
 	"github.com/pkg/errors"
 	"github.com/uber-go/atomic"
 
@@ -42,6 +40,7 @@ import (
 	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/packet"
 	"github.com/cectc/dbpack/pkg/proto"
+	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/pkg/visitor"
 	"github.com/cectc/dbpack/third_party/parser"
 )
@@ -200,14 +199,10 @@ func (l *MysqlListener) handle(conn net.Conn, connectionID uint32) {
 		ctx = proto.WithUserName(ctx, c.UserName())
 		ctx = proto.WithRemoteAddr(ctx, c.RemoteAddr().String())
 		ctx = proto.WithSchema(ctx, l.schemaName)
-		newCtx, span := tracing.GetTraceSpan(ctx, "mysql_handle")
-		err = l.ExecuteCommand(newCtx, c, content)
+		err = l.ExecuteCommand(ctx, c, content)
 		if err != nil {
-			tracing.RecordErrorSpan(span, err)
-			span.End()
 			return
 		}
-		span.End()
 	}
 }
 
@@ -520,30 +515,25 @@ func scramblePassword(scramble []byte, password string) []byte {
 }
 
 func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data []byte) error {
-	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_exec_command")
-	defer span.End()
-
 	commandType := data[0]
 	switch commandType {
 	case constant.ComQuit:
 		// https://dev.constant.Com/doc/internals/en/com-quit.html
 		c.RecycleReadPacket()
-		connectionID := proto.ConnectionID(newCtx)
-		l.executor.ConnectionClose(proto.WithConnectionID(newCtx, connectionID))
+		connectionID := proto.ConnectionID(ctx)
+		l.executor.ConnectionClose(proto.WithConnectionID(ctx, connectionID))
 		log.Debugf("connection closed, id: %d", connectionID)
 		return errors.New("ComQuit")
 	case constant.ComInitDB:
 		db := string(data[1:])
 		c.RecycleReadPacket()
 		l.schemaName = db
-		err := l.executor.ExecuteUseDB(newCtx, db)
+		err := l.executor.ExecuteUseDB(ctx, db)
 		if err != nil {
-			tracing.RecordErrorSpan(span, err)
 			return err
 		}
 		if err := c.WriteOKPacket(0, 0, c.StatusFlags(), 0); err != nil {
 			log.Errorf("Error writing ComInitDB result to %s: %v", c, err)
-			tracing.RecordErrorSpan(span, err)
 			return err
 		}
 	case constant.ComQuery:
@@ -552,25 +542,25 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 			defer func() {
 				if err := c.EndWriterBuffering(); err != nil {
 					log.Errorf("conn %v: flush() failed: %v", c.ID(), err)
-					tracing.RecordErrorSpan(span, err)
 				}
 			}()
-
 			query := string(data[1:])
 			c.RecycleReadPacket()
-
 			p := parser.New()
 			stmt, err := p.ParseOneStmt(query, "", "")
 			if err != nil {
 				if writeErr := c.WriteErrorPacketFromError(err); writeErr != nil {
 					log.Error("Error writing query error to client %v: %v", l.connectionID, writeErr)
-					tracing.RecordErrorSpan(span, writeErr)
 					return writeErr
 				}
 				return nil
 			}
-			stmt.Accept(&visitor.ParamVisitor{})
 
+			traceCtx := tracing.BuildContextFromSQLHint(ctx, stmt)
+			newCtx, span := tracing.GetTraceSpan(traceCtx, tracing.MySQLComQuery)
+			defer span.End()
+
+			stmt.Accept(&visitor.ParamVisitor{})
 			ctx = proto.WithCommandType(newCtx, commandType)
 			ctx = proto.WithQueryStmt(ctx, stmt)
 			ctx = proto.WithSqlText(ctx, query)
@@ -578,7 +568,6 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 			if err != nil {
 				if writeErr := c.WriteErrorPacketFromError(err); writeErr != nil {
 					log.Error("Error writing query error to client %v: %v", l.connectionID, writeErr)
-					tracing.RecordErrorSpan(span, writeErr)
 					return writeErr
 				}
 				return nil
@@ -637,7 +626,6 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 			return nil
 		}()
 		if err != nil {
-			tracing.RecordErrorSpan(span, err)
 			return err
 		}
 	case constant.ComPing:
@@ -646,7 +634,6 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 		// Return error if MysqlListener was shut down and OK otherwise
 		if err := c.WriteOKPacket(0, 0, c.StatusFlags(), 0); err != nil {
 			log.Errorf("Error writing ComPing result to %s: %v", c, err)
-			tracing.RecordErrorSpan(span, err)
 			return err
 		}
 	case constant.ComFieldList:
@@ -654,14 +641,12 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 		table := string(data[0:index])
 		wildcard := string(data[index+1:])
 		c.RecycleReadPacket()
-
-		fields, err := l.executor.ExecuteFieldList(newCtx, table, wildcard)
+		fields, err := l.executor.ExecuteFieldList(ctx, table, wildcard)
 		if err != nil {
 			log.Errorf("Conn %v: Error write field list: %v", c, err)
 			if writeErr := c.WriteErrorPacketFromError(err); writeErr != nil {
 				// If we can't even write the error, we're done.
 				log.Errorf("Conn %v: Error write field list error: %v", c, writeErr)
-				tracing.RecordErrorSpan(span, writeErr)
 				return writeErr
 			}
 		}
@@ -672,7 +657,6 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 		}
 		err = c.WriteFields(l.capabilities, result.Fields)
 		if err != nil {
-			tracing.RecordErrorSpan(span, err)
 			return err
 		}
 	case constant.ComPrepare:
@@ -687,12 +671,12 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 		}
 		p := parser.New()
 		act, err := p.ParseOneStmt(stmt.SqlText, "", "")
+
 		if err != nil {
 			log.Errorf("Conn %v: Error parsing prepared statement: %v", c, err)
 			if writeErr := c.WriteErrorPacketFromError(err); writeErr != nil {
 				// If we can't even write the error, we're done.
 				log.Errorf("Conn %v: Error writing prepared statement error: %v", c, writeErr)
-				tracing.RecordErrorSpan(span, writeErr)
 				return writeErr
 			}
 		}
@@ -711,7 +695,6 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 		l.stmts.Store(stmt.StatementID, stmt)
 
 		if err = c.WritePrepare(l.capabilities, stmt); err != nil {
-			tracing.RecordErrorSpan(span, err)
 			return err
 		}
 	case constant.ComStmtExecute:
@@ -720,7 +703,6 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 			defer func() {
 				if err := c.EndWriterBuffering(); err != nil {
 					log.Errorf("conn %v: flush() failed: %v", c.ID(), err)
-					tracing.RecordErrorSpan(span, err)
 				}
 			}()
 			stmtID, _, err := packet.ParseComStmtExecute(l.stmts, data)
@@ -739,7 +721,6 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 				if writeErr := c.WriteErrorPacketFromError(err); writeErr != nil {
 					// If we can't even write the error, we're done.
 					log.Error("Error writing query error to client %v: %v", l.connectionID, writeErr)
-					tracing.RecordErrorSpan(span, writeErr)
 					return writeErr
 				}
 				return nil
@@ -748,6 +729,10 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 			si, _ := l.stmts.Load(stmtID)
 			stmt := si.(*proto.Stmt)
 			stmt.ParamData = data
+
+			traceCtx := tracing.BuildContextFromSQLHint(ctx, stmt.StmtNode)
+			newCtx, span := tracing.GetTraceSpan(traceCtx, "mysql_com_stmt_execute")
+			defer span.End()
 
 			ctx = proto.WithCommandType(newCtx, commandType)
 			ctx = proto.WithPrepareStmt(ctx, stmt)
@@ -816,7 +801,6 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 			return nil
 		}()
 		if err != nil {
-			tracing.RecordErrorSpan(span, err)
 			return err
 		}
 	case constant.ComStmtClose: // no response
@@ -864,20 +848,17 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 				log.Errorf("Got unhandled packet (ComSetOption default) from client %v, returning error: %v", l.connectionID, data)
 				if err := c.WriteErrorPacket(constant.ERUnknownComError, constant.SSUnknownComError, "error handling packet: %v", data); err != nil {
 					log.Errorf("Error writing error packet to client: %v", err)
-					tracing.RecordErrorSpan(span, err)
 					return err
 				}
 			}
 			if err := c.WriteEndResult(l.capabilities, false, 0, 0, 0); err != nil {
 				log.Errorf("Error writeEndResult error %v ", err)
-				tracing.RecordErrorSpan(span, err)
 				return err
 			}
 		} else {
 			log.Errorf("Got unhandled packet (ComSetOption else) from client %v, returning error: %v", l.connectionID, data)
 			if err := c.WriteErrorPacket(constant.ERUnknownComError, constant.SSUnknownComError, "error handling packet: %v", data); err != nil {
 				log.Errorf("Error writing error packet to client: %v", err)
-				tracing.RecordErrorSpan(span, err)
 				return err
 			}
 		}
