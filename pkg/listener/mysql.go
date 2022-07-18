@@ -557,14 +557,14 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 			}
 
 			traceCtx := tracing.BuildContextFromSQLHint(ctx, stmt)
-			newCtx, span := tracing.GetTraceSpan(traceCtx, tracing.MySQLComQuery)
+			spanCtx, span := tracing.GetTraceSpan(traceCtx, tracing.MySQLListenerComQuery)
 			defer span.End()
 
 			stmt.Accept(&visitor.ParamVisitor{})
-			ctx = proto.WithCommandType(newCtx, commandType)
-			ctx = proto.WithQueryStmt(ctx, stmt)
-			ctx = proto.WithSqlText(ctx, query)
-			result, warn, err := l.executor.ExecutorComQuery(ctx, query)
+			spanCtx = proto.WithCommandType(spanCtx, commandType)
+			spanCtx = proto.WithQueryStmt(spanCtx, stmt)
+			spanCtx = proto.WithSqlText(spanCtx, query)
+			result, warn, err := l.executor.ExecutorComQuery(spanCtx, query)
 			if err != nil {
 				if writeErr := c.WriteErrorPacketFromError(err); writeErr != nil {
 					log.Error("Error writing query error to client %v: %v", l.connectionID, writeErr)
@@ -731,13 +731,13 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 			stmt.ParamData = data
 
 			traceCtx := tracing.BuildContextFromSQLHint(ctx, stmt.StmtNode)
-			newCtx, span := tracing.GetTraceSpan(traceCtx, "mysql_com_stmt_execute")
+			spanCtx, span := tracing.GetTraceSpan(traceCtx, tracing.MySQLListenerComStmtExecute)
 			defer span.End()
 
-			ctx = proto.WithCommandType(newCtx, commandType)
-			ctx = proto.WithPrepareStmt(ctx, stmt)
-			ctx = proto.WithSqlText(ctx, stmt.SqlText)
-			result, warn, err := l.executor.ExecutorComStmtExecute(ctx, stmt)
+			spanCtx = proto.WithCommandType(spanCtx, commandType)
+			spanCtx = proto.WithPrepareStmt(spanCtx, stmt)
+			spanCtx = proto.WithSqlText(spanCtx, stmt.SqlText)
+			result, warn, err := l.executor.ExecutorComStmtExecute(spanCtx, stmt)
 			if err != nil {
 				if writeErr := c.WriteErrorPacketFromError(err); writeErr != nil {
 					log.Error("Error writing query error to client %v: %v", l.connectionID, writeErr)

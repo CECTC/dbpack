@@ -149,20 +149,20 @@ func (f *_httpFilter) GetKind() string {
 }
 
 func (f _httpFilter) PreHandle(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error {
-	newCtx, span := tracing.GetTraceSpan(ctx, "http_filter_pre_handle")
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.DTHttpFilterPreHandle)
 	defer span.End()
+
 	path := fastHttpCtx.Request.RequestURI()
 	method := fastHttpCtx.Method()
-
 	if !strings.EqualFold(string(method), fasthttp.MethodPost) {
 		return nil
 	}
 
 	transactionInfo, found := f.matchTransactionInfo(string(path))
 	if found {
-		result, err := f.handleHttp1GlobalBegin(newCtx, fastHttpCtx, transactionInfo)
+		result, err := f.handleHttp1GlobalBegin(spanCtx, fastHttpCtx, transactionInfo)
 		if !result {
-			if err := f.handleHttp1GlobalEnd(newCtx, fastHttpCtx); err != nil {
+			if err := f.handleHttp1GlobalEnd(spanCtx, fastHttpCtx); err != nil {
 				log.Error(err)
 			}
 		}
@@ -171,9 +171,9 @@ func (f _httpFilter) PreHandle(ctx context.Context, fastHttpCtx *fasthttp.Reques
 
 	tccResource, exists := f.tccResourceInfoMap[strings.ToLower(string(path))]
 	if exists {
-		result, err := f.handleHttp1BranchRegister(newCtx, fastHttpCtx, tccResource)
+		result, err := f.handleHttp1BranchRegister(spanCtx, fastHttpCtx, tccResource)
 		if !result {
-			if err := f.handleHttp1BranchEnd(newCtx, fastHttpCtx); err != nil {
+			if err := f.handleHttp1BranchEnd(spanCtx, fastHttpCtx); err != nil {
 				log.Error(err)
 			}
 		}
@@ -183,25 +183,25 @@ func (f _httpFilter) PreHandle(ctx context.Context, fastHttpCtx *fasthttp.Reques
 }
 
 func (f _httpFilter) PostHandle(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error {
-	newCtx, span := tracing.GetTraceSpan(ctx, "http_filter_post_handle")
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.DTHttpFilterPostHandle)
 	defer span.End()
+
 	path := fastHttpCtx.Request.RequestURI()
 	method := fastHttpCtx.Method()
-
 	if !strings.EqualFold(string(method), fasthttp.MethodPost) {
 		return nil
 	}
 
 	_, found := f.transactionInfoMap[strings.ToLower(string(path))]
 	if found {
-		if err := f.handleHttp1GlobalEnd(newCtx, fastHttpCtx); err != nil {
+		if err := f.handleHttp1GlobalEnd(spanCtx, fastHttpCtx); err != nil {
 			return err
 		}
 	}
 
 	_, exists := f.tccResourceInfoMap[strings.ToLower(string(path))]
 	if exists {
-		if err := f.handleHttp1BranchEnd(newCtx, fastHttpCtx); err != nil {
+		if err := f.handleHttp1BranchEnd(spanCtx, fastHttpCtx); err != nil {
 			return err
 		}
 	}

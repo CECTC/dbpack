@@ -60,19 +60,19 @@ func (executor *queryInsertExecutor) AfterImage(ctx context.Context) (*schema.Ta
 		pkValues   []interface{}
 		err        error
 	)
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.ExecutorFetchAfterImage)
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.ExecutorFetchAfterImage)
 	defer span.End()
 
-	pkValues, err = executor.getPKValuesByColumn(newCtx)
+	pkValues, err = executor.getPKValuesByColumn(spanCtx)
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)
 		return nil, err
 	}
-	if executor.getPKIndex(newCtx) >= 0 {
-		afterImage, err = executor.buildTableRecords(newCtx, pkValues)
+	if executor.getPKIndex(spanCtx) >= 0 {
+		afterImage, err = executor.buildTableRecords(spanCtx, pkValues)
 	} else {
 		pk, _ := executor.result.LastInsertId()
-		afterImage, err = executor.buildTableRecords(newCtx, []interface{}{pk})
+		afterImage, err = executor.buildTableRecords(spanCtx, []interface{}{pk})
 	}
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)

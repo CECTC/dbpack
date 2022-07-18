@@ -52,9 +52,9 @@ func NewQuerySelectForUpdateExecutor(
 }
 
 func (executor *querySelectForUpdateExecutor) Executable(ctx context.Context, xid string, lockRetryInterval time.Duration, lockRetryTimes int) (bool, error) {
-	newCtx, span := tracing.GetTraceSpan(ctx, "executable")
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.Executable)
 	defer span.End()
-	tableMeta, err := executor.GetTableMeta(newCtx)
+	tableMeta, err := executor.GetTableMeta(spanCtx)
 	if err != nil {
 		return false, err
 	}
@@ -70,7 +70,7 @@ func (executor *querySelectForUpdateExecutor) Executable(ctx context.Context, xi
 			err      error
 		)
 		for i := 0; i < lockRetryTimes; i++ {
-			lockable, err = dt.GetDistributedTransactionManager().IsLockableWithXID(newCtx,
+			lockable, err = dt.GetDistributedTransactionManager().IsLockableWithXID(spanCtx,
 				executor.conn.DataSourceName(), lockKeys, xid)
 			if lockable && err == nil {
 				break

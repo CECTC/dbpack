@@ -50,9 +50,9 @@ func NewQueryUpdateExecutor(
 }
 
 func (executor *queryUpdateExecutor) BeforeImage(ctx context.Context) (*schema.TableRecords, error) {
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.ExecutorFetchBeforeImage)
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.ExecutorFetchBeforeImage)
 	defer span.End()
-	tableMeta, err := executor.GetTableMeta(newCtx)
+	tableMeta, err := executor.GetTableMeta(spanCtx)
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)
 		return nil, err
@@ -70,9 +70,9 @@ func (executor *queryUpdateExecutor) AfterImage(ctx context.Context) (*schema.Ta
 	if executor.beforeImage == nil || len(executor.beforeImage.Rows) == 0 {
 		return nil, nil
 	}
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.ExecutorFetchAfterImage)
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.ExecutorFetchAfterImage)
 	defer span.End()
-	tableMeta, err := executor.GetTableMeta(newCtx)
+	tableMeta, err := executor.GetTableMeta(spanCtx)
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)
 		return nil, err

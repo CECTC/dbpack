@@ -19,16 +19,17 @@ package tracing
 import (
 	"context"
 
-	"github.com/cectc/dbpack/pkg/misc"
-	"github.com/cectc/dbpack/third_party/parser/ast"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/jaeger"
-	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/propagation"
+	olteResource "go.opentelemetry.io/otel/sdk/resource"
 	traceSDK "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/cectc/dbpack/pkg/misc"
+	"github.com/cectc/dbpack/third_party/parser/ast"
 )
 
 const (
@@ -54,9 +55,9 @@ func createJaegerExporter(endpoint string) (traceSDK.SpanExporter, error) {
 
 // NewTracer create tracer controller, currently only support jaeger.
 func NewTracer(version string, jaegerEndpoint string) (*TracerController, error) {
-	resource, err := resource.Merge(
-		resource.Default(),
-		resource.NewWithAttributes(
+	resource, err := olteResource.Merge(
+		olteResource.Default(),
+		olteResource.NewWithAttributes(
 			semconv.SchemaURL,
 			semconv.ServiceNameKey.String(serviceName),
 			semconv.ServiceVersionKey.String(version),
@@ -104,14 +105,13 @@ func BuildContextFromSQLHint(ctx context.Context, stmt ast.Node) context.Context
 		flag, traceParent = misc.HasTraceParentHint(node.TableHints)
 	}
 
-	sc := trace.SpanContext{}
 	if flag {
-		traceID, err := trace.TraceIDFromHex(traceParent)
-		if err == nil {
-			sc = trace.NewSpanContext(trace.SpanContextConfig{TraceID: traceID})
-		}
+		tc := propagation.TraceContext{}
+		carrier := propagation.MapCarrier{}
+		carrier.Set(TraceParentHeader, traceParent)
+		return tc.Extract(ctx, carrier)
 	}
-	return trace.ContextWithSpanContext(ctx, sc)
+	return trace.ContextWithSpanContext(ctx, trace.SpanContext{})
 }
 
 func RecordErrorSpan(span trace.Span, err error) {

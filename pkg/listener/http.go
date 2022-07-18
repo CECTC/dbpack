@@ -36,10 +36,6 @@ import (
 	"github.com/cectc/dbpack/pkg/tracing"
 )
 
-const (
-	traceParentHeader = "traceparent"
-)
-
 type HttpConfig struct {
 	BackendHost string `yaml:"backend_host" json:"backend_host"`
 }
@@ -104,10 +100,10 @@ func (l *HttpListener) Listen() {
 	if err := fasthttp.Serve(l.listener, func(fastHttpCtx *fasthttp.RequestCtx) {
 		fastHttpCtx.SetUserValue(dt.VarHost, l.conf.BackendHost)
 		ctx := extractTraceContext(context.Background(), &fastHttpCtx.Request)
-		newCtx, span := tracing.GetTraceSpan(ctx, tracing.HTTPProxyService)
+		spanCtx, span := tracing.GetTraceSpan(ctx, tracing.HTTPProxyService)
 		defer span.End()
 
-		if err := l.doPreFilter(newCtx, fastHttpCtx); err != nil {
+		if err := l.doPreFilter(spanCtx, fastHttpCtx); err != nil {
 			tracing.RecordErrorSpan(span, err)
 			log.Error(err)
 			return
@@ -117,8 +113,9 @@ func (l *HttpListener) Listen() {
 
 		// inject trace info.
 		carrier := propagation.MapCarrier{}
-		injectTraceContext(ctx, carrier)
+		injectTraceContext(spanCtx, carrier)
 		for k, v := range carrier {
+			log.Debugf("trace carrier key: %s, value: %s", k, v)
 			request.Header.Set(k, v)
 		}
 
@@ -126,7 +123,7 @@ func (l *HttpListener) Listen() {
 		if err := fasthttp.Do(request, &fastHttpCtx.Response); err != nil {
 			log.Error(err)
 		}
-		if err := l.doPostFilter(newCtx, fastHttpCtx); err != nil {
+		if err := l.doPostFilter(spanCtx, fastHttpCtx); err != nil {
 			tracing.RecordErrorSpan(span, err)
 			log.Error(err)
 			fastHttpCtx.Response.Reset()
@@ -168,11 +165,11 @@ func (l *HttpListener) doPostFilter(ctx context.Context, fastHttpCtx *fasthttp.R
 
 // SpanContextFromRequest extracts a span context from incoming requests.
 func extractTraceContext(ctx context.Context, req *fasthttp.Request) context.Context {
-	h, ok := getRequestHeader(req, traceParentHeader)
+	h, ok := getRequestHeader(req, tracing.TraceParentHeader)
 	tc := propagation.TraceContext{}
 	carrier := propagation.MapCarrier{}
 	if ok {
-		carrier.Set(traceParentHeader, h)
+		carrier.Set(tracing.TraceParentHeader, h)
 	}
 	return tc.Extract(ctx, carrier)
 }
