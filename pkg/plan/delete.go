@@ -64,8 +64,8 @@ func (p *DeletePlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHi
 		sql := sb.String()
 		log.Debugf("delete, db name: %s, sql: %s", p.Database, sql)
 
-		pp := parser.New()
-		stmtNode, err := pp.ParseOneStmt(sql, "", "")
+		_parser := parser.New()
+		stmtNode, err := _parser.ParseOneStmt(sql, "", "")
 		if err != nil {
 			return nil, 0, errors.WithStack(err)
 		}
