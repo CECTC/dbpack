@@ -28,6 +28,7 @@ import (
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/packet"
+	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/third_party/pools"
 )
 
@@ -875,13 +876,16 @@ func (conn *BackendConnection) ExecuteMulti(query string, wantFields bool) (resu
 // ExecuteWithWarningCount is for fetching results and a warning count
 // Note: In a future iteration this should be abolished and merged into the
 // Execute API.
-func (conn *BackendConnection) ExecuteWithWarningCount(query string, wantFields bool) (result *mysql.Result, warnings uint16, err error) {
+func (conn *BackendConnection) ExecuteWithWarningCount(ctx context.Context, query string, wantFields bool) (result *mysql.Result, warnings uint16, err error) {
+	_, span := tracing.GetTraceSpan(ctx, tracing.ConnQuery)
 	defer func() {
 		if err != nil {
 			if sqlerr, ok := err.(*err2.SQLError); ok {
 				sqlerr.Query = query
 			}
+			span.RecordError(err)
 		}
+		span.End()
 	}()
 
 	// Send the query as a COM_QUERY packet.
@@ -901,12 +905,16 @@ func (conn *BackendConnection) PrepareExecuteArgs(query string, args []interface
 	return stmt.execArgs(args)
 }
 
-func (conn *BackendConnection) PrepareQueryArgs(query string, data []interface{}) (Result *mysql.Result, warnings uint16, err error) {
+func (conn *BackendConnection) PrepareQueryArgs(ctx context.Context, query string, args []interface{}) (Result *mysql.Result, warnings uint16, err error) {
+	_, span := tracing.GetTraceSpan(ctx, tracing.ConnStmtExecute)
+	defer span.End()
+
 	stmt, err := conn.prepare(query)
 	if err != nil {
+		span.RecordError(err)
 		return nil, 0, err
 	}
-	return stmt.queryArgs(data)
+	return stmt.queryArgs(args)
 }
 
 func (conn *BackendConnection) PrepareExecute(query string, data []byte) (result *mysql.Result, warnings uint16, err error) {

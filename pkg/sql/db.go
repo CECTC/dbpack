@@ -133,7 +133,7 @@ func (db *DB) Query(ctx context.Context, query string) (proto.Result, uint16, er
 		return nil, 0, err
 	}
 
-	result, warn, err := conn.ExecuteWithWarningCount(query, true)
+	result, warn, err := conn.ExecuteWithWarningCount(spanCtx, query, true)
 	if err != nil {
 		return result, warn, err
 	}
@@ -171,15 +171,11 @@ func (db *DB) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, 
 	if err := db.doConnectionPreFilter(spanCtx, conn); err != nil {
 		return nil, 0, err
 	}
-	if stmt.HasLongDataParam {
-		for i := 0; i < len(stmt.BindVars); i++ {
-			parameterID := fmt.Sprintf("v%d", i+1)
-			args = append(args, stmt.BindVars[parameterID])
-		}
-		result, warn, err = conn.PrepareQueryArgs(query, args)
-	} else {
-		result, warn, err = conn.PrepareQuery(query, stmt.ParamData)
+	for i := 0; i < len(stmt.BindVars); i++ {
+		parameterID := fmt.Sprintf("v%d", i+1)
+		args = append(args, stmt.BindVars[parameterID])
 	}
+	result, warn, err = conn.PrepareQueryArgs(spanCtx, query, args)
 	if err != nil {
 		return result, warn, err
 	}
@@ -209,7 +205,7 @@ func (db *DB) ExecuteSql(ctx context.Context, sql string, args ...interface{}) (
 		return nil, 0, err
 	}
 	// TODO PrepareQueryArgs support ctx
-	result, warn, err := conn.PrepareQueryArgs(sql, args)
+	result, warn, err := conn.PrepareQueryArgs(spanCtx, sql, args)
 	if err != nil {
 		return result, warn, err
 	}

@@ -55,7 +55,7 @@ func (executor *queryDeleteExecutor) BeforeImage(ctx context.Context) (*schema.T
 		return nil, err
 	}
 	sql := executor.buildBeforeImageSql(tableMeta)
-	result, _, err := executor.conn.ExecuteWithWarningCount(sql, true)
+	result, _, err := executor.conn.ExecuteWithWarningCount(spanCtx, sql, true)
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)
 		return nil, err

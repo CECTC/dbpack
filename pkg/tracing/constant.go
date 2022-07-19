@@ -73,4 +73,8 @@ const (
 	TxExecStmt = "tx_exec_stmt"
 	TxCommit   = "db_local_transaction_commit"
 	TxRollback = "db_local_transaction_rollback"
+
+	// conn
+	ConnQuery       = "conn_com_query"
+	ConnStmtExecute = "conn_com_stmt_exec"
 )

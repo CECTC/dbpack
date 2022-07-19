@@ -170,7 +170,7 @@ func (l *MysqlListener) handle(conn net.Conn, connectionID uint32) {
 	if err != nil {
 		writeErr := c.WriteErrorPacketFromError(err)
 		if writeErr != nil {
-			log.Errorf("Cannot write error packet to %s: %v", c, writeErr)
+			log.Warnf("Cannot write error packet to %s: %v", c, writeErr)
 			return
 		}
 		return

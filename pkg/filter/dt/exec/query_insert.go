@@ -88,7 +88,7 @@ func (executor *queryInsertExecutor) buildTableRecords(ctx context.Context, pkVa
 	}
 
 	afterImageSql := executor.buildAfterImageSql(tableMeta, pkValues)
-	result, _, err := executor.conn.ExecuteWithWarningCount(afterImageSql, true)
+	result, _, err := executor.conn.ExecuteWithWarningCount(ctx, afterImageSql, true)
 	if err != nil {
 		return nil, err
 	}
