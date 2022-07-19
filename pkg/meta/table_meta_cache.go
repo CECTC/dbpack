@@ -29,6 +29,7 @@ import (
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/dt/schema"
 	"github.com/cectc/dbpack/pkg/log"
+	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/proto"
 )
@@ -141,8 +142,8 @@ func (cache *MysqlTableMetaCache) FetchSchema(ctx context.Context, db proto.DB, 
 
 func GetColumns(ctx context.Context, db proto.DB, tableName string) ([]schema.ColumnMeta, error) {
 	var (
-		schemaName = proto.Schema(ctx)
-		tn         = escape(tableName, "`")
+		schemaName    = proto.Schema(ctx)
+		dbName, table = misc.ParseTable(tableName, "`")
 	)
 	//`TABLE_CATALOG`,	`TABLE_SCHEMA`,	`TABLE_NAME`,	`COLUMN_NAME`,	`ORDINAL_POSITION`,	`COLUMN_DEFAULT`,
 	//`IS_NULLABLE`, `DATA_TYPE`,	`CHARACTER_MAXIMUM_LENGTH`,	`CHARACTER_OCTET_LENGTH`,	`NUMERIC_PRECISION`,
@@ -153,8 +154,12 @@ func GetColumns(ctx context.Context, db proto.DB, tableName string) ([]schema.Co
 		"`ORDINAL_POSITION`, `COLUMN_KEY`, `EXTRA`  FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = ? " +
 		"AND `TABLE_NAME` = ? ORDER BY ORDINAL_POSITION ASC"
 
+	if dbName == "" {
+		dbName = schemaName
+	}
+
 	// should use new context, otherwise, some filters will be executed repeatedly.
-	dataTable, _, err := db.ExecuteSql(context.Background(), s, schemaName, tn)
+	dataTable, _, err := db.ExecuteSql(context.Background(), s, dbName, table)
 	if err != nil {
 		return nil, err
 	}
@@ -234,8 +239,8 @@ func GetColumns(ctx context.Context, db proto.DB, tableName string) ([]schema.Co
 
 func GetIndexes(ctx context.Context, db proto.DB, tableName string) ([]schema.IndexMeta, error) {
 	var (
-		schemaName = proto.Schema(ctx)
-		tn         = escape(tableName, "`")
+		schemaName    = proto.Schema(ctx)
+		dbName, table = misc.ParseTable(tableName, "`")
 	)
 	//`TABLE_CATALOG`, `TABLE_SCHEMA`, `TABLE_NAME`, `NON_UNIQUE`, `INDEX_SCHEMA`, `INDEX_NAME`, `SEQ_IN_INDEX`,
 	//`COLUMN_NAME`, `COLLATION`, `CARDINALITY`, `SUB_PART`, `PACKED`, `NULLABLE`, `INDEX_TYPE`, `COMMENT`,
@@ -243,8 +248,12 @@ func GetIndexes(ctx context.Context, db proto.DB, tableName string) ([]schema.In
 	s := "SELECT `INDEX_NAME`, `COLUMN_NAME`, `NON_UNIQUE`, `INDEX_TYPE`, `SEQ_IN_INDEX`, `COLLATION`, `CARDINALITY` " +
 		"FROM `INFORMATION_SCHEMA`.`STATISTICS` WHERE `TABLE_SCHEMA` = ? AND `TABLE_NAME` = ?"
 
+	if dbName == "" {
+		dbName = schemaName
+	}
+
 	// should use new context, otherwise, some filters will be executed repeatedly.
-	dataTable, _, err := db.ExecuteSql(context.Background(), s, schemaName, tn)
+	dataTable, _, err := db.ExecuteSql(context.Background(), s, dbName, table)
 	if err != nil {
 		return nil, err
 	}
@@ -301,14 +310,4 @@ func GetIndexes(ctx context.Context, db proto.DB, tableName string) ([]schema.In
 		result = append(result, index)
 	}
 	return result, nil
-}
-
-func escape(tableName, cutset string) string {
-	if strings.Contains(tableName, ".") {
-		idx := strings.LastIndex(tableName, ".")
-		tName := tableName[idx+1:]
-		return strings.Trim(tName, cutset)
-	} else {
-		return strings.Trim(tableName, cutset)
-	}
 }
