@@ -59,7 +59,7 @@ func (executor *prepareInsertExecutor) BeforeImage(ctx context.Context) (*schema
 }
 
 func (executor *prepareInsertExecutor) AfterImage(ctx context.Context) (*schema.TableRecords, error) {
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.ExecutorFetchAfterImage)
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.ExecutorFetchAfterImage)
 	defer span.End()
 	var afterImage *schema.TableRecords
 	var err error
@@ -69,10 +69,10 @@ func (executor *prepareInsertExecutor) AfterImage(ctx context.Context) (*schema.
 		return nil, err
 	}
 	if executor.getPKIndex(ctx) >= 0 {
-		afterImage, err = executor.buildTableRecords(newCtx, pkValues)
+		afterImage, err = executor.buildTableRecords(spanCtx, pkValues)
 	} else {
 		pk, _ := executor.result.LastInsertId()
-		afterImage, err = executor.buildTableRecords(newCtx, []interface{}{pk})
+		afterImage, err = executor.buildTableRecords(spanCtx, []interface{}{pk})
 	}
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)

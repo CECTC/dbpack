@@ -50,9 +50,9 @@ func NewPrepareDeleteExecutor(
 }
 
 func (executor *prepareDeleteExecutor) BeforeImage(ctx context.Context) (*schema.TableRecords, error) {
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.ExecutorFetchBeforeImage)
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.ExecutorFetchBeforeImage)
 	defer span.End()
-	tableMeta, err := executor.GetTableMeta(newCtx)
+	tableMeta, err := executor.GetTableMeta(spanCtx)
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)
 		return nil, err

@@ -153,8 +153,6 @@ func (executor *ReadWriteSplittingExecutor) ExecuteFieldList(ctx context.Context
 }
 
 func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context, sql string) (proto.Result, uint16, error) {
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.RWExecComQuery)
-	defer span.End()
 	var (
 		db     *DataSourceBrief
 		tx     proto.Tx
@@ -162,15 +160,17 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 		err    error
 	)
 
-	connectionID := proto.ConnectionID(newCtx)
-	queryStmt := proto.QueryStmt(newCtx)
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.RWSComQuery)
+	defer span.End()
 
+	connectionID := proto.ConnectionID(spanCtx)
+	queryStmt := proto.QueryStmt(spanCtx)
 	switch stmt := queryStmt.(type) {
 	case *ast.SetStmt:
 		if shouldStartTransaction(stmt) {
-			db = executor.masters.Next(proto.WithMaster(newCtx)).(*DataSourceBrief)
+			db = executor.masters.Next(proto.WithMaster(spanCtx)).(*DataSourceBrief)
 			// TODO add metrics
-			tx, result, err = db.DB.Begin(newCtx)
+			tx, result, err = db.DB.Begin(spanCtx)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -180,12 +180,12 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 			txi, ok := executor.localTransactionMap.Load(connectionID)
 			if ok {
 				tx = txi.(proto.Tx)
-				return tx.Query(newCtx, sql)
+				return tx.Query(spanCtx, sql)
 			}
 			// set to all db
 			for _, db := range executor.all {
 				go func(db *DataSourceBrief) {
-					if _, _, err := db.DB.Query(newCtx, sql); err != nil {
+					if _, _, err := db.DB.Query(spanCtx, sql); err != nil {
 						log.Error(err)
 					}
 				}(db)
@@ -196,9 +196,9 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 			}, 0, nil
 		}
 	case *ast.BeginStmt:
-		db = executor.masters.Next(proto.WithMaster(newCtx)).(*DataSourceBrief)
+		db = executor.masters.Next(proto.WithMaster(spanCtx)).(*DataSourceBrief)
 		// TODO add metrics
-		tx, result, err = db.DB.Begin(newCtx)
+		tx, result, err = db.DB.Begin(spanCtx)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -212,7 +212,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 		defer executor.localTransactionMap.Delete(connectionID)
 		tx = txi.(proto.Tx)
 		// TODO add metrics
-		if result, err = tx.Commit(newCtx); err != nil {
+		if result, err = tx.Commit(spanCtx); err != nil {
 			return nil, 0, err
 		}
 		return result, 0, err
@@ -224,7 +224,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 		defer executor.localTransactionMap.Delete(connectionID)
 		tx = txi.(proto.Tx)
 		// TODO add metrics
-		if result, err = tx.Rollback(newCtx); err != nil {
+		if result, err = tx.Rollback(spanCtx); err != nil {
 			return nil, 0, err
 		}
 		return result, 0, err
@@ -233,9 +233,9 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 		if ok {
 			// in local transaction
 			tx = txi.(proto.Tx)
-			return tx.Query(newCtx, sql)
+			return tx.Query(spanCtx, sql)
 		}
-		withMasterCtx := proto.WithMaster(newCtx)
+		withMasterCtx := proto.WithMaster(spanCtx)
 		db = executor.masters.Next(withMasterCtx).(*DataSourceBrief)
 		return db.DB.Query(withMasterCtx, sql)
 	case *ast.SelectStmt:
@@ -243,9 +243,9 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 		if ok {
 			// in local transaction
 			tx = txi.(proto.Tx)
-			return tx.Query(newCtx, sql)
+			return tx.Query(spanCtx, sql)
 		}
-		withSlaveCtx := proto.WithSlave(newCtx)
+		withSlaveCtx := proto.WithSlave(spanCtx)
 		if has, dsName := hasUseDBHint(stmt.TableHints); has {
 			protoDB := resource.GetDBManager().GetDB(dsName)
 			if protoDB == nil {
@@ -263,42 +263,43 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 		if ok {
 			// in local transaction
 			tx = txi.(proto.Tx)
-			return tx.Query(newCtx, sql)
+			return tx.Query(spanCtx, sql)
 		}
-		withSlaveCtx := proto.WithSlave(newCtx)
+		withSlaveCtx := proto.WithSlave(spanCtx)
 		db = executor.reads.Next(withSlaveCtx).(*DataSourceBrief)
 		return db.DB.Query(withSlaveCtx, sql)
 	}
 }
 
 func (executor *ReadWriteSplittingExecutor) ExecutorComStmtExecute(ctx context.Context, stmt *proto.Stmt) (proto.Result, uint16, error) {
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.RWExecComStmt)
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.RWSComStmtExecute)
 	defer span.End()
-	connectionID := proto.ConnectionID(newCtx)
+
+	connectionID := proto.ConnectionID(spanCtx)
 	txi, ok := executor.localTransactionMap.Load(connectionID)
 	if ok {
 		// in local transaction
 		tx := txi.(proto.Tx)
-		return tx.ExecuteStmt(newCtx, stmt)
+		return tx.ExecuteStmt(spanCtx, stmt)
 	}
 	switch st := stmt.StmtNode.(type) {
 	case *ast.InsertStmt, *ast.DeleteStmt, *ast.UpdateStmt:
-		db := executor.masters.Next(proto.WithMaster(newCtx)).(*DataSourceBrief)
-		return db.DB.ExecuteStmt(proto.WithMaster(newCtx), stmt)
+		db := executor.masters.Next(proto.WithMaster(spanCtx)).(*DataSourceBrief)
+		return db.DB.ExecuteStmt(proto.WithMaster(spanCtx), stmt)
 	case *ast.SelectStmt:
 		var db *DataSourceBrief
 		if has, dsName := hasUseDBHint(st.TableHints); has {
 			protoDB := resource.GetDBManager().GetDB(dsName)
 			if protoDB == nil {
 				log.Debugf("data source %d not found", dsName)
-				db = executor.reads.Next(proto.WithSlave(newCtx)).(*DataSourceBrief)
-				return db.DB.ExecuteStmt(proto.WithSlave(newCtx), stmt)
+				db = executor.reads.Next(proto.WithSlave(spanCtx)).(*DataSourceBrief)
+				return db.DB.ExecuteStmt(proto.WithSlave(spanCtx), stmt)
 			} else {
-				return protoDB.ExecuteStmt(proto.WithSlave(newCtx), stmt)
+				return protoDB.ExecuteStmt(proto.WithSlave(spanCtx), stmt)
 			}
 		}
-		db = executor.reads.Next(proto.WithSlave(newCtx)).(*DataSourceBrief)
-		return db.DB.ExecuteStmt(proto.WithSlave(newCtx), stmt)
+		db = executor.reads.Next(proto.WithSlave(spanCtx)).(*DataSourceBrief)
+		return db.DB.ExecuteStmt(proto.WithSlave(spanCtx), stmt)
 	default:
 		return nil, 0, errors.Errorf("unsupported %t statement", stmt.StmtNode)
 	}

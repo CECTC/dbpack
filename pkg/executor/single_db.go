@@ -128,10 +128,11 @@ func (executor *SingleDBExecutor) ExecutorComQuery(ctx context.Context, sql stri
 		result proto.Result
 		err    error
 	)
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.SDBExecComQuery)
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.SDBComQuery)
 	defer span.End()
-	connectionID := proto.ConnectionID(newCtx)
-	queryStmt := proto.QueryStmt(newCtx)
+
+	connectionID := proto.ConnectionID(spanCtx)
+	queryStmt := proto.QueryStmt(spanCtx)
 	if queryStmt == nil {
 		return nil, 0, errors.New("query stmt should not be nil")
 	}
@@ -141,7 +142,7 @@ func (executor *SingleDBExecutor) ExecutorComQuery(ctx context.Context, sql stri
 	case *ast.SetStmt:
 		if shouldStartTransaction(stmt) {
 			// TODO add metrics
-			tx, result, err = db.Begin(newCtx)
+			tx, result, err = db.Begin(spanCtx)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -151,13 +152,13 @@ func (executor *SingleDBExecutor) ExecutorComQuery(ctx context.Context, sql stri
 			txi, ok := executor.localTransactionMap.Load(connectionID)
 			if ok {
 				tx = txi.(proto.Tx)
-				return tx.Query(newCtx, sql)
+				return tx.Query(spanCtx, sql)
 			}
-			return db.Query(newCtx, sql)
+			return db.Query(spanCtx, sql)
 		}
 	case *ast.BeginStmt:
 		// TODO add metrics
-		tx, result, err = db.Begin(newCtx)
+		tx, result, err = db.Begin(spanCtx)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -171,7 +172,7 @@ func (executor *SingleDBExecutor) ExecutorComQuery(ctx context.Context, sql stri
 		defer executor.localTransactionMap.Delete(connectionID)
 		tx = txi.(proto.Tx)
 		// TODO add metrics
-		if result, err = tx.Commit(newCtx); err != nil {
+		if result, err = tx.Commit(spanCtx); err != nil {
 			return nil, 0, err
 		}
 		return result, 0, err
@@ -183,7 +184,7 @@ func (executor *SingleDBExecutor) ExecutorComQuery(ctx context.Context, sql stri
 		defer executor.localTransactionMap.Delete(connectionID)
 		tx = txi.(proto.Tx)
 		// TODO add metrics
-		if result, err = tx.Rollback(newCtx); err != nil {
+		if result, err = tx.Rollback(spanCtx); err != nil {
 			return nil, 0, err
 		}
 		return result, 0, err
@@ -191,22 +192,25 @@ func (executor *SingleDBExecutor) ExecutorComQuery(ctx context.Context, sql stri
 		txi, ok := executor.localTransactionMap.Load(connectionID)
 		if ok {
 			tx = txi.(proto.Tx)
-			return tx.Query(newCtx, sql)
+			return tx.Query(spanCtx, sql)
 		}
-		return db.Query(newCtx, sql)
+		return db.Query(spanCtx, sql)
 	}
 }
 
 func (executor *SingleDBExecutor) ExecutorComStmtExecute(ctx context.Context, stmt *proto.Stmt) (proto.Result, uint16, error) {
-	connectionID := proto.ConnectionID(ctx)
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.SDBComStmtExecute)
+	defer span.End()
+
+	connectionID := proto.ConnectionID(spanCtx)
 	log.Debugf("connectionID: %d, prepare: %s", connectionID, stmt.SqlText)
 	txi, ok := executor.localTransactionMap.Load(connectionID)
 	if ok {
 		tx := txi.(proto.Tx)
-		return tx.ExecuteStmt(ctx, stmt)
+		return tx.ExecuteStmt(spanCtx, stmt)
 	}
 	db := resource.GetDBManager().GetDB(executor.dataSource)
-	return db.ExecuteStmt(ctx, stmt)
+	return db.ExecuteStmt(spanCtx, stmt)
 }
 
 func (executor *SingleDBExecutor) ConnectionClose(ctx context.Context) {

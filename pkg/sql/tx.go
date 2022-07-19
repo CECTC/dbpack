@@ -21,10 +21,12 @@ import (
 	"fmt"
 
 	"github.com/uber-go/atomic"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/cectc/dbpack/pkg/driver"
 	err2 "github.com/cectc/dbpack/pkg/errors"
 	"github.com/cectc/dbpack/pkg/proto"
+	"github.com/cectc/dbpack/pkg/tracing"
 )
 
 type Tx struct {
@@ -34,28 +36,38 @@ type Tx struct {
 }
 
 func (tx *Tx) Query(ctx context.Context, query string) (proto.Result, uint16, error) {
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.TxQuery)
+	span.SetAttributes(attribute.KeyValue{Key: "db", Value: attribute.StringValue(tx.db.name)},
+		attribute.KeyValue{Key: "sql", Value: attribute.StringValue(query)})
+	defer span.End()
+
 	tx.db.inflightRequests.Inc()
 	defer tx.db.inflightRequests.Dec()
 
-	if err := tx.db.doConnectionPreFilter(ctx, tx.conn); err != nil {
+	if err := tx.db.doConnectionPreFilter(spanCtx, tx.conn); err != nil {
 		return nil, 0, err
 	}
 	result, warn, err := tx.conn.ExecuteWithWarningCount(query, true)
 	if err != nil {
 		return result, warn, err
 	}
-	if err := tx.db.doConnectionPostFilter(ctx, result, tx.conn); err != nil {
+	if err := tx.db.doConnectionPostFilter(spanCtx, result, tx.conn); err != nil {
 		return nil, 0, err
 	}
 	return result, warn, err
 }
 
 func (tx *Tx) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, uint16, error) {
+	query := stmt.StmtNode.Text()
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.TxExecStmt)
+	span.SetAttributes(attribute.KeyValue{Key: "db", Value: attribute.StringValue(tx.db.name)},
+		attribute.KeyValue{Key: "sql", Value: attribute.StringValue(query)})
+	defer span.End()
+
 	tx.db.inflightRequests.Inc()
 	defer tx.db.inflightRequests.Dec()
 
-	query := stmt.StmtNode.Text()
-	if err := tx.db.doConnectionPreFilter(ctx, tx.conn); err != nil {
+	if err := tx.db.doConnectionPreFilter(spanCtx, tx.conn); err != nil {
 		return nil, 0, err
 	}
 
@@ -77,30 +89,39 @@ func (tx *Tx) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, 
 	if err != nil {
 		return result, warn, err
 	}
-	if err := tx.db.doConnectionPostFilter(ctx, result, tx.conn); err != nil {
+	if err := tx.db.doConnectionPostFilter(spanCtx, result, tx.conn); err != nil {
 		return nil, 0, err
 	}
 	return result, warn, err
 }
 
 func (tx *Tx) ExecuteSql(ctx context.Context, sql string, args ...interface{}) (proto.Result, uint16, error) {
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.TxExecSQL)
+	span.SetAttributes(attribute.KeyValue{Key: "db", Value: attribute.StringValue(tx.db.name)},
+		attribute.KeyValue{Key: "sql", Value: attribute.StringValue(sql)})
+	defer span.End()
+
 	tx.db.inflightRequests.Inc()
 	defer tx.db.inflightRequests.Dec()
 
-	if err := tx.db.doConnectionPreFilter(ctx, tx.conn); err != nil {
+	if err := tx.db.doConnectionPreFilter(spanCtx, tx.conn); err != nil {
 		return nil, 0, err
 	}
 	result, warn, err := tx.conn.PrepareQueryArgs(sql, args)
 	if err != nil {
 		return result, warn, err
 	}
-	if err := tx.db.doConnectionPostFilter(ctx, result, tx.conn); err != nil {
+	if err := tx.db.doConnectionPostFilter(spanCtx, result, tx.conn); err != nil {
 		return nil, 0, err
 	}
 	return result, warn, err
 }
 
 func (tx *Tx) Commit(ctx context.Context) (result proto.Result, err error) {
+	_, span := tracing.GetTraceSpan(ctx, tracing.TxCommit)
+	span.SetAttributes(attribute.KeyValue{Key: "db", Value: attribute.StringValue(tx.db.name)})
+	defer span.End()
+
 	if tx.closed.Load() {
 		return nil, nil
 	}
@@ -114,6 +135,10 @@ func (tx *Tx) Commit(ctx context.Context) (result proto.Result, err error) {
 }
 
 func (tx *Tx) Rollback(ctx context.Context) (result proto.Result, err error) {
+	_, span := tracing.GetTraceSpan(ctx, tracing.TxRollback)
+	span.SetAttributes(attribute.KeyValue{Key: "db", Value: attribute.StringValue(tx.db.name)})
+	defer span.End()
+
 	if tx.closed.Load() {
 		return nil, nil
 	}

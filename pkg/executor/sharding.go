@@ -168,7 +168,7 @@ func (executor *ShardingExecutor) GetPostFilters() []proto.DBPostFilter {
 }
 
 func (executor *ShardingExecutor) ExecuteMode() config.ExecuteMode {
-	return config.RWS
+	return config.SHD
 }
 
 func (executor *ShardingExecutor) ProcessDistributedTransaction() bool {
@@ -202,18 +202,19 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 		plan proto.Plan
 		err  error
 	)
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.ShardExecComQuery)
+
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.SHDComQuery)
 	defer span.End()
 
 	log.Debugf("query: %s", sql)
-	queryStmt := proto.QueryStmt(newCtx)
+	queryStmt := proto.QueryStmt(spanCtx)
 	if queryStmt == nil {
 		return nil, 0, errors.New("query stmt should not be nil")
 	}
 	if _, ok := queryStmt.(*ast.SetStmt); ok {
 		for _, db := range executor.all {
 			go func(db *DataSourceBrief) {
-				if _, _, err := db.DB.Query(newCtx, sql); err != nil {
+				if _, _, err := db.DB.Query(spanCtx, sql); err != nil {
 					log.Error(err)
 				}
 			}(db)
@@ -227,16 +228,16 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 	if selectStmt, ok := queryStmt.(*ast.SelectStmt); ok {
 		if selectStmt.Fields != nil && len(selectStmt.Fields.Fields) > 0 {
 			if _, ok := selectStmt.Fields.Fields[0].Expr.(*ast.VariableExpr); ok {
-				return executor.all[0].DB.Query(newCtx, sql)
+				return executor.all[0].DB.Query(spanCtx, sql)
 			}
 		}
 	}
-	plan, err = executor.optimizer.Optimize(newCtx, queryStmt)
+	plan, err = executor.optimizer.Optimize(spanCtx, queryStmt)
 	if err != nil {
 		return nil, 0, err
 	}
-	proto.WithVariable(newCtx, constant.TransactionTimeout, executor.config.TransactionTimeout)
-	return plan.Execute(newCtx)
+	proto.WithVariable(spanCtx, constant.TransactionTimeout, executor.config.TransactionTimeout)
+	return plan.Execute(spanCtx)
 }
 
 func (executor *ShardingExecutor) ExecutorComStmtExecute(ctx context.Context, stmt *proto.Stmt) (proto.Result, uint16, error) {
@@ -245,19 +246,20 @@ func (executor *ShardingExecutor) ExecutorComStmtExecute(ctx context.Context, st
 		plan proto.Plan
 		err  error
 	)
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.ShardExecComStmt)
+
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.SHDComStmtExecute)
 	defer span.End()
 
 	for i := 0; i < len(stmt.BindVars); i++ {
 		parameterID := fmt.Sprintf("v%d", i+1)
 		args = append(args, stmt.BindVars[parameterID])
 	}
-	plan, err = executor.optimizer.Optimize(newCtx, stmt.StmtNode, args...)
+	plan, err = executor.optimizer.Optimize(spanCtx, stmt.StmtNode, args...)
 	if err != nil {
 		return nil, 0, err
 	}
-	proto.WithVariable(newCtx, constant.TransactionTimeout, executor.config.TransactionTimeout)
-	return plan.Execute(newCtx)
+	proto.WithVariable(spanCtx, constant.TransactionTimeout, executor.config.TransactionTimeout)
+	return plan.Execute(spanCtx)
 }
 
 func (executor *ShardingExecutor) ConnectionClose(ctx context.Context) {

@@ -13,11 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package tracing
 
 const (
+	TraceParentHeader = "traceparent"
+
 	// service
 	HTTPProxyService = "http_proxy_service"
+
+	// distributed transaction filter
+	DTHttpFilterPreHandle   = "dt_http_filter_pre_handle"
+	DTHttpFilterPostHandle  = "dt_http_filter_post_handle"
+	DTMysqlFilterPreHandle  = "dt_mysql_filter_pre_handle"
+	DTMysqlFilterPostHandle = "dt_mysql_filter_post_handle"
 
 	// global transcation span name.
 	GlobalTransactionBegin    = "global_transaction_begin"
@@ -29,29 +38,39 @@ const (
 	BranchTransactionRegister = "branch_transaction_register"
 	BranchTransactionEnd      = "branch_transaction_end"
 
-	// mysql command
-	MySQLComQuery = "mysql_com_query"
-
 	// executor
 	ExecutorFetchBeforeImage = "executor_fetch_before_image"
 	ExecutorFetchAfterImage  = "executor_fetch_after_image"
+	Executable               = "executable"
 
-	// db execute
-	DBExecSQL          = "db_exec_sql"
-	DBExecStmt         = "db_exec_stmt"
-	DBQuery            = "db_query"
-	DBExecFieldList    = "db_exec_field_list"
-	DBUse              = "db_use"
-	DBTransactionBegin = "db_transaction_begin"
+	// mysql command
+	MySQLListenerComQuery       = "mysql_listener_com_query"
+	MySQLListenerComStmtExecute = "mysql_listener_com_stmt_execute"
 
 	// single db
-	SDBExecComQuery = "sdb_exec_com_query"
+	SDBComQuery       = "sdb_com_query"
+	SDBComStmtExecute = "sdb_com_stmt_execute"
 
 	// read write splitting
-	RWExecComQuery = "rw_exec_com_query"
-	RWExecComStmt  = "rw_exec_com_stmt"
+	RWSComQuery       = "rws_com_query"
+	RWSComStmtExecute = "rws_com_stmt_execute"
 
 	// sharding
-	ShardExecComQuery = "shard_exec_com_query"
-	ShardExecComStmt  = "shard_exec_com_stmt"
+	SHDComQuery       = "shd_com_query"
+	SHDComStmtExecute = "shd_com_stmt_execute"
+
+	// db
+	DBUse                   = "db_use"
+	DBQuery                 = "db_query"
+	DBExecSQL               = "db_exec_sql"
+	DBExecStmt              = "db_exec_stmt"
+	DBExecFieldList         = "db_exec_field_list"
+	DBLocalTransactionBegin = "db_local_transaction_begin"
+
+	// tx
+	TxQuery    = "tx_query"
+	TxExecSQL  = "tx_exec_sql"
+	TxExecStmt = "tx_exec_stmt"
+	TxCommit   = "db_local_transaction_commit"
+	TxRollback = "db_local_transaction_rollback"
 )

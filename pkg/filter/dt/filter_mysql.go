@@ -89,36 +89,36 @@ func (f *_mysqlFilter) GetKind() string {
 }
 
 func (f *_mysqlFilter) PreHandle(ctx context.Context, conn proto.Connection) error {
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.DTMysqlFilterPreHandle)
+	defer span.End()
+
 	var err error
 	bc := conn.(*driver.BackendConnection)
-	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_filter_pre_handle")
-	defer span.End()
-	commandType := proto.CommandType(newCtx)
-
+	commandType := proto.CommandType(spanCtx)
 	switch commandType {
 	case constant.ComQuery:
-		stmt := proto.QueryStmt(newCtx)
+		stmt := proto.QueryStmt(spanCtx)
 		if stmt == nil {
 			return errors.New("query stmt should not be nil")
 		}
 		switch stmtNode := stmt.(type) {
 		case *ast.DeleteStmt:
-			err = f.processBeforeQueryDelete(newCtx, bc, stmtNode)
+			err = f.processBeforeQueryDelete(spanCtx, bc, stmtNode)
 		case *ast.UpdateStmt:
-			err = f.processBeforeQueryUpdate(newCtx, bc, stmtNode)
+			err = f.processBeforeQueryUpdate(spanCtx, bc, stmtNode)
 		default:
 			return nil
 		}
 	case constant.ComStmtExecute:
-		stmt := proto.PrepareStmt(newCtx)
+		stmt := proto.PrepareStmt(spanCtx)
 		if stmt == nil {
 			return errors.New("prepare stmt should not be nil")
 		}
 		switch stmtNode := stmt.StmtNode.(type) {
 		case *ast.DeleteStmt:
-			err = f.processBeforePrepareDelete(newCtx, bc, stmt, stmtNode)
+			err = f.processBeforePrepareDelete(spanCtx, bc, stmt, stmtNode)
 		case *ast.UpdateStmt:
-			err = f.processBeforePrepareUpdate(newCtx, bc, stmt, stmtNode)
+			err = f.processBeforePrepareUpdate(spanCtx, bc, stmt, stmtNode)
 		default:
 			return nil
 		}
@@ -129,24 +129,25 @@ func (f *_mysqlFilter) PreHandle(ctx context.Context, conn proto.Connection) err
 }
 
 func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn proto.Connection) error {
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.DTMysqlFilterPostHandle)
+	defer span.End()
+
 	var err error
 	bc := conn.(*driver.BackendConnection)
-	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_filter_post_handle")
-	defer span.End()
-	commandType := proto.CommandType(newCtx)
+	commandType := proto.CommandType(spanCtx)
 	switch commandType {
 	case constant.ComQuery:
-		stmt := proto.QueryStmt(newCtx)
+		stmt := proto.QueryStmt(spanCtx)
 		if stmt == nil {
 			return errors.New("query stmt should not be nil")
 		}
 		switch stmtNode := stmt.(type) {
 		case *ast.DeleteStmt:
-			err = f.processAfterQueryDelete(newCtx, bc, stmtNode)
+			err = f.processAfterQueryDelete(spanCtx, bc, stmtNode)
 		case *ast.InsertStmt:
-			err = f.processAfterQueryInsert(newCtx, bc, result, stmtNode)
+			err = f.processAfterQueryInsert(spanCtx, bc, result, stmtNode)
 		case *ast.UpdateStmt:
-			err = f.processAfterQueryUpdate(newCtx, bc, stmtNode)
+			err = f.processAfterQueryUpdate(spanCtx, bc, stmtNode)
 		case *ast.SelectStmt:
 			if stmtNode.LockInfo != nil && stmtNode.LockInfo.LockType == ast.SelectLockForUpdate {
 				err = f.processQuerySelectForUpdate(ctx, bc, result, stmtNode)
@@ -155,20 +156,20 @@ func (f *_mysqlFilter) PostHandle(ctx context.Context, result proto.Result, conn
 			return nil
 		}
 	case constant.ComStmtExecute:
-		stmt := proto.PrepareStmt(newCtx)
+		stmt := proto.PrepareStmt(spanCtx)
 		if stmt == nil {
 			return errors.New("prepare stmt should not be nil")
 		}
 		switch stmtNode := stmt.StmtNode.(type) {
 		case *ast.DeleteStmt:
-			err = f.processAfterPrepareDelete(newCtx, bc, stmt, stmtNode)
+			err = f.processAfterPrepareDelete(spanCtx, bc, stmt, stmtNode)
 		case *ast.InsertStmt:
-			err = f.processAfterPrepareInsert(newCtx, bc, result, stmt, stmtNode)
+			err = f.processAfterPrepareInsert(spanCtx, bc, result, stmt, stmtNode)
 		case *ast.UpdateStmt:
-			err = f.processAfterPrepareUpdate(newCtx, bc, stmt, stmtNode)
+			err = f.processAfterPrepareUpdate(spanCtx, bc, stmt, stmtNode)
 		case *ast.SelectStmt:
 			if stmtNode.LockInfo != nil && stmtNode.LockInfo.LockType == ast.SelectLockForUpdate {
-				err = f.processPrepareSelectForUpdate(newCtx, bc, result, stmt, stmtNode)
+				err = f.processPrepareSelectForUpdate(spanCtx, bc, result, stmt, stmtNode)
 			}
 		default:
 			return nil
@@ -184,7 +185,7 @@ func (f *_mysqlFilter) registerBranchTransaction(ctx context.Context, xid, resou
 		branchID int64
 		err      error
 	)
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.BranchTransactionRegister)
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.BranchTransactionRegister)
 	defer span.End()
 
 	br := &api.BranchRegisterRequest{
@@ -195,7 +196,7 @@ func (f *_mysqlFilter) registerBranchTransaction(ctx context.Context, xid, resou
 		ApplicationData: nil,
 	}
 	for retryCount := 0; retryCount < f.lockRetryTimes; retryCount++ {
-		_, branchID, err = dt.GetDistributedTransactionManager().BranchRegister(newCtx, br)
+		_, branchID, err = dt.GetDistributedTransactionManager().BranchRegister(spanCtx, br)
 		if err == nil {
 			break
 		}

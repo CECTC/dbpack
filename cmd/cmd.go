@@ -201,18 +201,6 @@ func init() {
 	rootCommand.AddCommand(startCommand)
 }
 
-func initTracing(ctx context.Context, jaegerEndpoint string) {
-	traceCtl, err := tracing.NewTracer(Version, jaegerEndpoint)
-	if err != nil {
-		log.Fatalf("could not setup tracing manager: %s", err.Error())
-	}
-
-	go func() {
-		<-ctx.Done()
-		traceCtl.Shutdown(ctx)
-	}()
-}
-
 func initServer(ctx context.Context, lis net.Listener) {
 	go func() {
 		<-ctx.Done()
@@ -232,6 +220,18 @@ func initServer(ctx context.Context, lis net.Listener) {
 		return
 	}
 	log.Infof("start api server :  %s", lis.Addr())
+}
+
+func initTracing(ctx context.Context, jaegerEndpoint string) {
+	traceCtl, err := tracing.NewTracer(Version, jaegerEndpoint)
+	if err != nil {
+		log.Fatalf("could not setup tracing manager: %s", err.Error())
+	}
+
+	go func() {
+		<-ctx.Done()
+		traceCtl.Shutdown(ctx)
+	}()
 }
 
 //func initHolmes() *holmes.Holmes {

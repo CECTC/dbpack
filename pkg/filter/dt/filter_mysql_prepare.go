@@ -29,7 +29,6 @@ import (
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/proto"
-	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 )
 
@@ -118,18 +117,16 @@ func (f *_mysqlFilter) processAfterPrepareDelete(ctx context.Context, conn *driv
 func (f *_mysqlFilter) processAfterPrepareInsert(ctx context.Context, conn *driver.BackendConnection,
 	result proto.Result, stmt *proto.Stmt, insertStmt *ast.InsertStmt) error {
 	has, xid := misc.HasXIDHint(insertStmt.TableHints)
-	newCtx, span := tracing.GetTraceSpan(ctx, "mysql_process_after_prepare_insert")
-	defer span.End()
 	if !has {
 		return nil
 	}
 
 	executor := exec.NewPrepareInsertExecutor(conn, insertStmt, stmt.BindVars, result)
-	afterImage, err := executor.AfterImage(newCtx)
+	afterImage, err := executor.AfterImage(ctx)
 	if err != nil {
 		return err
 	}
-	schemaName := proto.Schema(newCtx)
+	schemaName := proto.Schema(ctx)
 	if schemaName == "" {
 		return errors.New("schema name should not be nil")
 	}
@@ -138,7 +135,7 @@ func (f *_mysqlFilter) processAfterPrepareInsert(ctx context.Context, conn *driv
 	log.Debugf("insert, lockKey: %s", lockKeys)
 	undoLog := exec.BuildUndoItem(true, constant.SQLType_INSERT, schemaName, executor.GetTableName(), lockKeys, nil, afterImage)
 
-	branchID, err := f.registerBranchTransaction(newCtx, xid, conn.DataSourceName(), lockKeys)
+	branchID, err := f.registerBranchTransaction(ctx, xid, conn.DataSourceName(), lockKeys)
 	if err != nil {
 		return err
 	}

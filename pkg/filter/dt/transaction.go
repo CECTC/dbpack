@@ -23,6 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/cectc/dbpack/pkg/dt"
 	"github.com/cectc/dbpack/pkg/dt/api"
@@ -33,10 +34,12 @@ import (
 // handleHttp1GlobalBegin return bool, represent whether continue
 func (f *_httpFilter) handleHttp1GlobalBegin(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx, transactionInfo *TransactionInfo) (bool, error) {
 	// todo support transaction isolation level
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionBegin)
+	globalTransactionName := string(fastHttpCtx.Request.RequestURI())
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionBegin)
+	span.SetAttributes(attribute.KeyValue{Key: "global-transaction-name", Value: attribute.StringValue(globalTransactionName)})
 	defer span.End()
 	transactionManager := dt.GetDistributedTransactionManager()
-	xid, err := transactionManager.Begin(newCtx, string(fastHttpCtx.Request.RequestURI()), transactionInfo.Timeout)
+	xid, err := transactionManager.Begin(spanCtx, globalTransactionName, transactionInfo.Timeout)
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)
 		fastHttpCtx.Response.Reset()
@@ -52,19 +55,19 @@ func (f *_httpFilter) handleHttp1GlobalBegin(ctx context.Context, fastHttpCtx *f
 }
 
 func (f *_httpFilter) handleHttp1GlobalEnd(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error {
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionEnd)
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionEnd)
 	defer span.End()
 	xidParam := fastHttpCtx.UserValue(XID)
 	xid := xidParam.(string)
 
 	if fastHttpCtx.Response.StatusCode() == http.StatusOK {
-		err := f.globalCommit(newCtx, xid)
+		err := f.globalCommit(spanCtx, xid)
 		if err != nil {
 			tracing.RecordErrorSpan(span, err)
 			return errors.WithStack(err)
 		}
 	} else {
-		err := f.globalRollback(newCtx, xid)
+		err := f.globalRollback(spanCtx, xid)
 		if err != nil {
 			tracing.RecordErrorSpan(span, err)
 			return errors.WithStack(err)
@@ -75,7 +78,7 @@ func (f *_httpFilter) handleHttp1GlobalEnd(ctx context.Context, fastHttpCtx *fas
 
 // handleHttp1BranchRegister return bool, represent whether continue
 func (f *_httpFilter) handleHttp1BranchRegister(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx, tccResource *TccResourceInfo) (bool, error) {
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.BranchTransactionRegister)
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.BranchTransactionRegister)
 	defer span.End()
 	xid := fastHttpCtx.Request.Header.Peek(XID)
 	if string(xid) == "" {
@@ -117,7 +120,7 @@ func (f *_httpFilter) handleHttp1BranchRegister(ctx context.Context, fastHttpCtx
 	}
 
 	transactionManager := dt.GetDistributedTransactionManager()
-	branchID, _, err := transactionManager.BranchRegister(newCtx, &api.BranchRegisterRequest{
+	branchID, _, err := transactionManager.BranchRegister(spanCtx, &api.BranchRegisterRequest{
 		XID:             string(xid),
 		ResourceID:      string(fastHttpCtx.Request.RequestURI()),
 		LockKey:         "",
@@ -137,14 +140,14 @@ func (f *_httpFilter) handleHttp1BranchRegister(ctx context.Context, fastHttpCtx
 }
 
 func (f *_httpFilter) handleHttp1BranchEnd(ctx context.Context, fastHttpCtx *fasthttp.RequestCtx) error {
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.BranchTransactionEnd)
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.BranchTransactionEnd)
 	defer span.End()
 	branchIDParam := fastHttpCtx.UserValue(BranchID)
 	branchID := branchIDParam.(string)
 
 	if fastHttpCtx.Response.StatusCode() != http.StatusOK {
 		transactionManager := dt.GetDistributedTransactionManager()
-		err := transactionManager.BranchReport(newCtx, branchID, api.PhaseOneFailed)
+		err := transactionManager.BranchReport(spanCtx, branchID, api.PhaseOneFailed)
 		if err != nil {
 			tracing.RecordErrorSpan(span, err)
 			return errors.WithStack(err)
@@ -159,11 +162,11 @@ func (f *_httpFilter) globalCommit(ctx context.Context, xid string) error {
 		status api.GlobalSession_GlobalStatus
 	)
 
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionCommit)
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionCommit)
 	defer span.End()
 
 	transactionManager := dt.GetDistributedTransactionManager()
-	status, err = transactionManager.Commit(newCtx, xid)
+	status, err = transactionManager.Commit(spanCtx, xid)
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)
 	}
@@ -176,11 +179,11 @@ func (f *_httpFilter) globalRollback(ctx context.Context, xid string) error {
 		err    error
 		status api.GlobalSession_GlobalStatus
 	)
-	newCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionRollback)
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionRollback)
 	defer span.End()
 
 	transactionManager := dt.GetDistributedTransactionManager()
-	status, err = transactionManager.Rollback(newCtx, xid)
+	status, err = transactionManager.Rollback(spanCtx, xid)
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)
 	}
