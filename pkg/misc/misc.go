@@ -56,3 +56,15 @@ func CollectRowKeys(lockKey, resourceID string) []string {
 func GetRowKey(resourceID string, tableName string, pk string) string {
 	return fmt.Sprintf("%s^^^%s^^^%s", resourceID, tableName, pk)
 }
+
+// ParseTable return db, table name. If db is empty, return "".
+func ParseTable(tableName, cutSet string) (string, string) {
+	if strings.Contains(tableName, ".") {
+		idx := strings.LastIndex(tableName, ".")
+		db := tableName[0:idx]
+		tName := tableName[idx+1:]
+		return strings.Trim(db, cutSet), strings.Trim(tName, cutSet)
+	} else {
+		return "", strings.Trim(tableName, cutSet)
+	}
+}

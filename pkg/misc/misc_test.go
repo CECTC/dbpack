@@ -99,3 +99,44 @@ func TestGetRowKey(t *testing.T) {
 		})
 	}
 }
+
+func TestParseTable(t *testing.T) {
+	cases := []struct {
+		tableName     string
+		cutSet        string
+		expectedDB    string
+		expectedTable string
+	}{
+		{
+			"`employees`.`employee`",
+			"`",
+			"employees",
+			"employee",
+		},
+		{
+			"employees.employee",
+			"`",
+			"employees",
+			"employee",
+		},
+		{
+			"`employee`",
+			"`",
+			"",
+			"employee",
+		},
+		{
+			"employee",
+			"`",
+			"",
+			"employee",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.tableName, func(t *testing.T) {
+			db, table := ParseTable(tc.tableName, tc.cutSet)
+			assert.Equal(t, tc.expectedDB, db)
+			assert.Equal(t, tc.expectedTable, table)
+		})
+	}
+}
