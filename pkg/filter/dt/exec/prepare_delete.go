@@ -66,7 +66,7 @@ func (executor *prepareDeleteExecutor) BeforeImage(ctx context.Context) (*schema
 		args = append(args, executor.args[parameterID])
 	}
 
-	result, _, err := executor.conn.PrepareQueryArgs(sql, args)
+	result, _, err := executor.conn.PrepareQueryArgs(spanCtx, sql, args)
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)
 		return nil, err
