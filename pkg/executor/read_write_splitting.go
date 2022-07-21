@@ -28,17 +28,13 @@ import (
 	"github.com/cectc/dbpack/pkg/filter"
 	"github.com/cectc/dbpack/pkg/lb"
 	"github.com/cectc/dbpack/pkg/log"
+	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 	"github.com/cectc/dbpack/third_party/parser/format"
-	"github.com/cectc/dbpack/third_party/parser/model"
-)
-
-const (
-	hintUseDB = "UseDB"
 )
 
 type ReadWriteSplittingExecutor struct {
@@ -163,6 +159,11 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
 	}
 	defer func() {
 		if err == nil {
+			result, err = decodeTextResult(result)
+			if err != nil {
+				span.RecordError(err)
+				return
+			}
 			err = executor.doPostFilter(spanCtx, result)
 		} else {
 			span.RecordError(err)
@@ -267,7 +268,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
 			return tx.Query(spanCtx, sql)
 		}
 		withSlaveCtx := proto.WithSlave(spanCtx)
-		if has, dsName := hasUseDBHint(stmt.TableHints); has {
+		if has, dsName := misc.HasUseDBHint(stmt.TableHints); has {
 			protoDB := resource.GetDBManager().GetDB(dsName)
 			if protoDB == nil {
 				log.Debugf("data source %d not found", dsName)
@@ -302,6 +303,11 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComStmtExecute(
 	}
 	defer func() {
 		if err == nil {
+			result, err = decodeBinaryResult(result)
+			if err != nil {
+				span.RecordError(err)
+				return
+			}
 			err = executor.doPostFilter(spanCtx, result)
 		} else {
 			span.RecordError(err)
@@ -322,7 +328,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComStmtExecute(
 		return db.DB.ExecuteStmt(proto.WithMaster(spanCtx), stmt)
 	case *ast.SelectStmt:
 		var db *DataSourceBrief
-		if has, dsName := hasUseDBHint(st.TableHints); has {
+		if has, dsName := misc.HasUseDBHint(st.TableHints); has {
 			protoDB := resource.GetDBManager().GetDB(dsName)
 			if protoDB == nil {
 				log.Debugf("data source %d not found", dsName)
@@ -371,15 +377,4 @@ func (executor *ReadWriteSplittingExecutor) doPostFilter(ctx context.Context, re
 		}
 	}
 	return nil
-}
-
-func hasUseDBHint(hints []*ast.TableOptimizerHint) (bool, string) {
-	for _, hint := range hints {
-		if strings.EqualFold(hint.HintName.String(), hintUseDB) {
-			hintData := hint.HintData.(model.CIStr)
-			ds := hintData.String()
-			return true, ds
-		}
-	}
-	return false, ""
 }

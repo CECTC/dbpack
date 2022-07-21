@@ -597,7 +597,7 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 					return err
 				}
 			}
-			if rlt, ok := result.(*mysql.MergeResult); ok {
+			if rlt, ok := result.(*mysql.DecodedResult); ok {
 				if len(rlt.Fields) == 0 {
 					// A successful callback with no fields means that this was a
 					// DML or other write-only operation.
@@ -772,7 +772,7 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 					return err
 				}
 			}
-			if rlt, ok := result.(*mysql.MergeResult); ok {
+			if rlt, ok := result.(*mysql.DecodedResult); ok {
 				if len(rlt.Fields) == 0 {
 					// A successful callback with no fields means that this was a
 					// DML or other write-only operation.

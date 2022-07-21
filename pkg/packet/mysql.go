@@ -651,11 +651,12 @@ func TextVal2MySQL(v *proto.Value) ([]byte, error) {
 		constant.FieldTypeMediumBLOB, constant.FieldTypeLongBLOB, constant.FieldTypeBLOB, constant.FieldTypeVarString,
 		constant.FieldTypeString, constant.FieldTypeGeometry, constant.FieldTypeJSON, constant.FieldTypeBit,
 		constant.FieldTypeEnum, constant.FieldTypeSet:
-		l := len(v.Raw)
+		val := v.Val.([]byte)
+		l := len(val)
 		length := misc.LenEncIntSize(uint64(l)) + l
 		out = make([]byte, length)
 		pos = misc.WriteLenEncInt(out, pos, uint64(l))
-		copy(out[pos:], v.Raw)
+		copy(out[pos:], val)
 	default:
 		out = make([]byte, len(v.Raw))
 		copy(out, v.Raw)
@@ -848,7 +849,8 @@ func TextVal2MySQLLen(v *proto.Value) (int, error) {
 		constant.FieldTypeMediumBLOB, constant.FieldTypeLongBLOB, constant.FieldTypeBLOB, constant.FieldTypeVarString,
 		constant.FieldTypeString, constant.FieldTypeGeometry, constant.FieldTypeJSON, constant.FieldTypeBit,
 		constant.FieldTypeEnum, constant.FieldTypeSet:
-		l := len(v.Raw)
+		val := v.Val.([]byte)
+		l := len(val)
 		length = misc.LenEncIntSize(uint64(l)) + l
 	default:
 		length = len(v.Raw)

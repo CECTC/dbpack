@@ -31,13 +31,15 @@ const (
 	masterDataSourceName = "root:123456@tcp(127.0.0.1:3306)/employees?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
 	slaveDataSourceName  = "root:123456@tcp(127.0.0.1:3307)/employees?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
 
-	insertEmployee   = `INSERT INTO employees ( emp_no, birth_date, first_name, last_name, gender, hire_date ) VALUES (?, ?, ?, ?, ?, ?)`
-	selectEmployee1  = `SELECT emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
+	insertEmployee  = `INSERT INTO employees ( emp_no, birth_date, first_name, last_name, gender, hire_date ) VALUES (?, ?, ?, ?, ?, ?)`
+	selectEmployee1 = `SELECT emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
+	selectEmployee2 = `SELECT /*+ UseDB('employees-master') */ emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
+	updateEmployee  = `UPDATE employees SET last_name = ? WHERE emp_no = ?`
+	deleteEmployee  = `DELETE FROM employees WHERE emp_no = ?`
+
 	insertDepartment = `INSERT INTO departments( id, dept_no, dept_name ) values (?, ?, ?)`
-	selectEmployee2  = `SELECT /*+ UseDB('employees-master') */ emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
-	updateEmployee   = `UPDATE employees set last_name = ? where emp_no = ?`
 	updateDepartment = `UPDATE departments SET dept_name = ? WHERE id = ?`
-	deleteEmployee   = `DELETE FROM employees WHERE emp_no = ?`
+	selectDepartment = `SELECT /*+ UseDB('employees-master') */ id, dept_name FROM departments WHERE id = ?`
 )
 
 type _ReadWriteSplittingSuite struct {
@@ -149,6 +151,19 @@ func (suite *_ReadWriteSplittingSuite) TestInsertEncryption() {
 			suite.Equal(int64(1), affected)
 		}
 	}
+
+	rows, err := suite.db.Query(selectDepartment, 1)
+	if suite.NoErrorf(err, "select row error: %v", err) {
+		var (
+			id       int64
+			deptName string
+		)
+		for rows.Next() {
+			err := rows.Scan(&id, &deptName)
+			suite.NoError(err)
+			suite.T().Logf("id: %d, dept name: %s", id, deptName)
+		}
+	}
 }
 
 func (suite *_ReadWriteSplittingSuite) TestSelect2() {
@@ -198,6 +213,19 @@ func (suite *_ReadWriteSplittingSuite) TestUpdateEncryption() {
 		affected, err := result.RowsAffected()
 		if suite.NoErrorf(err, "update department error: %v", err) {
 			suite.Equal(int64(1), affected)
+		}
+	}
+
+	rows, err := suite.db.Query(selectDepartment, 1)
+	if suite.NoErrorf(err, "select row error: %v", err) {
+		var (
+			id       int64
+			deptName string
+		)
+		for rows.Next() {
+			err := rows.Scan(&id, &deptName)
+			suite.NoError(err)
+			suite.T().Logf("id: %d, dept name: %s", id, deptName)
 		}
 	}
 }

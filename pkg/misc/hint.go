@@ -26,6 +26,7 @@ import (
 const (
 	XIDHint         = "XID"
 	GlobalLockHint  = "GlobalLock"
+	UseDBHint       = "UseDB"
 	TraceParentHint = "TraceParent"
 )
 
@@ -47,6 +48,17 @@ func HasGlobalLockHint(hints []*ast.TableOptimizerHint) bool {
 		}
 	}
 	return false
+}
+
+func HasUseDBHint(hints []*ast.TableOptimizerHint) (bool, string) {
+	for _, hint := range hints {
+		if strings.EqualFold(hint.HintName.String(), UseDBHint) {
+			hintData := hint.HintData.(model.CIStr)
+			ds := hintData.String()
+			return true, ds
+		}
+	}
+	return false, ""
 }
 
 func HasTraceParentHint(hints []*ast.TableOptimizerHint) (bool, string) {

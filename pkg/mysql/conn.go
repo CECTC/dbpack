@@ -615,8 +615,14 @@ func (c *Conn) writeTextRow(row []*proto.Value) error {
 		if val == nil || val.Val == nil {
 			length++
 		} else {
-			l := len(val.Raw)
-			length += misc.LenEncIntSize(uint64(l)) + l
+			value, ok := val.Val.([]byte)
+			if ok {
+				l := len(value)
+				length += misc.LenEncIntSize(uint64(l)) + l
+			} else {
+				l := len(val.Raw)
+				length += misc.LenEncIntSize(uint64(l)) + l
+			}
 		}
 	}
 
@@ -626,9 +632,16 @@ func (c *Conn) writeTextRow(row []*proto.Value) error {
 		if val == nil || val.Val == nil {
 			pos = misc.WriteByte(data, pos, constant.NullValue)
 		} else {
-			l := len(val.Raw)
-			pos = misc.WriteLenEncInt(data, pos, uint64(l))
-			pos += copy(data[pos:], val.Raw)
+			value, ok := val.Val.([]byte)
+			if ok {
+				l := len(value)
+				pos = misc.WriteLenEncInt(data, pos, uint64(l))
+				pos += copy(data[pos:], value)
+			} else {
+				l := len(val.Raw)
+				pos = misc.WriteLenEncInt(data, pos, uint64(l))
+				pos += copy(data[pos:], val.Raw)
+			}
 		}
 	}
 
@@ -812,7 +825,7 @@ func (c *Conn) WriteBinaryRows(result *Result) error {
 	return nil
 }
 
-func (c *Conn) WriteRows(result *MergeResult) error {
+func (c *Conn) WriteRows(result *DecodedResult) error {
 	for _, row := range result.Rows {
 		switch r := row.(type) {
 		case *TextRow:

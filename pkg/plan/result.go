@@ -172,7 +172,7 @@ func (c OrderByCells) Swap(i, j int) {
 func mergeResult(ctx context.Context,
 	results []*ResultWithErr,
 	orderBy *ast.OrderByClause,
-	limit *Limit) (*mysql.MergeResult, uint16) {
+	limit *Limit) (*mysql.DecodedResult, uint16) {
 	if orderBy == nil && limit == nil {
 		return mergeResultWithoutOrderByAndLimit(ctx, results)
 	}
@@ -190,7 +190,7 @@ func mergeResult(ctx context.Context,
 
 // mergeResultWithOutOrderByAndLimit e.g. select * from t where id between ? and ?
 func mergeResultWithoutOrderByAndLimit(ctx context.Context,
-	results []*ResultWithErr) (*mysql.MergeResult, uint16) {
+	results []*ResultWithErr) (*mysql.DecodedResult, uint16) {
 	var (
 		fields      []*mysql.Field
 		warning     uint16 = 0
@@ -234,7 +234,7 @@ func mergeResultWithoutOrderByAndLimit(ctx context.Context,
 		}
 	}
 	fields = results[0].Result.(*mysql.Result).Fields
-	result := &mysql.MergeResult{
+	result := &mysql.DecodedResult{
 		Fields:       fields,
 		AffectedRows: 0,
 		InsertId:     0,
@@ -246,7 +246,7 @@ func mergeResultWithoutOrderByAndLimit(ctx context.Context,
 // mergeResultWithLimit e.g. select * from t where id between ? and ? limit ?,?
 func mergeResultWithLimit(ctx context.Context,
 	results []*ResultWithErr,
-	limit *Limit) (*mysql.MergeResult, uint16) {
+	limit *Limit) (*mysql.DecodedResult, uint16) {
 	var (
 		fields      []*mysql.Field
 		warning     uint16 = 0
@@ -303,7 +303,7 @@ func mergeResultWithLimit(ctx context.Context,
 		}
 	}
 	fields = results[0].Result.(*mysql.Result).Fields
-	result := &mysql.MergeResult{
+	result := &mysql.DecodedResult{
 		Fields:       fields,
 		AffectedRows: 0,
 		InsertId:     0,
@@ -316,7 +316,7 @@ func mergeResultWithLimit(ctx context.Context,
 func mergeResultWithOrderByAndLimit(ctx context.Context,
 	results []*ResultWithErr,
 	orderBy *ast.OrderByClause,
-	limit *Limit) (*mysql.MergeResult, uint16) {
+	limit *Limit) (*mysql.DecodedResult, uint16) {
 	var (
 		fields        []*mysql.Field
 		orderByFields []*OrderField
@@ -407,7 +407,7 @@ func mergeResultWithOrderByAndLimit(ctx context.Context,
 	for _, rlt := range results {
 		warning += rlt.Warning
 	}
-	result := &mysql.MergeResult{
+	result := &mysql.DecodedResult{
 		Fields:       fields,
 		AffectedRows: 0,
 		InsertId:     0,
@@ -419,7 +419,7 @@ func mergeResultWithOrderByAndLimit(ctx context.Context,
 // mergeResultWithOrderBy e.g. select * from t where id between ? and ? order by id desc
 func mergeResultWithOrderBy(ctx context.Context,
 	results []*ResultWithErr,
-	orderBy *ast.OrderByClause) (*mysql.MergeResult, uint16) {
+	orderBy *ast.OrderByClause) (*mysql.DecodedResult, uint16) {
 	var (
 		fields        []*mysql.Field
 		orderByFields []*OrderField
@@ -499,7 +499,7 @@ func mergeResultWithOrderBy(ctx context.Context,
 	for _, rlt := range results {
 		warning += rlt.Warning
 	}
-	result := &mysql.MergeResult{
+	result := &mysql.DecodedResult{
 		Fields:       fields,
 		AffectedRows: 0,
 		InsertId:     0,
@@ -508,7 +508,7 @@ func mergeResultWithOrderBy(ctx context.Context,
 	return result, warning
 }
 
-func aggregateResult(ctx context.Context, result *mysql.MergeResult) {
+func aggregateResult(ctx context.Context, result *mysql.DecodedResult) {
 	sqlText := proto.SqlText(ctx)
 	funcColumns := proto.Variable(ctx, FuncColumns)
 	if funcColumns == nil {

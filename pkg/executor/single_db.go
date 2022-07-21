@@ -133,6 +133,11 @@ func (executor *SingleDBExecutor) ExecutorComQuery(
 	}
 	defer func() {
 		if err == nil {
+			result, err = decodeTextResult(result)
+			if err != nil {
+				span.RecordError(err)
+				return
+			}
 			err = executor.doPostFilter(spanCtx, result)
 		} else {
 			span.RecordError(err)
@@ -230,6 +235,11 @@ func (executor *SingleDBExecutor) ExecutorComStmtExecute(
 	}
 	defer func() {
 		if err == nil {
+			result, err = decodeBinaryResult(result)
+			if err != nil {
+				span.RecordError(err)
+				return
+			}
 			err = executor.doPostFilter(spanCtx, result)
 		} else {
 			span.RecordError(err)

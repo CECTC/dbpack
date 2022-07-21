@@ -29,6 +29,7 @@ import (
 	"github.com/cectc/dbpack/pkg/filter"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
+	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 	"github.com/cectc/dbpack/third_party/parser/format"
@@ -87,7 +88,7 @@ func (f *_filter) PreHandle(ctx context.Context) error {
 		stmt := proto.QueryStmt(ctx)
 		switch stmtNode := stmt.(type) {
 		case *ast.InsertStmt:
-			config, err := f.checkInsertColumn(stmtNode)
+			config, err := f.checkInsertTable(stmtNode)
 			if err != nil {
 				return err
 			}
@@ -101,7 +102,7 @@ func (f *_filter) PreHandle(ctx context.Context) error {
 				}
 			}
 		case *ast.UpdateStmt:
-			config, err := f.checkUpdateColumn(stmtNode)
+			config, err := f.checkUpdateTable(stmtNode)
 			if err != nil {
 				return err
 			}
@@ -118,7 +119,7 @@ func (f *_filter) PreHandle(ctx context.Context) error {
 		}
 		switch stmtNode := stmt.StmtNode.(type) {
 		case *ast.InsertStmt:
-			config, err := f.checkInsertColumn(stmtNode)
+			config, err := f.checkInsertTable(stmtNode)
 			if err != nil {
 				return err
 			}
@@ -128,11 +129,11 @@ func (f *_filter) PreHandle(ctx context.Context) error {
 					return err
 				}
 				if len(columns) != 0 {
-					encryptBindVars(columns, config, &stmt.BindVars)
+					return encryptBindVars(columns, config, &stmt.BindVars)
 				}
 			}
 		case *ast.UpdateStmt:
-			config, err := f.checkUpdateColumn(stmtNode)
+			config, err := f.checkUpdateTable(stmtNode)
 			if err != nil {
 				return err
 			}
@@ -142,7 +143,7 @@ func (f *_filter) PreHandle(ctx context.Context) error {
 					return err
 				}
 				if len(columns) != 0 {
-					encryptBindVars(columns, config, &stmt.BindVars)
+					return encryptBindVars(columns, config, &stmt.BindVars)
 				}
 			}
 		default:
@@ -153,10 +154,58 @@ func (f *_filter) PreHandle(ctx context.Context) error {
 }
 
 func (f *_filter) PostHandle(ctx context.Context, result proto.Result) error {
+	commandType := proto.CommandType(ctx)
+	switch commandType {
+	case constant.ComQuery:
+		stmt := proto.QueryStmt(ctx)
+		if stmtNode, ok := stmt.(*ast.SelectStmt); ok {
+			if decodedResult, is := result.(*mysql.DecodedResult); is && len(decodedResult.Rows) > 0 {
+				config, err := f.checkSelectTable(stmtNode)
+				if err != nil {
+					log.Error(err)
+					return nil
+				}
+				if config != nil {
+					columns, err := retrieveNeedDecryptionSelectColumns(decodedResult, config)
+					if err != nil {
+						log.Error(err)
+						return nil
+					}
+					if len(columns) != 0 {
+						decryptDecodedResult(decodedResult, config, columns)
+					}
+				}
+			}
+		}
+	case constant.ComStmtExecute:
+		stmt := proto.PrepareStmt(ctx)
+		if stmt == nil {
+			return errors.New("prepare stmt should not be nil")
+		}
+		if stmtNode, ok := stmt.StmtNode.(*ast.SelectStmt); ok {
+			if decodedResult, is := result.(*mysql.DecodedResult); is && len(decodedResult.Rows) > 0 {
+				config, err := f.checkSelectTable(stmtNode)
+				if err != nil {
+					log.Error(err)
+					return nil
+				}
+				if config != nil {
+					columns, err := retrieveNeedDecryptionSelectColumns(decodedResult, config)
+					if err != nil {
+						log.Error(err)
+						return nil
+					}
+					if len(columns) != 0 {
+						decryptDecodedResult(decodedResult, config, columns)
+					}
+				}
+			}
+		}
+	}
 	return nil
 }
 
-func (f _filter) checkInsertColumn(insertStmt *ast.InsertStmt) (*ColumnCrypto, error) {
+func (f _filter) checkInsertTable(insertStmt *ast.InsertStmt) (*ColumnCrypto, error) {
 	var sb strings.Builder
 	if err := insertStmt.Table.TableRefs.Left.Restore(
 		format.NewRestoreCtx(format.RestoreStringSingleQuotes|format.RestoreKeyWordUppercase, &sb)); err != nil {
@@ -171,9 +220,24 @@ func (f _filter) checkInsertColumn(insertStmt *ast.InsertStmt) (*ColumnCrypto, e
 	return nil, nil
 }
 
-func (f _filter) checkUpdateColumn(updateStmt *ast.UpdateStmt) (*ColumnCrypto, error) {
+func (f _filter) checkUpdateTable(updateStmt *ast.UpdateStmt) (*ColumnCrypto, error) {
 	var sb strings.Builder
 	if err := updateStmt.TableRefs.TableRefs.Left.Restore(
+		format.NewRestoreCtx(format.RestoreStringSingleQuotes|format.RestoreKeyWordUppercase, &sb)); err != nil {
+		return nil, err
+	}
+	tableName := sb.String()
+	for _, config := range f.ColumnConfigs {
+		if strings.EqualFold(config.Table, tableName) {
+			return config, nil
+		}
+	}
+	return nil, nil
+}
+
+func (f _filter) checkSelectTable(selectStmt *ast.SelectStmt) (*ColumnCrypto, error) {
+	var sb strings.Builder
+	if err := selectStmt.From.TableRefs.Left.Restore(
 		format.NewRestoreCtx(format.RestoreStringSingleQuotes|format.RestoreKeyWordUppercase, &sb)); err != nil {
 		return nil, err
 	}
@@ -209,6 +273,19 @@ func retrieveNeedEncryptionUpdateColumns(updateStmt *ast.UpdateStmt, config *Col
 		if contains(config.Columns, columnName) {
 			result = append(result, &columnIndex{
 				Column: columnName,
+				Index:  i,
+			})
+		}
+	}
+	return result, nil
+}
+
+func retrieveNeedDecryptionSelectColumns(decodedResult *mysql.DecodedResult, config *ColumnCrypto) ([]*columnIndex, error) {
+	var result []*columnIndex
+	for i, column := range decodedResult.Fields {
+		if column.Name != "" && contains(config.Columns, column.Name) {
+			result = append(result, &columnIndex{
+				Column: column.Name,
 				Index:  i,
 			})
 		}
@@ -260,24 +337,58 @@ func encryptUpdateValues(updateStmt *ast.UpdateStmt, config *ColumnCrypto) error
 }
 
 // encryptBindVars for com_stmt_execute
-func encryptBindVars(columns []*columnIndex, config *ColumnCrypto, args *map[string]interface{}) {
+func encryptBindVars(columns []*columnIndex, config *ColumnCrypto, args *map[string]interface{}) error {
 	for _, column := range columns {
 		parameterID := fmt.Sprintf("v%d", column.Index+1)
 		param := (*args)[parameterID]
 		if arg, ok := param.(string); ok {
 			encoded, err := misc.AesEncryptCBC([]byte(arg), []byte(config.AesKey), []byte(aesIV))
 			if err != nil {
-				log.Debugf("Encryption of %s failed: %v", column.Column, err)
+				return errors.Errorf("Encryption of %s failed: %v", column.Column, err)
 			}
 			val := hex.EncodeToString(encoded)
 			(*args)[parameterID] = val
 		} else if arg, ok := param.([]byte); ok {
 			encoded, err := misc.AesEncryptCBC(arg, []byte(config.AesKey), []byte(aesIV))
 			if err != nil {
-				log.Debugf("Encryption of %s failed: %v", column.Column, err)
+				return errors.Errorf("Encryption of %s failed: %v", column.Column, err)
 			}
 			val := hex.EncodeToString(encoded)
 			(*args)[parameterID] = []byte(val)
+		}
+	}
+	return nil
+}
+
+func decryptDecodedResult(decodedResult *mysql.DecodedResult, config *ColumnCrypto, columns []*columnIndex) {
+	for _, row := range decodedResult.Rows {
+		switch r := row.(type) {
+		case *mysql.TextRow:
+			for _, column := range columns {
+				protoValue := r.Values[column.Index]
+				if protoValue != nil {
+					if originalVal, ok := protoValue.Val.([]byte); ok {
+						if n, err := hex.Decode(originalVal, originalVal); err == nil {
+							if decodedVal, err := misc.AesDecryptCBC(originalVal[:n], []byte(config.AesKey), []byte(aesIV)); err == nil {
+								r.Values[column.Index].Val = decodedVal
+							}
+						}
+					}
+				}
+			}
+		case *mysql.BinaryRow:
+			for _, column := range columns {
+				protoValue := r.Values[column.Index]
+				if protoValue != nil {
+					if originalVal, ok := protoValue.Val.([]byte); ok {
+						if n, err := hex.Decode(originalVal, originalVal); err == nil {
+							if decodedVal, err := misc.AesDecryptCBC(originalVal[:n], []byte(config.AesKey), []byte(aesIV)); err == nil {
+								r.Values[column.Index].Val = decodedVal
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 }
