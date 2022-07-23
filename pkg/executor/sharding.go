@@ -211,7 +211,9 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 	if queryStmt == nil {
 		return nil, 0, errors.New("query stmt should not be nil")
 	}
-	if _, ok := queryStmt.(*ast.SetStmt); ok {
+
+	switch stmt := queryStmt.(type) {
+	case *ast.SetStmt:
 		for _, db := range executor.all {
 			go func(db *DataSourceBrief) {
 				if _, _, err := db.DB.Query(spanCtx, sql); err != nil {
@@ -224,20 +226,28 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 			AffectedRows: 0,
 			InsertId:     0,
 		}, 0, nil
-	}
-	if selectStmt, ok := queryStmt.(*ast.SelectStmt); ok {
-		if selectStmt.Fields != nil && len(selectStmt.Fields.Fields) > 0 {
-			if _, ok := selectStmt.Fields.Fields[0].Expr.(*ast.VariableExpr); ok {
+	case *ast.ShowStmt:
+		return executor.all[0].DB.Query(spanCtx, sql)
+	case *ast.SelectStmt:
+		if stmt.Fields != nil && len(stmt.Fields.Fields) > 0 {
+			if _, ok := stmt.Fields.Fields[0].Expr.(*ast.VariableExpr); ok {
 				return executor.all[0].DB.Query(spanCtx, sql)
 			}
 		}
+		plan, err = executor.optimizer.Optimize(spanCtx, queryStmt)
+		if err != nil {
+			return nil, 0, err
+		}
+		proto.WithVariable(spanCtx, constant.TransactionTimeout, executor.config.TransactionTimeout)
+		return plan.Execute(spanCtx)
+	default:
+		plan, err = executor.optimizer.Optimize(spanCtx, queryStmt)
+		if err != nil {
+			return nil, 0, err
+		}
+		proto.WithVariable(spanCtx, constant.TransactionTimeout, executor.config.TransactionTimeout)
+		return plan.Execute(spanCtx)
 	}
-	plan, err = executor.optimizer.Optimize(spanCtx, queryStmt)
-	if err != nil {
-		return nil, 0, err
-	}
-	proto.WithVariable(spanCtx, constant.TransactionTimeout, executor.config.TransactionTimeout)
-	return plan.Execute(spanCtx)
 }
 
 func (executor *ShardingExecutor) ExecutorComStmtExecute(

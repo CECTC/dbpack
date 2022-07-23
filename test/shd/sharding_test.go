@@ -181,6 +181,60 @@ func (suite *_ShardingSuite) TestSelectCount() {
 	}
 }
 
+func (suite *_ShardingSuite) TestShowDatabases() {
+	rows, err := suite.db.Query("SHOW DATABASES")
+	if suite.NoErrorf(err, "show databases error: %v", err) {
+		var (
+			database string
+		)
+		for rows.Next() {
+			err := rows.Scan(&database)
+			suite.NoError(err)
+			suite.T().Logf("database: %s", database)
+		}
+	}
+}
+
+func (suite *_ShardingSuite) TestShowEngines() {
+	rows, err := suite.db.Query("SHOW ENGINES")
+	if suite.NoErrorf(err, "show engines error: %v", err) {
+		var (
+			engine, support, comment, transactions, xa, savepoints string
+		)
+		for rows.Next() {
+			err := rows.Scan(&engine, &support, &comment, &transactions, &xa, &savepoints)
+			suite.NoError(err)
+			suite.T().Logf("%s	%s	%s	%s	%s	%s", engine, support, comment, transactions, xa, savepoints)
+		}
+	}
+}
+
+func (suite *_ShardingSuite) TestShowCreateDatabase() {
+	rows, err := suite.db.Query("SHOW CREATE DATABASE drug;")
+	if suite.NoErrorf(err, "show engines error: %v", err) {
+		var (
+			database, createDatabase string
+		)
+		for rows.Next() {
+			err := rows.Scan(&database, &createDatabase)
+			suite.NoError(err)
+			suite.T().Logf("%s	%s", database, createDatabase)
+		}
+	}
+
+	rows, err = suite.db.Query("SHOW CREATE SCHEMA drug;")
+	if suite.NoErrorf(err, "show engines error: %v", err) {
+		var (
+			database, createDatabase string
+		)
+		for rows.Next() {
+			err := rows.Scan(&database, &createDatabase)
+			suite.NoError(err)
+			suite.T().Logf("%s	%s", database, createDatabase)
+		}
+	}
+}
+
 func (suite *_ShardingSuite) TestDeleteDrugResource() {
 	result, err := suite.db.Exec(deleteDrugResource, 10, 20)
 	suite.Assert().Nil(err)
