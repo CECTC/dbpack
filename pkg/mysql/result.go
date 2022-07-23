@@ -33,17 +33,17 @@ func (res *Result) RowsAffected() (uint64, error) {
 	return res.AffectedRows, nil
 }
 
-type MergeResult struct {
+type DecodedResult struct {
 	Fields       []*Field
 	AffectedRows uint64
 	InsertId     uint64
 	Rows         []proto.Row
 }
 
-func (res *MergeResult) LastInsertId() (uint64, error) {
+func (res *DecodedResult) LastInsertId() (uint64, error) {
 	return res.InsertId, nil
 }
 
-func (res *MergeResult) RowsAffected() (uint64, error) {
+func (res *DecodedResult) RowsAffected() (uint64, error) {
 	return res.AffectedRows, nil
 }

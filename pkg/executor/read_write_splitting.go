@@ -28,16 +28,13 @@ import (
 	"github.com/cectc/dbpack/pkg/filter"
 	"github.com/cectc/dbpack/pkg/lb"
 	"github.com/cectc/dbpack/pkg/log"
+	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/third_party/parser/ast"
-	"github.com/cectc/dbpack/third_party/parser/model"
-)
-
-const (
-	hintUseDB = "UseDB"
+	"github.com/cectc/dbpack/third_party/parser/format"
 )
 
 type ReadWriteSplittingExecutor struct {
@@ -152,19 +149,44 @@ func (executor *ReadWriteSplittingExecutor) ExecuteFieldList(ctx context.Context
 	return nil, errors.New("unimplemented COM_FIELD_LIST in read write splitting mode")
 }
 
-func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context, sql string) (proto.Result, uint16, error) {
-	var (
-		db     *DataSourceBrief
-		tx     proto.Tx
-		result proto.Result
-		err    error
-	)
-
+func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
+	ctx context.Context, _ string) (result proto.Result, warns uint16, err error) {
 	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.RWSComQuery)
 	defer span.End()
 
+	if err = executor.doPreFilter(spanCtx); err != nil {
+		return nil, 0, err
+	}
+	defer func() {
+		if err == nil {
+			result, err = decodeTextResult(result)
+			if err != nil {
+				span.RecordError(err)
+				return
+			}
+			err = executor.doPostFilter(spanCtx, result)
+		} else {
+			span.RecordError(err)
+		}
+	}()
+
+	var (
+		db *DataSourceBrief
+		tx proto.Tx
+		sb strings.Builder
+	)
+
 	connectionID := proto.ConnectionID(spanCtx)
 	queryStmt := proto.QueryStmt(spanCtx)
+	if err := queryStmt.Restore(format.NewRestoreCtx(format.RestoreStringSingleQuotes|
+		format.RestoreKeyWordUppercase|
+		format.RestoreStringWithoutDefaultCharset, &sb)); err != nil {
+		return nil, 0, err
+	}
+	sql := sb.String()
+	spanCtx = proto.WithSqlText(spanCtx, sql)
+
+	log.Debugf("connectionID: %d, query: %s", connectionID, sql)
 	switch stmt := queryStmt.(type) {
 	case *ast.SetStmt:
 		if shouldStartTransaction(stmt) {
@@ -246,7 +268,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 			return tx.Query(spanCtx, sql)
 		}
 		withSlaveCtx := proto.WithSlave(spanCtx)
-		if has, dsName := hasUseDBHint(stmt.TableHints); has {
+		if has, dsName := misc.HasUseDBHint(stmt.TableHints); has {
 			protoDB := resource.GetDBManager().GetDB(dsName)
 			if protoDB == nil {
 				log.Debugf("data source %d not found", dsName)
@@ -271,11 +293,29 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(ctx context.Context
 	}
 }
 
-func (executor *ReadWriteSplittingExecutor) ExecutorComStmtExecute(ctx context.Context, stmt *proto.Stmt) (proto.Result, uint16, error) {
+func (executor *ReadWriteSplittingExecutor) ExecutorComStmtExecute(
+	ctx context.Context, stmt *proto.Stmt) (result proto.Result, warns uint16, err error) {
 	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.RWSComStmtExecute)
 	defer span.End()
 
+	if err = executor.doPreFilter(spanCtx); err != nil {
+		return nil, 0, err
+	}
+	defer func() {
+		if err == nil {
+			result, err = decodeBinaryResult(result)
+			if err != nil {
+				span.RecordError(err)
+				return
+			}
+			err = executor.doPostFilter(spanCtx, result)
+		} else {
+			span.RecordError(err)
+		}
+	}()
+
 	connectionID := proto.ConnectionID(spanCtx)
+	log.Debugf("connectionID: %d, prepare: %s", connectionID, stmt.SqlText)
 	txi, ok := executor.localTransactionMap.Load(connectionID)
 	if ok {
 		// in local transaction
@@ -288,7 +328,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComStmtExecute(ctx context.C
 		return db.DB.ExecuteStmt(proto.WithMaster(spanCtx), stmt)
 	case *ast.SelectStmt:
 		var db *DataSourceBrief
-		if has, dsName := hasUseDBHint(st.TableHints); has {
+		if has, dsName := misc.HasUseDBHint(st.TableHints); has {
 			protoDB := resource.GetDBManager().GetDB(dsName)
 			if protoDB == nil {
 				log.Debugf("data source %d not found", dsName)
@@ -337,15 +377,4 @@ func (executor *ReadWriteSplittingExecutor) doPostFilter(ctx context.Context, re
 		}
 	}
 	return nil
-}
-
-func hasUseDBHint(hints []*ast.TableOptimizerHint) (bool, string) {
-	for _, hint := range hints {
-		if strings.EqualFold(hint.HintName.String(), hintUseDB) {
-			hintData := hint.HintData.(model.CIStr)
-			ds := hintData.String()
-			return true, ds
-		}
-	}
-	return false, ""
 }

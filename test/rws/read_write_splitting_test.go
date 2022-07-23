@@ -34,8 +34,12 @@ const (
 	insertEmployee  = `INSERT INTO employees ( emp_no, birth_date, first_name, last_name, gender, hire_date ) VALUES (?, ?, ?, ?, ?, ?)`
 	selectEmployee1 = `SELECT emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
 	selectEmployee2 = `SELECT /*+ UseDB('employees-master') */ emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
-	updateEmployee  = `UPDATE employees set last_name = ? where emp_no = ?`
+	updateEmployee  = `UPDATE employees SET last_name = ? WHERE emp_no = ?`
 	deleteEmployee  = `DELETE FROM employees WHERE emp_no = ?`
+
+	insertDepartment = `INSERT INTO departments( id, dept_no, dept_name ) values (?, ?, ?)`
+	updateDepartment = `UPDATE departments SET dept_name = ? WHERE id = ?`
+	selectDepartment = `SELECT /*+ UseDB('employees-master') */ id, dept_name FROM departments WHERE id = ?`
 )
 
 type _ReadWriteSplittingSuite struct {
@@ -139,6 +143,29 @@ func (suite *_ReadWriteSplittingSuite) TestSelect1() {
 	}
 }
 
+func (suite *_ReadWriteSplittingSuite) TestInsertEncryption() {
+	result, err := suite.db.Exec(insertDepartment, 1, "1001", "sunset")
+	if suite.NoErrorf(err, "insert row error: %v", err) {
+		affected, err := result.RowsAffected()
+		if suite.NoErrorf(err, "insert row error: %v", err) {
+			suite.Equal(int64(1), affected)
+		}
+	}
+
+	rows, err := suite.db.Query(selectDepartment, 1)
+	if suite.NoErrorf(err, "select row error: %v", err) {
+		var (
+			id       int64
+			deptName string
+		)
+		for rows.Next() {
+			err := rows.Scan(&id, &deptName)
+			suite.NoError(err)
+			suite.T().Logf("id: %d, dept name: %s", id, deptName)
+		}
+	}
+}
+
 func (suite *_ReadWriteSplittingSuite) TestSelect2() {
 	rows, err := suite.db.Query(selectEmployee2, 100001)
 	if suite.NoErrorf(err, "select row error: %v", err) {
@@ -177,6 +204,29 @@ func (suite *_ReadWriteSplittingSuite) TestUpdate() {
 			suite.NoError(err)
 		}
 		suite.Equal("louis", lastName)
+	}
+}
+
+func (suite *_ReadWriteSplittingSuite) TestUpdateEncryption() {
+	result, err := suite.db.Exec(updateDepartment, "moonlight", 1)
+	if suite.NoErrorf(err, "update department error: %v", err) {
+		affected, err := result.RowsAffected()
+		if suite.NoErrorf(err, "update department error: %v", err) {
+			suite.Equal(int64(1), affected)
+		}
+	}
+
+	rows, err := suite.db.Query(selectDepartment, 1)
+	if suite.NoErrorf(err, "select row error: %v", err) {
+		var (
+			id       int64
+			deptName string
+		)
+		for rows.Next() {
+			err := rows.Scan(&id, &deptName)
+			suite.NoError(err)
+			suite.T().Logf("id: %d, dept name: %s", id, deptName)
+		}
 	}
 }
 

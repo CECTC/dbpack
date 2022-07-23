@@ -29,11 +29,15 @@ const (
 	driverName = "mysql"
 
 	// user:password@tcp(127.0.0.1:3306)/dbName?
-	dataSourceName = "dksl:123456@tcp(127.0.0.1:13306)/employees?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
+	dataSourceName = "dksl:123456@tcp(127.0.0.1:13306)/employees?interpolateParams=true&timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
 	insertEmployee = `INSERT INTO employees ( emp_no, birth_date, first_name, last_name, gender, hire_date ) VALUES (?, ?, ?, ?, ?, ?)`
 	selectEmployee = `SELECT emp_no, birth_date, first_name, last_name, gender, hire_date FROM employees WHERE emp_no = ?`
-	updateEmployee = `UPDATE employees set last_name = ? where emp_no = ?`
+	updateEmployee = `UPDATE employees SET last_name = ? WHERE emp_no = ?`
 	deleteEmployee = `DELETE FROM employees WHERE emp_no = ?`
+
+	insertDepartment = `INSERT INTO departments( id, dept_no, dept_name ) values (?, ?, ?)`
+	updateDepartment = `UPDATE departments SET dept_name = ? WHERE id = ?`
+	selectDepartment = `SELECT id, dept_name FROM departments WHERE id = ?`
 )
 
 type _CRUDSuite struct {
@@ -80,6 +84,29 @@ func (suite *_CRUDSuite) TestInsert() {
 	}
 }
 
+func (suite *_CRUDSuite) TestInsertEncryption() {
+	result, err := suite.db.Exec(insertDepartment, 1, "1001", "sunset")
+	if suite.NoErrorf(err, "insert row error: %v", err) {
+		affected, err := result.RowsAffected()
+		if suite.NoErrorf(err, "insert row error: %v", err) {
+			suite.Equal(int64(1), affected)
+		}
+	}
+
+	rows, err := suite.db.Query(selectDepartment, 1)
+	if suite.NoErrorf(err, "select row error: %v", err) {
+		var (
+			id       int64
+			deptName string
+		)
+		for rows.Next() {
+			err := rows.Scan(&id, &deptName)
+			suite.NoError(err)
+			suite.T().Logf("id: %d, dept name: %s", id, deptName)
+		}
+	}
+}
+
 func (suite *_CRUDSuite) TestSelect() {
 	rows, err := suite.db.Query(selectEmployee, 100001)
 	if suite.NoErrorf(err, "select row error: %v", err) {
@@ -103,6 +130,29 @@ func (suite *_CRUDSuite) TestUpdate() {
 		affected, err := result.RowsAffected()
 		if suite.NoErrorf(err, "update row error: %v", err) {
 			suite.Equal(int64(1), affected)
+		}
+	}
+}
+
+func (suite *_CRUDSuite) TestUpdateEncryption() {
+	result, err := suite.db.Exec(updateDepartment, "moonlight", 1)
+	if suite.NoErrorf(err, "update department error: %v", err) {
+		affected, err := result.RowsAffected()
+		if suite.NoErrorf(err, "update department error: %v", err) {
+			suite.Equal(int64(1), affected)
+		}
+	}
+
+	rows, err := suite.db.Query(selectDepartment, 1)
+	if suite.NoErrorf(err, "select row error: %v", err) {
+		var (
+			id       int64
+			deptName string
+		)
+		for rows.Next() {
+			err := rows.Scan(&id, &deptName)
+			suite.NoError(err)
+			suite.T().Logf("id: %d, dept name: %s", id, deptName)
 		}
 	}
 }

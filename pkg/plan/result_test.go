@@ -65,7 +65,7 @@ func TestMergeResultWithOutOrderByAndLimit(t *testing.T) {
 	defer patch2.Reset()
 	patch3 := buildBinaryRowDecodePatch()
 	defer patch3.Reset()
-	merge := func(commandType int) (*mysql.MergeResult, uint16) {
+	merge := func(commandType int) (*mysql.DecodedResult, uint16) {
 		return mergeResultWithoutOrderByAndLimit(proto.WithCommandType(context.Background(), byte(commandType)),
 			[]*ResultWithErr{
 				{
@@ -106,7 +106,7 @@ func TestMergeResultWithLimit(t *testing.T) {
 	defer patch2.Reset()
 	patch3 := buildBinaryRowDecodePatch()
 	defer patch3.Reset()
-	merge := func(commandType int) (*mysql.MergeResult, uint16) {
+	merge := func(commandType int) (*mysql.DecodedResult, uint16) {
 		return mergeResultWithLimit(proto.WithCommandType(context.Background(), byte(commandType)),
 			[]*ResultWithErr{
 				{
@@ -150,7 +150,7 @@ func TestMergeResultWithOrderByAndLimit(t *testing.T) {
 	defer patch2.Reset()
 	patch3 := buildBinaryRowDecodePatch()
 	defer patch3.Reset()
-	merge := func(commandType int) (*mysql.MergeResult, uint16) {
+	merge := func(commandType int) (*mysql.DecodedResult, uint16) {
 		return mergeResultWithOrderByAndLimit(proto.WithCommandType(context.Background(), byte(commandType)),
 			[]*ResultWithErr{
 				{
@@ -218,7 +218,7 @@ func TestMergeResultWithOrderBy(t *testing.T) {
 	defer patch2.Reset()
 	patch3 := buildBinaryRowDecodePatch()
 	defer patch3.Reset()
-	merge := func(commandType int) (*mysql.MergeResult, uint16) {
+	merge := func(commandType int) (*mysql.DecodedResult, uint16) {
 		return mergeResultWithOrderBy(proto.WithCommandType(context.Background(), byte(commandType)),
 			[]*ResultWithErr{
 				{
