@@ -97,3 +97,14 @@
 
 * refactor: AuditLog filter PreHandle support more stmtnode type ([198](https://github.com/CECTC/dbpack/pull/198)) ([bb408a5](https://github.com/CECTC/dbpack/commit/bb408a5f7f1f22e5c5a5927e24b0f0316e0b6e12))
 * refactor: support manipulating the same data in different transaction… ([199](https://github.com/CECTC/dbpack/issues/199)) ([040b4d1](https://github.com/CECTC/dbpack/commit/040b4d14968ab96c5933fc6dad5968668c151e45))
+
+## v0.3.0
+
+### Features
+* add more trace span and integrate with jaeger ([177](https://github.com/CECTC/dbpack/pull/177)) ([d703959](https://github.com/CECTC/dbpack/commit/d70395948677b41759e795be60eb93fcb5dc7f74))
+* add trace for BackendConnection ([204](https://github.com/CECTC/dbpack/pull/204)) ([36b3894](https://github.com/CECTC/dbpack/commit/36b38940539e8d14a8550bd1d08695591cd9c491))
+* support column encryption ([24](https://github.com/CECTC/dbpack/issues/24)) ([946c190](https://github.com/CECTC/dbpack/commit/946c19013c4030f31fb2afecae7772c8546a5a01))
+
+### Bug Fixes
+
+* fix: construct a TraceContext with the correct traceparent ([203](https://github.com/CECTC/dbpack/pull/203)) ([3ecb2cc](https://github.com/CECTC/dbpack/commit/3ecb2cc3dfcf164f68c0cadd2ea6fe73ed49ceff))
