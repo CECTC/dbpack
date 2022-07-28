@@ -53,7 +53,7 @@ type store struct {
 	initBranchSessionRevision int64
 }
 
-func NewEtcdStore(config clientv3.Config) *store {
+func NewEtcdStore(config clientv3.Config) storage.Driver {
 	if config.DialTimeout == 0 {
 		config.DialTimeout = 5 * time.Second
 	}
