@@ -29,7 +29,6 @@ import (
 	"github.com/cectc/dbpack/pkg/config"
 	"github.com/cectc/dbpack/pkg/dt"
 	"github.com/cectc/dbpack/pkg/dt/api"
-	"github.com/cectc/dbpack/pkg/dt/storage/etcd"
 )
 
 const (
@@ -67,9 +66,7 @@ func (suite *_DistributedTransactionSuite) SetupSuite() {
 		},
 	}
 
-	driver := etcd.NewEtcdStore(conf.EtcdConfig)
-
-	dt.InitDistributedTransactionManager(conf, driver)
+	dt.InitDistributedTransactionManager(conf)
 
 	db, err := sql.Open(driverName, dataSourceName)
 	if suite.NoErrorf(err, "connection error: %v", err) {

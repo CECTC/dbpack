@@ -34,7 +34,6 @@ import (
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/driver"
 	"github.com/cectc/dbpack/pkg/dt"
-	"github.com/cectc/dbpack/pkg/dt/storage/etcd"
 	"github.com/cectc/dbpack/pkg/executor"
 	"github.com/cectc/dbpack/pkg/filter"
 	_ "github.com/cectc/dbpack/pkg/filter/audit_log"
@@ -125,8 +124,7 @@ var (
 
 			if conf.DistributedTransaction != nil {
 				dbpackHttp.DistributedTransactionEnabled = true
-				driver := etcd.NewEtcdStore(conf.DistributedTransaction.EtcdConfig)
-				dt.InitDistributedTransactionManager(conf.DistributedTransaction, driver)
+				dt.InitDistributedTransactionManager(conf.DistributedTransaction)
 			}
 
 			dbpackHttp.Listeners = conf.Listeners

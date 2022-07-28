@@ -31,6 +31,7 @@ import (
 	"github.com/cectc/dbpack/pkg/dt/api"
 	"github.com/cectc/dbpack/pkg/dt/metrics"
 	"github.com/cectc/dbpack/pkg/dt/storage"
+	"github.com/cectc/dbpack/pkg/dt/storage/etcd"
 	dbpackHttp "github.com/cectc/dbpack/pkg/http"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
@@ -55,14 +56,14 @@ var (
 	manager        *DistributedTransactionManager
 )
 
-func InitDistributedTransactionManager(conf *config.DistributedTransaction, storageDriver storage.Driver) {
+func InitDistributedTransactionManager(conf *config.DistributedTransaction) {
 	if conf.RetryDeadThreshold == 0 {
 		conf.RetryDeadThreshold = DefaultRetryDeadThreshold
 	}
-
+	driver := etcd.NewEtcdStore(conf.EtcdConfig)
 	manager = &DistributedTransactionManager{
 		applicationID:                    conf.ApplicationID,
-		storageDriver:                    storageDriver,
+		storageDriver:                    driver,
 		retryDeadThreshold:               conf.RetryDeadThreshold,
 		rollbackRetryTimeoutUnlockEnable: conf.RollbackRetryTimeoutUnlockEnable,
 
@@ -70,7 +71,7 @@ func InitDistributedTransactionManager(conf *config.DistributedTransaction, stor
 		branchSessionQueue: workqueue.New(),
 	}
 	go func() {
-		if storageDriver.LeaderElection(manager.applicationID) {
+		if driver.LeaderElection(manager.applicationID) {
 			dbpackHttp.IsMaster = true
 			if err := manager.processGlobalSessions(); err != nil {
 				log.Fatal(err)
@@ -284,11 +285,12 @@ func (manager *DistributedTransactionManager) processGlobalSessions() error {
 				if err := manager.storageDriver.DeleteGlobalSession(context.Background(), gs.XID); err != nil {
 					return err
 				}
-				log.Debugf("global session finished, key: %s", gs.XID)
 				switch gs.Status {
 				case api.Committing:
+					log.Debugf("global session commit finished, key: %s", gs.XID)
 					manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusCommitted)
 				case api.Rollbacking:
+					log.Debugf("global session rollback finished, key: %s", gs.XID)
 					manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusRollbacked)
 				}
 			} else {
@@ -342,16 +344,17 @@ func (manager *DistributedTransactionManager) processNextGlobalSession(ctx conte
 			if err := manager.storageDriver.DeleteGlobalSession(context.Background(), newGlobalSession.XID); err != nil {
 				log.Error(err)
 			}
-			log.Debugf("global session finished, key: %s", newGlobalSession.XID)
 			switch newGlobalSession.Status {
 			case api.Committing:
+				log.Debugf("global session commit finished, key: %s", newGlobalSession.XID)
 				manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusCommitted)
 			case api.Rollbacking:
+				log.Debugf("global session rollback finished, key: %s", newGlobalSession.XID)
 				manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusRollbacked)
 			}
 		} else {
 			// global transaction timeout.
-			manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusRollbacked)
+			manager.recordGlobalTransactionMetric(gs.TransactionName, metrics.TransactionStatusTimeout)
 		}
 	}
 	return true

@@ -11,6 +11,7 @@ require (
 	github.com/cznic/strutil v0.0.0-20181122101858-275e90344537
 	github.com/cznic/y v0.0.0-20181122101901-b05e8c2e8d7b
 	github.com/dop251/goja v0.0.0-20220516123900-4418d4575a41
+	github.com/gin-gonic/gin v1.5.0
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gogo/protobuf v1.3.2
@@ -40,6 +41,20 @@ require (
 	gopkg.in/yaml.v3 v3.0.0
 	k8s.io/client-go v0.23.5
 	vimagination.zapto.org/byteio v1.0.1
+)
+
+require (
+	github.com/gin-contrib/sse v0.1.0 // indirect
+	github.com/go-playground/locales v0.12.1 // indirect
+	github.com/go-playground/universal-translator v0.16.0 // indirect
+	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/leodido/go-urn v1.1.0 // indirect
+	github.com/mattn/go-isatty v0.0.12 // indirect
+	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
+	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/ugorji/go/codec v1.1.7 // indirect
+	gopkg.in/go-playground/validator.v9 v9.29.1 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
 require (
@@ -74,7 +89,7 @@ require (
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/pingcap/failpoint v0.0.0-20210316064728-7acb0f0a3dfd // indirect
 	github.com/pingcap/kvproto v0.0.0-20210806074406-317f69fb54b4 // indirect
-	github.com/pingcap/parser v0.0.0-20210831085004-b5390aa83f65
+	github.com/pingcap/parser v0.0.0-20210831085004-b5390aa83f65 // indirect
 	github.com/pingcap/tipb v0.0.0-20210708040514-0f154bb0dc0f // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
