@@ -66,6 +66,7 @@ unit-test: ## run unit test
 
 ########################################################
 build-local:  ## build dbpack cli, and put in dist dir
+	export GOPROXY=https://goproxy.cn
 	${GO_BUILD_ENVVARS} go build -o dbpack ./cmd
 
 ########################################################

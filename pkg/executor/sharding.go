@@ -259,6 +259,8 @@ func (executor *ShardingExecutor) ExecutorComStmtExecute(
 	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.SHDComStmtExecute)
 	defer span.End()
 
+	connectionID := proto.ConnectionID(ctx)
+	log.Debugf("connectionID: %d, prepare: %s", connectionID, stmt.SqlText)
 	for i := 0; i < len(stmt.BindVars); i++ {
 		parameterID := fmt.Sprintf("v%d", i+1)
 		args = append(args, stmt.BindVars[parameterID])
