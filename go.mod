@@ -11,7 +11,7 @@ require (
 	github.com/cznic/strutil v0.0.0-20181122101858-275e90344537
 	github.com/cznic/y v0.0.0-20181122101901-b05e8c2e8d7b
 	github.com/dop251/goja v0.0.0-20220516123900-4418d4575a41
-	github.com/gin-gonic/gin v1.5.0
+	github.com/gin-gonic/gin v1.7.0
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gogo/protobuf v1.3.2
@@ -45,15 +45,16 @@ require (
 
 require (
 	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/go-playground/locales v0.12.1 // indirect
-	github.com/go-playground/universal-translator v0.16.0 // indirect
+	github.com/go-playground/locales v0.13.0 // indirect
+	github.com/go-playground/universal-translator v0.17.0 // indirect
+	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/leodido/go-urn v1.1.0 // indirect
+	github.com/leodido/go-urn v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/ugorji/go/codec v1.1.7 // indirect
-	gopkg.in/go-playground/validator.v9 v9.29.1 // indirect
+	golang.org/x/crypto v0.0.0-20220214200702-86341886e292 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
