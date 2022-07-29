@@ -353,7 +353,7 @@ func (db *DB) Ping() {
 		<-timer.C
 		err := db.ping()
 		if err != nil {
-			log.Errorf("db %s ping failed", db.name)
+			log.Errorf("db %s ping failed, err: %v", db.name, err)
 		}
 		timer.Reset(db.pingInterval)
 	}
