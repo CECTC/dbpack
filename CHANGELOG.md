@@ -114,3 +114,14 @@
 ### Features
 
 * feature: support gin middleware and grpc interceptor ([212](https://github.com/CECTC/dbpack/issues/212)) ([a74d1d2](https://github.com/CECTC/dbpack/commit/a74d1d201457bc394bdbf0364cb25657fca3e0e2))
+
+## v0.3.1
+
+### Features
+
+* feature: support customize request buffer size for http request ([218](https://github.com/CECTC/dbpack/issues/218)) ([593fd25](https://github.com/CECTC/dbpack/commit/593fd25981a28ce9c83ec49a6a1556e9961d49fe))
+
+### Changes
+
+* chore: print ping failed err ([216](https://github.com/CECTC/dbpack/pull/216)) ([852a0f2](https://github.com/CECTC/dbpack/commit/852a0f21f76a270c4d5e8eba60e7c155f0f8edaa))
+
