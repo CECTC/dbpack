@@ -56,7 +56,7 @@ func main() {
 }
 
 var (
-	Version               = "0.3.0"
+	Version               = "0.3.1"
 	defaultHTTPListenPort = 18888
 	appName               = "dbpack"
 

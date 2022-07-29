@@ -108,3 +108,9 @@
 ### Bug Fixes
 
 * fix: construct a TraceContext with the correct traceparent ([203](https://github.com/CECTC/dbpack/pull/203)) ([3ecb2cc](https://github.com/CECTC/dbpack/commit/3ecb2cc3dfcf164f68c0cadd2ea6fe73ed49ceff))
+
+## v0.3.1
+
+### Features
+
+* feature: support gin middleware and grpc interceptor ([212](https://github.com/CECTC/dbpack/issues/212)) ([a74d1d2](https://github.com/CECTC/dbpack/commit/a74d1d201457bc394bdbf0364cb25657fca3e0e2))
