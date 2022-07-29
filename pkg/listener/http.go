@@ -38,6 +38,12 @@ import (
 
 type HttpConfig struct {
 	BackendHost string `yaml:"backend_host" json:"backend_host"`
+	// ReadBufferSize default 4096 byte
+	ReadBufferSize int `yaml:"read_buffer_size" json:"read_buffer_size"`
+	// WriteBufferSize default 4096 byte
+	WriteBufferSize int `yaml:"write_buffer_size" json:"write_buffer_size"`
+	// MaxRequestBodySize default 4 * 1024 * 1024 byte
+	MaxRequestBodySize int `yaml:"max_request_body_size" json:"max_request_body_size"`
 }
 
 type HttpListener struct {
@@ -97,7 +103,7 @@ func NewHttpListener(conf *config.Listener) (proto.Listener, error) {
 
 func (l *HttpListener) Listen() {
 	log.Infof("start http listener %s", l.listener.Addr())
-	if err := fasthttp.Serve(l.listener, func(fastHttpCtx *fasthttp.RequestCtx) {
+	handler := func(fastHttpCtx *fasthttp.RequestCtx) {
 		fastHttpCtx.SetUserValue(dt.VarHost, l.conf.BackendHost)
 		ctx := extractTraceContext(context.Background(), &fastHttpCtx.Request)
 		spanCtx, span := tracing.GetTraceSpan(ctx, tracing.HTTPProxyService)
@@ -130,7 +136,14 @@ func (l *HttpListener) Listen() {
 			fastHttpCtx.SetStatusCode(http.StatusInternalServerError)
 			fastHttpCtx.SetBodyString(fmt.Sprintf(`{"success":false,"error":"%s"}`, err.Error()))
 		}
-	}); err != nil {
+	}
+	server := &fasthttp.Server{
+		Handler:            handler,
+		ReadBufferSize:     l.conf.ReadBufferSize,
+		WriteBufferSize:    l.conf.WriteBufferSize,
+		MaxRequestBodySize: l.conf.MaxRequestBodySize,
+	}
+	if err := server.Serve(l.listener); err != nil {
 		log.Error(err)
 	}
 }
