@@ -8,31 +8,31 @@
 
 <img src="https://cectc.github.io/dbpack-doc/images/dbpack.svg" alt="dbpack.svg"/>
 
-> DBPack means a database cluster tool pack. It can be deployed as a sidecar in a pod, it shields complex basic logic, so that business development does not need to rely on a specific SDK, simplifying the development process and improving development efficiency.
+> DBPack is a database proxy pack aims to provide a distributed transaction solution of high performance and has no invasion into business logic. It can be deployed as a sidecar in a pod, which can shield complex basic logic, so that business development does not need to rely on a specific SDK, simplifying the development process and improving development efficiency. It supports any programming language and is easy to use.
 
 
 ## Feature
 
 + support MYSQL protocol.
 + event driven distributed transaction solution inspired by kubernetes.
-+ support read write splitting，supports custom SQL routing via Hint.
-+ support audit log, support sql tracing.
-+ sharding: support query on sharded table, support order by，support limit.
-+ sharding: support insert、delete、update on sharded table
-+ deployed as a sidecar，support any language
-+ more features on the road
++ support read write splitting and custom SQL routing via Hint.
++ support audit log and SQL tracing.
++ sharding: support query on sharded table, support `order by` and `limit`.
++ sharding: support `insert`, `delete`, `update` on sharded tables.
++ can be deployed as a sidecar，support any programming language.
++ more features on the road.
 
 ## Metrics
-using prometheus metrics, default metric server run at :18888
+using prometheus metrics, default metric server runs at :18888
 
-## Documentation
-+ [Official Website](https://cectc.github.io/dbpack-doc/)
+## Getting Started
++ [Official Document](https://cectc.github.io/dbpack-doc/#/en-us/)
 + [Samples](https://github.com/CECTC/dbpack-samples)
 
 ## Requirements
 
-+ Go 1.17 or higher
-+ MYSQL (5.7+)
++ Go >= 1.17
++ MYSQL >= 5.7+
 
 ## Contribution Guide
 + [Contribution Guide](CONTRIBUTING.md)
