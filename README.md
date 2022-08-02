@@ -1,9 +1,10 @@
 # DBPack
 [![LICENSE](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/cectc/dbpack/blob/dev/LICENSE)
-[![codecov](https://codecov.io/gh/CECTC/dbpack/branch/dev/graph/badge.svg?token=2AVE9EHLXO)](https://codecov.io/gh/CECTC/dbpack)
 ![GitHub Workflow Status](https://github.com/cectc/dbpack/actions/workflows/main.yml/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cectc/dbpack)](https://goreportcard.com/report/github.com/cectc/dbpack)
+[![codecov](https://codecov.io/gh/CECTC/dbpack/branch/dev/graph/badge.svg?token=2AVE9EHLXO)](https://codecov.io/gh/CECTC/dbpack)
 [![GitHub Release](https://img.shields.io/github/release-pre/cectc/dbpack.svg)](https://github.com/cectc/dbpack/releases)
+[![Docker Pulls](https://img.shields.io/docker/pulls/cectc/dbpack)](https://img.shields.io/docker/pulls/cectc/dbpack)
 
 
 <img src="https://cectc.github.io/dbpack-doc/images/dbpack.svg" alt="dbpack.svg"/>
