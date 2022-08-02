@@ -34,6 +34,7 @@ require (
 	go.etcd.io/etcd/client/v3 v3.5.0-alpha.0
 	go.uber.org/atomic v1.9.0
 	go.uber.org/goleak v1.1.11
+	go.uber.org/ratelimit v0.2.1-0.20220713224938-b62b799bc9a5
 	go.uber.org/zap v1.21.0
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/text v0.3.7

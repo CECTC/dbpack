@@ -40,6 +40,7 @@ import (
 	_ "github.com/cectc/dbpack/pkg/filter/crypto"
 	_ "github.com/cectc/dbpack/pkg/filter/dt"
 	_ "github.com/cectc/dbpack/pkg/filter/metrics"
+	_ "github.com/cectc/dbpack/pkg/filter/rate"
 	dbpackHttp "github.com/cectc/dbpack/pkg/http"
 	"github.com/cectc/dbpack/pkg/listener"
 	"github.com/cectc/dbpack/pkg/log"
