@@ -26,6 +26,33 @@ import (
 	"github.com/pkg/errors"
 )
 
+func AesEncryptGCM(origData []byte, key []byte, iv []byte) (encrypted []byte, err error) {
+	var block cipher.Block
+	block, err = aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	aesGcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	cipherText := aesGcm.Seal(nil, iv, origData, nil)
+	return cipherText, nil
+}
+
+func AesDecryptGCM(encrypted []byte, key []byte, iv []byte) (decrypted []byte, err error) {
+	var block cipher.Block
+	block, err = aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	aesGcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	return aesGcm.Open(nil, iv, encrypted, nil)
+}
+
 func AesEncryptCBC(origData []byte, key []byte, iv []byte) (encrypted []byte, err error) {
 	var (
 		block     cipher.Block
