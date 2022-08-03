@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/cectc/dbpack)](https://goreportcard.com/report/github.com/cectc/dbpack)
 [![codecov](https://codecov.io/gh/CECTC/dbpack/branch/dev/graph/badge.svg?token=2AVE9EHLXO)](https://codecov.io/gh/CECTC/dbpack)
 [![GitHub Release](https://img.shields.io/github/release-pre/cectc/dbpack.svg)](https://github.com/cectc/dbpack/releases)
-[![Docker Pulls](https://img.shields.io/docker/pulls/cectc/dbpack)](https://img.shields.io/docker/pulls/cectc/dbpack)
+[![Docker Pulls](https://img.shields.io/docker/pulls/cectc/dbpack)](https://hub.docker.com/r/cectc/dbpack/tags)
 
 
 <img src="https://cectc.github.io/dbpack-doc/images/dbpack.svg" alt="dbpack.svg"/>
