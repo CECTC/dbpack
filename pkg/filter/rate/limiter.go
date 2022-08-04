@@ -50,7 +50,7 @@ func (factory *_factory) NewFilter(config map[string]interface{}) (proto.Filter,
 		return nil, errors.Wrap(err, "marshal rate limit filter config failed.")
 	}
 	if err = json.Unmarshal(content, &conf); err != nil {
-		log.Errorf("unmarshal rate limit filter failed, %s", err)
+		log.Errorf("unmarshal rate limit filter failed, %v", err)
 		return nil, err
 	}
 	if conf.InsertLimit != 0 {

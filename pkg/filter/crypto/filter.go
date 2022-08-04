@@ -55,7 +55,7 @@ func (factory *_factory) NewFilter(config map[string]interface{}) (proto.Filter,
 		ColumnCryptoList []*ColumnCrypto `yaml:"column_crypto_list" json:"column_crypto_list"`
 	}{}
 	if err = json.Unmarshal(content, &v); err != nil {
-		log.Errorf("unmarshal crypto filter failed, %s", err)
+		log.Errorf("unmarshal crypto filter failed, %v", err)
 		return nil, err
 	}
 

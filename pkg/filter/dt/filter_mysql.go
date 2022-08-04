@@ -63,7 +63,7 @@ func (factory *_mysqlFactory) NewFilter(config map[string]interface{}) (proto.Fi
 		LockRetryTimes       int           `yaml:"lock_retry_times" json:"lock_retry_times"`
 	}{}
 	if err = json.Unmarshal(content, v); err != nil {
-		log.Errorf("unmarshal mysql distributed transaction filter config failed, %s", err)
+		log.Errorf("unmarshal mysql distributed transaction filter config failed, %v", err)
 		return nil, err
 	}
 	if v.LockRetryInterval, err = time.ParseDuration(v.LockRetryIntervalStr); err != nil {
