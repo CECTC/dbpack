@@ -136,12 +136,9 @@ func (executor *SingleDBExecutor) ExecutorComQuery(
 	defer func() {
 		if err == nil {
 			result, err = decodeResult(result)
-			if err != nil {
-				span.RecordError(err)
-				return
-			}
-			err = executor.doPostFilter(spanCtx, result)
-		} else {
+		}
+		err = executor.doPostFilter(spanCtx, result, err)
+		if err != nil {
 			span.RecordError(err)
 		}
 	}()
@@ -238,12 +235,9 @@ func (executor *SingleDBExecutor) ExecutorComStmtExecute(
 	defer func() {
 		if err == nil {
 			result, err = decodeResult(result)
-			if err != nil {
-				span.RecordError(err)
-				return
-			}
-			err = executor.doPostFilter(spanCtx, result)
-		} else {
+		}
+		err = executor.doPostFilter(spanCtx, result, err)
+		if err != nil {
 			span.RecordError(err)
 		}
 	}()
@@ -283,10 +277,10 @@ func (executor *SingleDBExecutor) doPreFilter(ctx context.Context) error {
 	return nil
 }
 
-func (executor *SingleDBExecutor) doPostFilter(ctx context.Context, result proto.Result) error {
+func (executor *SingleDBExecutor) doPostFilter(ctx context.Context, result proto.Result, err error) error {
 	for i := 0; i < len(executor.PostFilters); i++ {
 		f := executor.PostFilters[i]
-		err := f.PostHandle(ctx, result)
+		err := f.PostHandle(ctx, result, err)
 		if err != nil {
 			return err
 		}

@@ -54,7 +54,7 @@ func TestRateLimiter(t *testing.T) {
 				ctx := proto.WithCommandType(context.Background(), constant.ComQuery)
 				ctx = proto.WithQueryStmt(ctx, stmt)
 
-				filter, err := (&_factory{}).NewFilter(map[string]interface{}{
+				filter, err := (&_factory{}).NewFilter("test", map[string]interface{}{
 					tc: 1,
 				})
 				assert.Nil(t, err)
@@ -87,7 +87,7 @@ func TestRateLimiter(t *testing.T) {
 				ctx := proto.WithCommandType(context.Background(), constant.ComStmtExecute)
 				ctx = proto.WithPrepareStmt(ctx, protoStmt)
 
-				filter, err := (&_factory{}).NewFilter(map[string]interface{}{
+				filter, err := (&_factory{}).NewFilter("test", map[string]interface{}{
 					tc: 1,
 				})
 				assert.Nil(t, err)

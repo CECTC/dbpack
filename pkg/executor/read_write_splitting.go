@@ -163,12 +163,9 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
 	defer func() {
 		if err == nil {
 			result, err = decodeResult(result)
-			if err != nil {
-				span.RecordError(err)
-				return
-			}
-			err = executor.doPostFilter(spanCtx, result)
-		} else {
+		}
+		err = executor.doPostFilter(spanCtx, result, err)
+		if err != nil {
 			span.RecordError(err)
 		}
 	}()
@@ -307,12 +304,9 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComStmtExecute(
 	defer func() {
 		if err == nil {
 			result, err = decodeResult(result)
-			if err != nil {
-				span.RecordError(err)
-				return
-			}
-			err = executor.doPostFilter(spanCtx, result)
-		} else {
+		}
+		err = executor.doPostFilter(spanCtx, result, err)
+		if err != nil {
 			span.RecordError(err)
 		}
 	}()
@@ -371,10 +365,10 @@ func (executor *ReadWriteSplittingExecutor) doPreFilter(ctx context.Context) err
 	return nil
 }
 
-func (executor *ReadWriteSplittingExecutor) doPostFilter(ctx context.Context, result proto.Result) error {
+func (executor *ReadWriteSplittingExecutor) doPostFilter(ctx context.Context, result proto.Result, err error) error {
 	for i := 0; i < len(executor.PostFilters); i++ {
 		f := executor.PostFilters[i]
-		err := f.PostHandle(ctx, result)
+		err := f.PostHandle(ctx, result, err)
 		if err != nil {
 			return err
 		}

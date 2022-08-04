@@ -37,6 +37,7 @@ import (
 	"github.com/cectc/dbpack/pkg/executor"
 	"github.com/cectc/dbpack/pkg/filter"
 	_ "github.com/cectc/dbpack/pkg/filter/audit_log"
+	_ "github.com/cectc/dbpack/pkg/filter/breaker"
 	_ "github.com/cectc/dbpack/pkg/filter/crypto"
 	_ "github.com/cectc/dbpack/pkg/filter/dt"
 	_ "github.com/cectc/dbpack/pkg/filter/metrics"
