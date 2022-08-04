@@ -124,7 +124,7 @@ func (executor *SingleDBExecutor) ExecuteFieldList(ctx context.Context, table, w
 }
 
 func (executor *SingleDBExecutor) ExecutorComQuery(
-	ctx context.Context, _ string) (result proto.Result, warns uint16, err error) {
+	ctx context.Context, sqlText string) (result proto.Result, warns uint16, err error) {
 	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.SDBComQuery)
 	defer span.End()
 
@@ -155,9 +155,7 @@ func (executor *SingleDBExecutor) ExecutorComQuery(
 	if queryStmt == nil {
 		return nil, 0, errors.New("query stmt should not be nil")
 	}
-	if err := queryStmt.Restore(format.NewRestoreCtx(format.RestoreStringSingleQuotes|
-		format.RestoreKeyWordUppercase|
-		format.RestoreStringWithoutDefaultCharset, &sb)); err != nil {
+	if err := queryStmt.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
 		return nil, 0, err
 	}
 	sql := sb.String()
@@ -179,9 +177,9 @@ func (executor *SingleDBExecutor) ExecutorComQuery(
 			txi, ok := executor.localTransactionMap.Load(connectionID)
 			if ok {
 				tx = txi.(proto.Tx)
-				return tx.Query(spanCtx, sql)
+				return tx.Query(spanCtx, sqlText)
 			}
-			return db.Query(spanCtx, sql)
+			return db.Query(spanCtx, sqlText)
 		}
 	case *ast.BeginStmt:
 		// TODO add metrics
