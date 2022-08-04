@@ -155,7 +155,9 @@ func (executor *SingleDBExecutor) ExecutorComQuery(
 	if queryStmt == nil {
 		return nil, 0, errors.New("query stmt should not be nil")
 	}
-	if err := queryStmt.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+	if err := queryStmt.Restore(format.NewRestoreCtx(
+		format.DefaultRestoreFlags|
+			format.RestoreStringWithoutDefaultCharset, &sb)); err != nil {
 		return nil, 0, err
 	}
 	sql := sb.String()
