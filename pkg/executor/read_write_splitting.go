@@ -178,7 +178,9 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
 
 	connectionID := proto.ConnectionID(spanCtx)
 	queryStmt := proto.QueryStmt(spanCtx)
-	if err := queryStmt.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+	if err := queryStmt.Restore(format.NewRestoreCtx(
+		format.DefaultRestoreFlags|
+			format.RestoreStringWithoutDefaultCharset, &sb)); err != nil {
 		return nil, 0, err
 	}
 	sql := sb.String()
