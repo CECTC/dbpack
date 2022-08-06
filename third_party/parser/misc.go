@@ -562,7 +562,6 @@ var tokenMap = map[string]int{
 	"REBUILD":                  rebuild,
 	"RECENT":                   recent,
 	"RECOVER":                  recover,
-	"RECREATOR":                recreator,
 	"RECURSIVE":                recursive,
 	"REDUNDANT":                redundant,
 	"REFERENCES":               references,
@@ -606,6 +605,7 @@ var tokenMap = map[string]int{
 	"S3":                       s3,
 	"SAMPLES":                  samples,
 	"SAN":                      san,
+	"SAVEPOINT":                savepoint,
 	"SCHEDULE":                 schedule,
 	"SCHEMA":                   database,
 	"SCHEMAS":                  databases,
@@ -794,7 +794,6 @@ var tokenMap = map[string]int{
 
 // See https://dev.mysql.com/doc/refman/5.7/en/function-resolution.html for details
 var btFuncTokenMap = map[string]int{
-	"ADDDATE":               builtinAddDate,
 	"BIT_AND":               builtinBitAnd,
 	"BIT_OR":                builtinBitOr,
 	"BIT_XOR":               builtinBitXor,
@@ -818,7 +817,6 @@ var btFuncTokenMap = map[string]int{
 	"STDDEV":                builtinStddevPop,
 	"STDDEV_POP":            builtinStddevPop,
 	"STDDEV_SAMP":           builtinStddevSamp,
-	"SUBDATE":               builtinSubDate,
 	"SUBSTR":                builtinSubstring,
 	"SUBSTRING":             builtinSubstring,
 	"SUM":                   builtinSum,

@@ -115,7 +115,7 @@ func (manager MysqlUndoLogManager) Undo(db proto.DB, xid string) ([]string, erro
 		tableMeta, err := meta.GetTableMetaCache().GetTableMeta(
 			proto.WithSchema(context.Background(), sqlUndoLog.SchemaName), db, sqlUndoLog.TableName)
 		if err != nil {
-			if _, err := tx.Rollback(context.Background()); err != nil {
+			if _, err := tx.Rollback(context.Background(), nil); err != nil {
 				return lockKeys, err
 			}
 			return lockKeys, err
@@ -124,7 +124,7 @@ func (manager MysqlUndoLogManager) Undo(db proto.DB, xid string) ([]string, erro
 		sqlUndoLog.SetTableMeta(tableMeta)
 		err = NewMysqlUndoExecutor(sqlUndoLog).Execute(tx)
 		if err != nil {
-			if _, err := tx.Rollback(context.Background()); err != nil {
+			if _, err := tx.Rollback(context.Background(), nil); err != nil {
 				return lockKeys, err
 			}
 			return lockKeys, err
@@ -135,7 +135,7 @@ func (manager MysqlUndoLogManager) Undo(db proto.DB, xid string) ([]string, erro
 	if exists {
 		_, _, err := tx.ExecuteSql(context.Background(), DeleteUndoLogByXIDSql, xid)
 		if err != nil {
-			if _, err := tx.Rollback(context.Background()); err != nil {
+			if _, err := tx.Rollback(context.Background(), nil); err != nil {
 				return lockKeys, err
 			}
 			return lockKeys, err
