@@ -120,7 +120,7 @@ func TestSingleDBExecutor(t *testing.T) {
 	tx.EXPECT().Query(gomock.Any(), gomock.Any()).Return(&mysql.Result{}, uint16(0), nil).MaxTimes(100)
 	tx.EXPECT().ExecuteStmt(gomock.Any(), gomock.Any()).Return(&mysql.Result{}, uint16(0), nil).MaxTimes(100)
 	tx.EXPECT().Commit(gomock.Any()).Return(&mysql.Result{}, nil).MaxTimes(100)
-	tx.EXPECT().Rollback(gomock.Any()).Return(&mysql.Result{}, nil).MaxTimes(100)
+	tx.EXPECT().Rollback(gomock.Any(), gomock.Any()).Return(&mysql.Result{}, nil).MaxTimes(100)
 
 	manager := testdata.NewMockDBManager(ctrl)
 	manager.EXPECT().GetDB(gomock.Any()).AnyTimes().Return(db)

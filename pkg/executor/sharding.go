@@ -280,7 +280,7 @@ func (executor *ShardingExecutor) ConnectionClose(ctx context.Context) {
 		return
 	}
 	// TODO add metrics
-	if _, err := tx.Rollback(ctx); err != nil {
+	if _, err := tx.Rollback(ctx, nil); err != nil {
 		log.Error(err)
 	}
 }

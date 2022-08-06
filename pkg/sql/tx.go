@@ -27,6 +27,7 @@ import (
 	err2 "github.com/cectc/dbpack/pkg/errors"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/tracing"
+	"github.com/cectc/dbpack/third_party/parser/ast"
 )
 
 type Tx struct {
@@ -130,7 +131,7 @@ func (tx *Tx) Commit(ctx context.Context) (result proto.Result, err error) {
 	return
 }
 
-func (tx *Tx) Rollback(ctx context.Context) (result proto.Result, err error) {
+func (tx *Tx) Rollback(ctx context.Context, stmt *ast.RollbackStmt) (result proto.Result, err error) {
 	_, span := tracing.GetTraceSpan(ctx, tracing.TxRollback)
 	span.SetAttributes(attribute.KeyValue{Key: "db", Value: attribute.StringValue(tx.db.name)})
 	defer span.End()
@@ -141,7 +142,11 @@ func (tx *Tx) Rollback(ctx context.Context) (result proto.Result, err error) {
 	if tx.db == nil || tx.db.IsClosed() {
 		return nil, err2.ErrInvalidConn
 	}
-	result, err = tx.conn.Execute("ROLLBACK", false)
+	if stmt != nil && stmt.SavepointName != "" {
+		result, err = tx.conn.Execute(fmt.Sprintf("ROLLBACK TO %s", stmt.SavepointName), false)
+	} else {
+		result, err = tx.conn.Execute("ROLLBACK", false)
+	}
 	tx.db.pool.Put(tx.conn)
 	tx.Close()
 	return

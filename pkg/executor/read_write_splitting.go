@@ -246,7 +246,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
 		defer executor.localTransactionMap.Delete(connectionID)
 		tx = txi.(proto.Tx)
 		// TODO add metrics
-		if result, err = tx.Rollback(spanCtx); err != nil {
+		if result, err = tx.Rollback(spanCtx, stmt); err != nil {
 			return nil, 0, err
 		}
 		return result, 0, err
@@ -352,7 +352,7 @@ func (executor *ReadWriteSplittingExecutor) ConnectionClose(ctx context.Context)
 		return
 	}
 	tx := txi.(proto.Tx)
-	if _, err := tx.Rollback(ctx); err != nil {
+	if _, err := tx.Rollback(ctx, nil); err != nil {
 		log.Error(err)
 	}
 }

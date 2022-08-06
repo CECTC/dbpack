@@ -25,9 +25,8 @@ import (
 	reflect "reflect"
 	time "time"
 
-	gomock "github.com/golang/mock/gomock"
-
 	proto "github.com/cectc/dbpack/pkg/proto"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockDB is a mock of DB interface.

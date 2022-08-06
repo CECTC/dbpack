@@ -599,11 +599,17 @@ type RollbackStmt struct {
 	stmtNode
 	// CompletionType overwrites system variable `completion_type` within transaction
 	CompletionType CompletionType
+	// SavepointName is the savepoint name.
+	SavepointName string
 }
 
 // Restore implements Node interface.
 func (n *RollbackStmt) Restore(ctx *format.RestoreCtx) error {
 	ctx.WriteKeyWord("ROLLBACK")
+	if n.SavepointName != "" {
+		ctx.WritePlain(" TO ")
+		ctx.WritePlain(n.SavepointName)
+	}
 	if err := n.CompletionType.Restore(ctx); err != nil {
 		return errors.Annotate(err, "An error occurred while restore RollbackStmt.CompletionType")
 	}
@@ -868,6 +874,48 @@ func (n *KillStmt) Accept(v Visitor) (Node, bool) {
 		return v.Leave(newNode)
 	}
 	n = newNode.(*KillStmt)
+	return v.Leave(n)
+}
+
+// SavepointStmt is the statement of SAVEPOINT.
+type SavepointStmt struct {
+	stmtNode
+	// Name is the savepoint name.
+	Name string
+}
+
+// Restore implements Node interface.
+func (n *SavepointStmt) Restore(ctx *format.RestoreCtx) error {
+	ctx.WriteKeyWord("SAVEPOINT ")
+	ctx.WritePlain(n.Name)
+	return nil
+}
+
+// Accept implements Node Accept interface.
+func (n *SavepointStmt) Accept(v Visitor) (Node, bool) {
+	newNode, _ := v.Enter(n)
+	n = newNode.(*SavepointStmt)
+	return v.Leave(n)
+}
+
+// ReleaseSavepointStmt is the statement of RELEASE SAVEPOINT.
+type ReleaseSavepointStmt struct {
+	stmtNode
+	// Name is the savepoint name.
+	Name string
+}
+
+// Restore implements Node interface.
+func (n *ReleaseSavepointStmt) Restore(ctx *format.RestoreCtx) error {
+	ctx.WriteKeyWord("RELEASE SAVEPOINT ")
+	ctx.WritePlain(n.Name)
+	return nil
+}
+
+// Accept implements Node Accept interface.
+func (n *ReleaseSavepointStmt) Accept(v Visitor) (Node, bool) {
+	newNode, _ := v.Enter(n)
+	n = newNode.(*ReleaseSavepointStmt)
 	return v.Leave(n)
 }
 
@@ -1905,6 +1953,12 @@ func (n *ShowSlow) Restore(ctx *format.RestoreCtx) error {
 	}
 	ctx.WritePlainf("%d", n.Count)
 	return nil
+}
+
+// LimitSimple is the struct for Admin statement limit option.
+type LimitSimple struct {
+	Count  uint64
+	Offset uint64
 }
 
 // AdminStmt is the struct for Admin statement.
@@ -3385,8 +3439,6 @@ func (n *TableOptimizerHint) Restore(ctx *format.RestoreCtx) error {
 		ctx.WriteString(hintData.VarName)
 		ctx.WritePlain(", ")
 		ctx.WriteString(hintData.Value)
-	case "xid":
-		ctx.WriteString(n.HintData.(model.CIStr).String())
 	}
 	ctx.WritePlain(")")
 	return nil

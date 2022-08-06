@@ -14,7 +14,10 @@
 package ast_test
 
 import (
+	"testing"
+
 	. "github.com/pingcap/check"
+	"github.com/stretchr/testify/require"
 
 	"github.com/cectc/dbpack/third_party/parser"
 	"github.com/cectc/dbpack/third_party/parser/ast"
@@ -87,7 +90,7 @@ func (ts *testMiscSuite) TestMiscVisitorCover(c *C) {
 	}
 }
 
-func (ts *testMiscSuite) TestDDLVisitorCover(c *C) {
+func TestDDLVisitorCoverMisc(t *testing.T) {
 	sql := `
 create table t (c1 smallint unsigned, c2 int unsigned);
 alter table t add column a smallint unsigned after b;
@@ -105,14 +108,14 @@ constraint foreign key (jobabbr) references ffxi_jobtype (jobabbr) on delete cas
 `
 	parse := parser.New()
 	stmts, _, err := parse.Parse(sql, "", "")
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	for _, stmt := range stmts {
 		stmt.Accept(visitor{})
 		stmt.Accept(visitor1{})
 	}
 }
 
-func (ts *testMiscSuite) TestDMLVistorCover(c *C) {
+func TestDMLVistorCover(t *testing.T) {
 	sql := `delete from somelog where user = 'jcole' order by timestamp_column limit 1;
 delete t1, t2 from t1 inner join t2 inner join t3 where t1.id=t2.id and t2.id=t3.id;
 select * from t where exists(select * from t k where t.c = k.c having sum(c) = 1);
@@ -124,7 +127,7 @@ load data infile '/tmp/t.csv' into table t fields terminated by 'ab' enclosed by
 
 	p := parser.New()
 	stmts, _, err := p.Parse(sql, "", "")
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	for _, stmt := range stmts {
 		stmt.Accept(visitor{})
 		stmt.Accept(visitor1{})
@@ -132,21 +135,21 @@ load data infile '/tmp/t.csv' into table t fields terminated by 'ab' enclosed by
 }
 
 // test Change Pump or drainer status sql parser
-func (ts *testMiscSuite) TestChangeStmt(c *C) {
+func TestChangeStmt(t *testing.T) {
 	sql := `change pump to node_state='paused' for node_id '127.0.0.1:8249';
 change drainer to node_state='paused' for node_id '127.0.0.1:8249';
 shutdown;`
 
 	p := parser.New()
 	stmts, _, err := p.Parse(sql, "", "")
-	c.Assert(err, IsNil)
+	require.NoError(t, err)
 	for _, stmt := range stmts {
 		stmt.Accept(visitor{})
 		stmt.Accept(visitor1{})
 	}
 }
 
-func (ts *testMiscSuite) TestSensitiveStatement(c *C) {
+func TestSensitiveStatement(t *testing.T) {
 	positive := []ast.StmtNode{
 		&ast.SetPwdStmt{},
 		&ast.CreateUserStmt{},
@@ -155,7 +158,7 @@ func (ts *testMiscSuite) TestSensitiveStatement(c *C) {
 	}
 	for i, stmt := range positive {
 		_, ok := stmt.(ast.SensitiveStmtNode)
-		c.Assert(ok, IsTrue, Commentf("%d, %#v fail", i, stmt))
+		require.Truef(t, ok, "%d, %#v fail", i, stmt)
 	}
 
 	negative := []ast.StmtNode{
@@ -173,11 +176,11 @@ func (ts *testMiscSuite) TestSensitiveStatement(c *C) {
 	}
 	for _, stmt := range negative {
 		_, ok := stmt.(ast.SensitiveStmtNode)
-		c.Assert(ok, IsFalse)
+		require.False(t, ok)
 	}
 }
 
-func (ts *testMiscSuite) TestUserSpec(c *C) {
+func TestUserSpec(t *testing.T) {
 	hashString := "*3D56A309CD04FA2EEF181462E59011F075C89548"
 	u := ast.UserSpec{
 		User: &auth.UserIdentity{
@@ -190,22 +193,22 @@ func (ts *testMiscSuite) TestUserSpec(c *C) {
 		},
 	}
 	pwd, ok := u.EncodedPassword()
-	c.Assert(ok, IsTrue)
-	c.Assert(pwd, Equals, u.AuthOpt.HashString)
+	require.True(t, ok)
+	require.Equal(t, u.AuthOpt.HashString, pwd)
 
 	u.AuthOpt.HashString = "not-good-password-format"
 	_, ok = u.EncodedPassword()
-	c.Assert(ok, IsFalse)
+	require.False(t, ok)
 
 	u.AuthOpt.ByAuthString = true
 	pwd, ok = u.EncodedPassword()
-	c.Assert(ok, IsTrue)
-	c.Assert(pwd, Equals, hashString)
+	require.True(t, ok)
+	require.Equal(t, hashString, pwd)
 
 	u.AuthOpt.AuthString = ""
 	pwd, ok = u.EncodedPassword()
-	c.Assert(ok, IsTrue)
-	c.Assert(pwd, Equals, "")
+	require.True(t, ok)
+	require.Equal(t, "", pwd)
 }
 
 func (ts *testMiscSuite) TestTableOptimizerHintRestore(c *C) {
@@ -243,6 +246,16 @@ func (ts *testMiscSuite) TestTableOptimizerHintRestore(c *C) {
 		{"INL_MERGE_JOIN(t1,t2)", "INL_MERGE_JOIN(`t1`, `t2`)"},
 		{"INL_JOIN(t1,t2)", "INL_JOIN(`t1`, `t2`)"},
 		{"HASH_JOIN(t1,t2)", "HASH_JOIN(`t1`, `t2`)"},
+		{"ORDERED_HASH_JOIN(t1,t2)", "ORDERED_HASH_JOIN(`t1`, `t2`)"},
+		{"LEADING(t1)", "LEADING(`t1`)"},
+		{"LEADING(t1, c1)", "LEADING(`t1`, `c1`)"},
+		{"LEADING(t1, c1, t2)", "LEADING(`t1`, `c1`, `t2`)"},
+		{"LEADING(@sel1 t1, c1)", "LEADING(@`sel1` `t1`, `c1`)"},
+		{"LEADING(@sel1 t1)", "LEADING(@`sel1` `t1`)"},
+		{"LEADING(@sel1 t1, c1, t2)", "LEADING(@`sel1` `t1`, `c1`, `t2`)"},
+		{"LEADING(t1@sel1)", "LEADING(`t1`@`sel1`)"},
+		{"LEADING(t1@sel1, c1)", "LEADING(`t1`@`sel1`, `c1`)"},
+		{"LEADING(t1@sel1, c1, t2)", "LEADING(`t1`@`sel1`, `c1`, `t2`)"},
 		{"MAX_EXECUTION_TIME(3000)", "MAX_EXECUTION_TIME(3000)"},
 		{"MAX_EXECUTION_TIME(@sel1 3000)", "MAX_EXECUTION_TIME(@`sel1` 3000)"},
 		{"USE_INDEX_MERGE(t1 c1)", "USE_INDEX_MERGE(`t1` `c1`)"},
@@ -268,6 +281,8 @@ func (ts *testMiscSuite) TestTableOptimizerHintRestore(c *C) {
 		{"AGG_TO_COP()", "AGG_TO_COP()"},
 		{"AGG_TO_COP(@sel_1)", "AGG_TO_COP(@`sel_1`)"},
 		{"LIMIT_TO_COP()", "LIMIT_TO_COP()"},
+		{"MERGE()", "MERGE()"},
+		{"STRAIGHT_JOIN()", "STRAIGHT_JOIN()"},
 		{"NO_INDEX_MERGE()", "NO_INDEX_MERGE()"},
 		{"NO_INDEX_MERGE(@sel1)", "NO_INDEX_MERGE(@`sel1`)"},
 		{"READ_CONSISTENT_REPLICA()", "READ_CONSISTENT_REPLICA()"},

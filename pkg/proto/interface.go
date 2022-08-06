@@ -122,7 +122,7 @@ type (
 		ExecuteStmt(ctx context.Context, stmt *Stmt) (Result, uint16, error)
 		ExecuteSql(ctx context.Context, sql string, args ...interface{}) (Result, uint16, error)
 		Commit(ctx context.Context) (Result, error)
-		Rollback(ctx context.Context) (Result, error)
+		Rollback(ctx context.Context, stmt *ast.RollbackStmt) (Result, error)
 	}
 
 	// Executor ...
