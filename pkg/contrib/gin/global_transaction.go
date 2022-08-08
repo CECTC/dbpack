@@ -27,10 +27,10 @@ import (
 
 const XID = "xid"
 
-func GlobalTransaction(timeout int32) gin.HandlerFunc {
+func GlobalTransaction(appid string, timeout int32) gin.HandlerFunc {
 	return func(context *gin.Context) {
 		var err error
-		transactionManager := dt.GetDistributedTransactionManager()
+		transactionManager := dt.GetTransactionManager(appid)
 		xid, err := transactionManager.Begin(context, context.FullPath(), timeout)
 		if err != nil {
 			context.AbortWithError(http.StatusInternalServerError, err)
@@ -38,13 +38,13 @@ func GlobalTransaction(timeout int32) gin.HandlerFunc {
 		context.Set(XID, xid)
 		context.Next()
 		if context.Writer.Status() == http.StatusOK && len(context.Errors) == 0 {
-			_, err = dt.GetDistributedTransactionManager().Commit(context, xid)
+			_, err = transactionManager.Commit(context, xid)
 			if err != nil {
 				log.Error(err)
 				context.AbortWithError(http.StatusInternalServerError, err)
 			}
 		} else {
-			_, err = dt.GetDistributedTransactionManager().Rollback(context, xid)
+			_, err = transactionManager.Rollback(context, xid)
 			if err != nil {
 				log.Error(err)
 			}

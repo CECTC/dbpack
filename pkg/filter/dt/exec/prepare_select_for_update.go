@@ -36,6 +36,7 @@ import (
 )
 
 type prepareSelectForUpdateExecutor struct {
+	appid  string
 	conn   *driver.BackendConnection
 	stmt   *ast.SelectStmt
 	args   map[string]interface{}
@@ -43,11 +44,13 @@ type prepareSelectForUpdateExecutor struct {
 }
 
 func NewPrepareSelectForUpdateExecutor(
+	appid string,
 	conn *driver.BackendConnection,
 	stmt *ast.SelectStmt,
 	args map[string]interface{},
 	result proto.Result) Executable {
 	return &prepareSelectForUpdateExecutor{
+		appid:  appid,
 		conn:   conn,
 		stmt:   stmt,
 		args:   args,
@@ -75,7 +78,7 @@ func (executor *prepareSelectForUpdateExecutor) Executable(ctx context.Context, 
 			err      error
 		)
 		for i := 0; i < lockRetryTimes; i++ {
-			lockable, err = dt.GetDistributedTransactionManager().IsLockableWithXID(spanCtx,
+			lockable, err = dt.GetTransactionManager(executor.appid).IsLockableWithXID(spanCtx,
 				executor.conn.DataSourceName(), lockKeys, xid)
 			if lockable && err == nil {
 				break
@@ -91,7 +94,7 @@ func (executor *prepareSelectForUpdateExecutor) Executable(ctx context.Context, 
 
 func (executor *prepareSelectForUpdateExecutor) GetTableMeta(ctx context.Context) (schema.TableMeta, error) {
 	dbName := executor.conn.DataSourceName()
-	db := resource.GetDBManager().GetDB(dbName)
+	db := resource.GetDBManager(executor.appid).GetDB(dbName)
 	return meta.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
 }
 

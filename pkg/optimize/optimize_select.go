@@ -50,7 +50,7 @@ func (o Optimizer) optimizeSelect(ctx context.Context, stmt *ast.SelectStmt, arg
 	}
 
 	for db, tables := range topology.DBs {
-		sqlDB := resource.GetDBManager().GetDB(db)
+		sqlDB := resource.GetDBManager(o.appid).GetDB(db)
 		tableMeta, err = meta.GetTableMetaCache().GetTableMeta(ctx, sqlDB, tables[0])
 		if err != nil {
 			continue

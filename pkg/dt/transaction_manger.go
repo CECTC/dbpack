@@ -36,6 +36,7 @@ import (
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/misc/uuid"
+	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
 )
 
@@ -53,16 +54,16 @@ const (
 var (
 	VarHost        = "host"
 	VarQueryString = "queryString"
-	manager        *DistributedTransactionManager
+	managers       = make(map[string]proto.DistributedTransactionManager)
 )
 
-func InitDistributedTransactionManager(conf *config.DistributedTransaction) {
+func RegisterTransactionManager(conf *config.DistributedTransaction) {
 	if conf.RetryDeadThreshold == 0 {
 		conf.RetryDeadThreshold = DefaultRetryDeadThreshold
 	}
-	driver := etcd.NewEtcdStore(conf.EtcdConfig)
-	manager = &DistributedTransactionManager{
-		applicationID:                    conf.ApplicationID,
+	driver := etcd.NewEtcdStore(*conf.EtcdConfig)
+	manager := &DistributedTransactionManager{
+		applicationID:                    conf.AppID,
 		storageDriver:                    driver,
 		retryDeadThreshold:               conf.RetryDeadThreshold,
 		rollbackRetryTimeoutUnlockEnable: conf.RollbackRetryTimeoutUnlockEnable,
@@ -84,10 +85,11 @@ func InitDistributedTransactionManager(conf *config.DistributedTransaction) {
 			go manager.watchBranchSession()
 		}
 	}()
+	managers[conf.AppID] = manager
 }
 
-func GetDistributedTransactionManager() *DistributedTransactionManager {
-	return manager
+func GetTransactionManager(appID string) proto.DistributedTransactionManager {
+	return managers[appID]
 }
 
 type DistributedTransactionManager struct {
@@ -193,7 +195,7 @@ func (manager *DistributedTransactionManager) branchCommit(bs *api.BranchSession
 }
 
 func (manager *DistributedTransactionManager) _branchCommit(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
-	db := resource.GetDBManager().GetDB(bs.ResourceID)
+	db := resource.GetDBManager(manager.applicationID).GetDB(bs.ResourceID)
 	if db == nil {
 		return 0, fmt.Errorf("DB resource is not exist, db name: %s", bs.ResourceID)
 	}
@@ -234,7 +236,7 @@ func (manager *DistributedTransactionManager) branchRollback(bs *api.BranchSessi
 }
 
 func (manager *DistributedTransactionManager) _branchRollback(bs *api.BranchSession) (api.BranchSession_BranchStatus, []string, error) {
-	db := resource.GetDBManager().GetDB(bs.ResourceID)
+	db := resource.GetDBManager(manager.applicationID).GetDB(bs.ResourceID)
 	if db == nil {
 		return 0, nil, fmt.Errorf("DB resource is not exist, db name: %s", bs.ResourceID)
 	}

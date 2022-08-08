@@ -54,15 +54,17 @@ func TestPrepareSelectForUpdate(t *testing.T) {
 			expectedErr:            err,
 		},
 	}
+	patch0 := getTransactionManagerPatch()
+	defer patch0.Reset()
 
-	patches1 := isLockableWithXIDPatch()
-	defer patches1.Reset()
+	patch1 := isLockableWithXIDPatch()
+	defer patch1.Reset()
 
-	patches2 := getPrepareTableMetaPatch()
-	defer patches2.Reset()
+	patch2 := getPrepareTableMetaPatch()
+	defer patch2.Reset()
 
-	patches3 := buildBinaryRecordsPatch()
-	defer patches3.Reset()
+	patch3 := buildBinaryRecordsPatch()
+	defer patch3.Reset()
 
 	for _, c := range testCases {
 		t.Run(c.sql, func(t *testing.T) {
@@ -91,7 +93,7 @@ func TestPrepareSelectForUpdate(t *testing.T) {
 			ctx = proto.WithPrepareStmt(ctx, protoStmt)
 
 			selectForUpdateStmt := stmt.(*ast.SelectStmt)
-			executor := NewPrepareSelectForUpdateExecutor(&driver.BackendConnection{}, selectForUpdateStmt, protoStmt.BindVars, &mysql.Result{})
+			executor := NewPrepareSelectForUpdateExecutor("app1", &driver.BackendConnection{}, selectForUpdateStmt, protoStmt.BindVars, &mysql.Result{})
 			tableName := executor.GetTableName()
 			assert.Equal(t, c.expectedTableName, tableName)
 			whereCondition := executor.(*prepareSelectForUpdateExecutor).GetWhereCondition()

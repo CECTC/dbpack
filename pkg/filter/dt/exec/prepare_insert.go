@@ -35,6 +35,7 @@ import (
 )
 
 type prepareInsertExecutor struct {
+	appid  string
 	conn   *driver.BackendConnection
 	stmt   *ast.InsertStmt
 	args   map[string]interface{}
@@ -42,11 +43,13 @@ type prepareInsertExecutor struct {
 }
 
 func NewPrepareInsertExecutor(
+	appid string,
 	conn *driver.BackendConnection,
 	stmt *ast.InsertStmt,
 	args map[string]interface{},
 	result proto.Result) Executor {
 	return &prepareInsertExecutor{
+		appid:  appid,
 		conn:   conn,
 		stmt:   stmt,
 		args:   args,
@@ -83,7 +86,7 @@ func (executor *prepareInsertExecutor) AfterImage(ctx context.Context) (*schema.
 
 func (executor *prepareInsertExecutor) GetTableMeta(ctx context.Context) (schema.TableMeta, error) {
 	dbName := executor.conn.DataSourceName()
-	db := resource.GetDBManager().GetDB(dbName)
+	db := resource.GetDBManager(executor.appid).GetDB(dbName)
 	return meta.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
 }
 

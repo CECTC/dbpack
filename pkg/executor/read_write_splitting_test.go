@@ -131,11 +131,12 @@ func TestReadWriteSplittingExecutor(t *testing.T) {
 
 	manager := testdata.NewMockDBManager(ctrl)
 	manager.EXPECT().GetDB(gomock.Any()).AnyTimes().Return(db)
-	resource.SetDBManager(manager)
+	resource.SetDBManager("app1", manager)
 
 	executor, err := NewReadWriteSplittingExecutor(&config.Executor{
-		Name: "rws",
-		Mode: config.RWS,
+		AppID: "app1",
+		Name:  "rws",
+		Mode:  config.RWS,
 		Config: map[string]interface{}{
 			"load_balance_algorithm": "Random",
 			"data_sources": []*config.DataSourceRef{

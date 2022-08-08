@@ -58,15 +58,15 @@ func TestDistributedTransaction(t *testing.T) {
 
 func (suite *_DistributedTransactionSuite) SetupSuite() {
 	var conf = &config.DistributedTransaction{
-		ApplicationID:                    "svc",
+		AppID:                            "svc",
 		RetryDeadThreshold:               130000,
 		RollbackRetryTimeoutUnlockEnable: true,
-		EtcdConfig: clientv3.Config{
+		EtcdConfig: &clientv3.Config{
 			Endpoints: []string{"localhost:2379"},
 		},
 	}
 
-	dt.InitDistributedTransactionManager(conf)
+	dt.RegisterTransactionManager(conf)
 
 	db, err := sql.Open(driverName, dataSourceName)
 	if suite.NoErrorf(err, "connection error: %v", err) {
@@ -86,7 +86,7 @@ func (suite *_DistributedTransactionSuite) SetupSuite() {
 }
 
 func (suite *_DistributedTransactionSuite) TestDistributedTransactionPrepareRequest() {
-	transactionManager := dt.GetDistributedTransactionManager()
+	transactionManager := dt.GetTransactionManager("svc")
 	xid, err := transactionManager.Begin(context.Background(), "test-distributed-transaction", 60000)
 	if suite.NoErrorf(err, "begin global transaction error: %v", err) {
 		tx, err := suite.db.Begin()
@@ -162,7 +162,7 @@ func (suite *_DistributedTransactionSuite) TestDistributedTransactionPrepareRequ
 }
 
 func (suite *_DistributedTransactionSuite) TestDistributedTransactionQueryRequest() {
-	transactionManager := dt.GetDistributedTransactionManager()
+	transactionManager := dt.GetTransactionManager("svc")
 	xid, err := transactionManager.Begin(context.Background(), "test-distributed-transaction", 60000)
 	if suite.NoErrorf(err, "begin global transaction error: %v", err) {
 		tx, err := suite.db2.Begin()

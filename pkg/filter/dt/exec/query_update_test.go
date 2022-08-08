@@ -56,7 +56,7 @@ func TestQueryUpdate(t *testing.T) {
 			stmt.Accept(&visitor.ParamVisitor{})
 
 			udpateStmt := stmt.(*ast.UpdateStmt)
-			executor := NewQueryUpdateExecutor(&driver.BackendConnection{}, udpateStmt, &schema.TableRecords{
+			executor := NewQueryUpdateExecutor("app1", &driver.BackendConnection{}, udpateStmt, &schema.TableRecords{
 				TableMeta: tableMeta,
 				TableName: "T",
 				Rows: []*schema.Row{

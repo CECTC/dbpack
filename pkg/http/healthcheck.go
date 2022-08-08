@@ -35,12 +35,7 @@ func registerHealthCheckRouter(router *mux.Router) {
 }
 
 func readinessHandler(w http.ResponseWriter, r *http.Request) {
-	dbm := resource.GetDBManager()
-	if dbm == nil {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		return
-	}
-	err := dbm.(*resource.DBManager).GetResourcePoolStatus()
+	err := resource.DetectDBs()
 	if err != nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return

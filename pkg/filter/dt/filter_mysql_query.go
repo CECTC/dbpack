@@ -34,7 +34,7 @@ import (
 
 func (f *_mysqlFilter) processBeforeQueryDelete(ctx context.Context, conn *driver.BackendConnection, deleteStmt *ast.DeleteStmt) error {
 	if misc.HasGlobalLockHint(deleteStmt.TableHints) {
-		executor := exec.NewQueryGlobalLockExecutor(conn, false, deleteStmt, nil)
+		executor := exec.NewQueryGlobalLockExecutor(f.applicationID, conn, false, deleteStmt, nil)
 		result, err := executor.Executable(ctx, f.lockRetryInterval, f.lockRetryTimes)
 		if err != nil {
 			return err
@@ -47,7 +47,7 @@ func (f *_mysqlFilter) processBeforeQueryDelete(ctx context.Context, conn *drive
 	if has, _ := misc.HasXIDHint(deleteStmt.TableHints); !has {
 		return nil
 	}
-	executor := exec.NewQueryDeleteExecutor(conn, deleteStmt)
+	executor := exec.NewQueryDeleteExecutor(f.applicationID, conn, deleteStmt)
 	bi, err := executor.BeforeImage(ctx)
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func (f *_mysqlFilter) processBeforeQueryDelete(ctx context.Context, conn *drive
 
 func (f *_mysqlFilter) processBeforeQueryUpdate(ctx context.Context, conn *driver.BackendConnection, updateStmt *ast.UpdateStmt) error {
 	if misc.HasGlobalLockHint(updateStmt.TableHints) {
-		executor := exec.NewQueryGlobalLockExecutor(conn, true, nil, updateStmt)
+		executor := exec.NewQueryGlobalLockExecutor(f.applicationID, conn, true, nil, updateStmt)
 		result, err := executor.Executable(ctx, f.lockRetryInterval, f.lockRetryTimes)
 		if err != nil {
 			return err
@@ -73,7 +73,7 @@ func (f *_mysqlFilter) processBeforeQueryUpdate(ctx context.Context, conn *drive
 	if has, _ := misc.HasXIDHint(updateStmt.TableHints); !has {
 		return nil
 	}
-	executor := exec.NewQueryUpdateExecutor(conn, updateStmt, nil)
+	executor := exec.NewQueryUpdateExecutor(f.applicationID, conn, updateStmt, nil)
 	bi, err := executor.BeforeImage(ctx)
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func (f *_mysqlFilter) processAfterQueryDelete(ctx context.Context, conn *driver
 		return nil
 	}
 
-	executor := exec.NewQueryDeleteExecutor(conn, deleteStmt)
+	executor := exec.NewQueryDeleteExecutor(f.applicationID, conn, deleteStmt)
 	bi := proto.Variable(ctx, beforeImage)
 	if bi == nil {
 		return errors.New("before image should not be nil")
@@ -119,7 +119,7 @@ func (f *_mysqlFilter) processAfterQueryInsert(ctx context.Context, conn *driver
 		return nil
 	}
 
-	executor := exec.NewQueryInsertExecutor(conn, insertStmt, result)
+	executor := exec.NewQueryInsertExecutor(f.applicationID, conn, insertStmt, result)
 	afterImage, err := executor.AfterImage(ctx)
 	if err != nil {
 		return err
@@ -151,7 +151,7 @@ func (f *_mysqlFilter) processAfterQueryUpdate(ctx context.Context, conn *driver
 		return errors.New("before image should not be nil")
 	}
 	beforeImage := bi.(*schema.TableRecords)
-	executor := exec.NewQueryUpdateExecutor(conn, updateStmt, beforeImage)
+	executor := exec.NewQueryUpdateExecutor(f.applicationID, conn, updateStmt, beforeImage)
 	afterImage, err := executor.AfterImage(ctx)
 	if err != nil {
 		return err
@@ -179,7 +179,7 @@ func (f *_mysqlFilter) processQuerySelectForUpdate(ctx context.Context, conn *dr
 	if !has {
 		return nil
 	}
-	executor := exec.NewQuerySelectForUpdateExecutor(conn, selectStmt, result)
+	executor := exec.NewQuerySelectForUpdateExecutor(f.applicationID, conn, selectStmt, result)
 	_, err := executor.Executable(ctx, xid, f.lockRetryInterval, f.lockRetryTimes)
 	return err
 }

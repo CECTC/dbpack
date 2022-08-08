@@ -35,7 +35,7 @@ const (
 
 type _factory struct{}
 
-func (factory *_factory) NewFilter(config map[string]interface{}) (proto.Filter, error) {
+func (factory *_factory) NewFilter(_ string, config map[string]interface{}) (proto.Filter, error) {
 	connectionFilterExecDuration := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Namespace: "dbpack",

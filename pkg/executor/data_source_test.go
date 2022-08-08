@@ -33,7 +33,7 @@ func TestCastToDataSourceBrief(t *testing.T) {
 
 	manager := testdata.NewMockDBManager(ctrl)
 	manager.EXPECT().GetDB(gomock.Any()).AnyTimes().Return(nil)
-	resource.SetDBManager(manager)
+	resource.SetDBManager("app1", manager)
 
 	testCases := []struct {
 		in     *config.DataSourceRef
@@ -54,7 +54,7 @@ func TestCastToDataSourceBrief(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		brief, err := castToDataSourceBrief(testCase.in)
+		brief, err := castToDataSourceBrief("app1", testCase.in)
 		assert.Nil(t, err)
 		assert.Equal(t, testCase.expect.Name, brief.Name)
 		assert.Equal(t, testCase.expect.WriteWeight, brief.WriteWeight)
@@ -69,7 +69,7 @@ func TestGroupDataSourceRefs(t *testing.T) {
 
 	manager := testdata.NewMockDBManager(ctrl)
 	manager.EXPECT().GetDB(gomock.Any()).AnyTimes().Return(nil)
-	resource.SetDBManager(manager)
+	resource.SetDBManager("app1", manager)
 
 	testCases := []struct {
 		in            []*config.DataSourceRef
@@ -124,7 +124,7 @@ func TestGroupDataSourceRefs(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		all, masters, reads, err := groupDataSourceRefs(testCase.in)
+		all, masters, reads, err := groupDataSourceRefs("app1", testCase.in)
 		assert.Nil(t, err)
 		if testCase.expectAll == nil {
 			assert.Equal(t, testCase.expectAll, all)

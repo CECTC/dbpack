@@ -1,71 +1,72 @@
-listeners:
-  - protocol_type: mysql
-    socket_address:
-      address: 0.0.0.0
-      port: 13306
-    config:
-      users:
-        dksl: "123456"
-      server_version: "8.0.27"
-    executor: redirect
+probe_port: 9999
+termination_drain_duration: 3s
+app_config:
+  svc:
+    distributed_transaction:
+      retry_dead_threshold: 130000
+      rollback_retry_timeout_unlock_enable: true
+      etcd_config:
+        endpoints:
+          - etcd:2379
 
-executors:
-  - name: redirect
-    mode: sdb
-    config:
-      data_source_ref: employees
+    listeners:
+      - protocol_type: mysql
+        socket_address:
+          address: 0.0.0.0
+          port: 13306
+        config:
+          users:
+            dksl: "123456"
+          server_version: "8.0.27"
+        executor: redirect
+
+    executors:
+      - name: redirect
+        mode: sdb
+        config:
+          data_source_ref: employees
+        filters:
+          - cryptoFilter
+
+    data_source_cluster:
+      - name: employees
+        capacity: 10
+        max_capacity: 20
+        idle_timeout: 60s
+        dsn: root:123456@tcp(dbpack-mysql:3306)/employees?timeout=60s&readTimeout=60s&writeTimeout=60s&parseTime=true&loc=Local&charset=utf8mb4,utf8
+        ping_interval: 20s
+        ping_times_for_change_status: 3
+        filters:
+          - metricFilter
+          - mysqlDTFilter
+          - auditLogFilter
+
     filters:
-      - cryptoFilter
-
-data_source_cluster:
-  - name: employees
-    capacity: 10
-    max_capacity: 20
-    idle_timeout: 60s
-    dsn: root:123456@tcp(dbpack-mysql:3306)/employees?timeout=60s&readTimeout=60s&writeTimeout=60s&parseTime=true&loc=Local&charset=utf8mb4,utf8
-    ping_interval: 20s
-    ping_times_for_change_status: 3
-    filters:
-      - metricFilter
-      - mysqlDTFilter
-      - auditLogFilter
-
-filters:
-  - name: metricFilter
-    kind: ConnectionMetricFilter
-  - name: mysqlDTFilter
-    kind: MysqlDistributedTransaction
-    conf:
-      appid: svc
-      lock_retry_interval: 50ms
-      lock_retry_times: 30
-  - name: auditLogFilter
-    kind: AuditLogFilter
-    conf:
-      audit_log_dir: /var/log/dbpack/
-      # unit MB
-      max_size: 300
-      # unit Day
-      max_age: 28
-      # maximum number of old log files to retain
-      max_backups: 1
-      # determines if the rotated log files should be compressed using gzip
-      compress: true
-      record_before: true
-  - name: cryptoFilter
-    kind: CryptoFilter
-    conf:
-      column_crypto_list:
-      - table: departments
-        columns: ["dept_name"]
-        aeskey: 123456789abcdefg
-
-distributed_transaction:
-  appid: svc
-  retry_dead_threshold: 130000
-  rollback_retry_timeout_unlock_enable: true
-  etcd_config:
-    endpoints:
-      - etcd:2379
-
-http_listen_port: 9999
+      - name: metricFilter
+        kind: ConnectionMetricFilter
+      - name: mysqlDTFilter
+        kind: MysqlDistributedTransaction
+        conf:
+          appid: svc
+          lock_retry_interval: 50ms
+          lock_retry_times: 30
+      - name: auditLogFilter
+        kind: AuditLogFilter
+        conf:
+          audit_log_dir: /var/log/dbpack/
+          # unit MB
+          max_size: 300
+          # unit Day
+          max_age: 28
+          # maximum number of old log files to retain
+          max_backups: 1
+          # determines if the rotated log files should be compressed using gzip
+          compress: true
+          record_before: true
+      - name: cryptoFilter
+        kind: CryptoFilter
+        conf:
+          column_crypto_list:
+            - table: departments
+              columns: [ "dept_name" ]
+              aeskey: 123456789abcdefg

@@ -66,7 +66,7 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 		log.Errorf("unmarshal read sharding executor config failed, %s", err)
 		return nil, err
 	}
-	all, executors, err = convertDBGroupConfigsToExecutors(shardingConfig.DBGroups)
+	all, executors, err = convertDBGroupConfigsToExecutors(conf.AppID, shardingConfig.DBGroups)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -80,7 +80,7 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 		PostFilters:         make([]proto.DBPostFilter, 0),
 		config:              shardingConfig,
 		all:                 all,
-		optimizer:           optimize.NewOptimizer(executors, algorithms, topologies),
+		optimizer:           optimize.NewOptimizer(conf.AppID, executors, algorithms, topologies),
 		localTransactionMap: make(map[uint32]proto.Tx, 0),
 	}
 
@@ -102,13 +102,13 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 	return executor, nil
 }
 
-func convertDBGroupConfigsToExecutors(dbGroups []*config.DataSourceRefGroup) ([]*DataSourceBrief, map[string]proto.DBGroupExecutor, error) {
+func convertDBGroupConfigsToExecutors(appid string, dbGroups []*config.DataSourceRefGroup) ([]*DataSourceBrief, map[string]proto.DBGroupExecutor, error) {
 	var (
 		all    []*DataSourceBrief
 		result = make(map[string]proto.DBGroupExecutor, 0)
 	)
 	for _, dbGroup := range dbGroups {
-		allDBs, masters, reads, err := groupDataSourceRefs(dbGroup.DataSources)
+		allDBs, masters, reads, err := groupDataSourceRefs(appid, dbGroup.DataSources)
 		if err != nil {
 			return nil, nil, err
 		}

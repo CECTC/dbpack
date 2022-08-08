@@ -56,7 +56,7 @@ func TestPrepareUpdate(t *testing.T) {
 			stmt.Accept(&visitor.ParamVisitor{})
 
 			updateStmt := stmt.(*ast.UpdateStmt)
-			executor := NewPrepareUpdateExecutor(&driver.BackendConnection{}, updateStmt, map[string]interface{}{
+			executor := NewPrepareUpdateExecutor("app1", &driver.BackendConnection{}, updateStmt, map[string]interface{}{
 				"v1": "scott",
 				"v2": 18,
 				"v3": 10,

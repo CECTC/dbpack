@@ -57,7 +57,7 @@ func NewDB(name string, pingInterval time.Duration,
 		inflightRequests:         atomic.NewInt64(0),
 		pingCount:                atomic.NewInt64(0),
 	}
-	go db.Ping()
+	go db.ping()
 	return db
 }
 
@@ -347,11 +347,32 @@ func (db *DB) StatsJSON() string {
 	return db.pool.StatsJSON()
 }
 
-func (db *DB) Ping() {
+func (db *DB) Ping() error {
+	r, err := db.pool.Get(context.Background())
+	if err != nil {
+		return err
+	}
+	defer db.pool.Put(r)
+	conn := r.(*driver.BackendConnection)
+	return conn.Ping(context.Background())
+}
+
+func (db *DB) Close() {
+	for db.inflightRequests.Load() == 0 {
+		db.pool.Close()
+	}
+}
+
+// IsClosed returns true if the db is closed.
+func (db *DB) IsClosed() (closed bool) {
+	return db.pool.IsClosed()
+}
+
+func (db *DB) ping() {
 	timer := time.NewTimer(db.pingInterval)
 	for {
 		<-timer.C
-		err := db.ping()
+		err := db._ping()
 		if err != nil {
 			log.Errorf("db %s ping failed, err: %v", db.name, err)
 		}
@@ -359,7 +380,7 @@ func (db *DB) Ping() {
 	}
 }
 
-func (db *DB) ping() (err error) {
+func (db *DB) _ping() (err error) {
 	defer func() {
 		if db.status == proto.Running {
 			if err != nil {
@@ -390,25 +411,4 @@ func (db *DB) ping() (err error) {
 	conn := r.(*driver.BackendConnection)
 	err = conn.Ping(context.Background())
 	return
-}
-
-func (db *DB) Close() {
-	for db.inflightRequests.Load() == 0 {
-		db.pool.Close()
-	}
-}
-
-// IsClosed returns true if the db is closed.
-func (db *DB) IsClosed() (closed bool) {
-	return db.pool.IsClosed()
-}
-
-func (db *DB) TestConn() error {
-	r, err := db.pool.Get(context.Background())
-	if err != nil {
-		return err
-	}
-	defer db.pool.Put(r)
-	conn := r.(*driver.BackendConnection)
-	return conn.Ping(context.Background())
 }

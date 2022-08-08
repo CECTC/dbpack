@@ -37,10 +37,10 @@ type GlobalTransactionInfo struct {
 	Timeout    int32
 }
 
-func GlobalTransactionInterceptor(globalTransactionInfos []*GlobalTransactionInfo) grpc.UnaryServerInterceptor {
+func GlobalTransactionInterceptor(appid string, globalTransactionInfos []*GlobalTransactionInfo) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		var xid string
-		transactionManager := dt.GetDistributedTransactionManager()
+		transactionManager := dt.GetTransactionManager(appid)
 		for _, gs := range globalTransactionInfos {
 			if strings.EqualFold(gs.FullMethod, info.FullMethod) {
 				xid, err = transactionManager.Begin(ctx, gs.FullMethod, gs.Timeout)
@@ -50,13 +50,13 @@ func GlobalTransactionInterceptor(globalTransactionInfos []*GlobalTransactionInf
 				ctx = context.WithValue(ctx, XID, xid)
 				resp, err = handler(ctx, req)
 				if err == nil {
-					_, commitErr := dt.GetDistributedTransactionManager().Commit(ctx, xid)
+					_, commitErr := transactionManager.Commit(ctx, xid)
 					if err != nil {
 						log.Error(err)
 						return resp, commitErr
 					}
 				} else {
-					_, rollbackErr := dt.GetDistributedTransactionManager().Rollback(ctx, xid)
+					_, rollbackErr := transactionManager.Rollback(ctx, xid)
 					if rollbackErr != nil {
 						log.Error(rollbackErr)
 					}

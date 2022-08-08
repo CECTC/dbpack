@@ -55,14 +55,17 @@ func TestQuerySelectForUpdate(t *testing.T) {
 		},
 	}
 
-	patches1 := isLockableWithXIDPatch()
-	defer patches1.Reset()
+	patch0 := getTransactionManagerPatch()
+	defer patch0.Reset()
 
-	patches2 := getQueryTableMetaPatch()
-	defer patches2.Reset()
+	patch1 := isLockableWithXIDPatch()
+	defer patch1.Reset()
 
-	patches3 := buildTextRecordsPatch()
-	defer patches3.Reset()
+	patch2 := getQueryTableMetaPatch()
+	defer patch2.Reset()
+
+	patch3 := buildTextRecordsPatch()
+	defer patch3.Reset()
 
 	for _, c := range testCases {
 		t.Run(c.sql, func(t *testing.T) {
@@ -91,7 +94,7 @@ func TestQuerySelectForUpdate(t *testing.T) {
 			ctx = proto.WithPrepareStmt(ctx, protoStmt)
 
 			selectForUpdateStmt := stmt.(*ast.SelectStmt)
-			executor := NewQuerySelectForUpdateExecutor(&driver.BackendConnection{}, selectForUpdateStmt, &mysql.Result{})
+			executor := NewQuerySelectForUpdateExecutor("app1", &driver.BackendConnection{}, selectForUpdateStmt, &mysql.Result{})
 			tableName := executor.GetTableName()
 			assert.Equal(t, c.expectedTableName, tableName)
 			_, executeErr := executor.Executable(ctx, c.xid, c.lockInterval, c.lockTimes)

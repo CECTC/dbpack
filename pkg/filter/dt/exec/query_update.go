@@ -33,16 +33,19 @@ import (
 )
 
 type queryUpdateExecutor struct {
+	appid       string
 	conn        *driver.BackendConnection
 	stmt        *ast.UpdateStmt
 	beforeImage *schema.TableRecords
 }
 
 func NewQueryUpdateExecutor(
+	appid string,
 	conn *driver.BackendConnection,
 	stmt *ast.UpdateStmt,
 	beforeImage *schema.TableRecords) Executor {
 	return &queryUpdateExecutor{
+		appid:       appid,
 		conn:        conn,
 		stmt:        stmt,
 		beforeImage: beforeImage,
@@ -89,7 +92,7 @@ func (executor *queryUpdateExecutor) AfterImage(ctx context.Context) (*schema.Ta
 
 func (executor *queryUpdateExecutor) GetTableMeta(ctx context.Context) (schema.TableMeta, error) {
 	dbName := executor.conn.DataSourceName()
-	db := resource.GetDBManager().GetDB(dbName)
+	db := resource.GetDBManager(executor.appid).GetDB(dbName)
 	return meta.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
 }
 

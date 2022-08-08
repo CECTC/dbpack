@@ -34,6 +34,7 @@ import (
 )
 
 type queryGlobalLockExecutor struct {
+	appid      string
 	conn       *driver.BackendConnection
 	isUpdate   bool
 	deleteStmt *ast.DeleteStmt
@@ -41,11 +42,13 @@ type queryGlobalLockExecutor struct {
 }
 
 func NewQueryGlobalLockExecutor(
+	appid string,
 	conn *driver.BackendConnection,
 	isUpdate bool,
 	deleteStmt *ast.DeleteStmt,
 	updateStmt *ast.UpdateStmt) GlobalLockExecutor {
 	return &queryGlobalLockExecutor{
+		appid:      appid,
 		conn:       conn,
 		isUpdate:   isUpdate,
 		deleteStmt: deleteStmt,
@@ -68,7 +71,7 @@ func (executor *queryGlobalLockExecutor) Executable(ctx context.Context, lockRet
 			lockable bool
 		)
 		for i := 0; i < lockRetryTimes; i++ {
-			lockable, err = dt.GetDistributedTransactionManager().IsLockable(ctx,
+			lockable, err = dt.GetTransactionManager(executor.appid).IsLockable(ctx,
 				executor.conn.DataSourceName(), lockKeys)
 			if err != nil {
 				time.Sleep(lockRetryInterval)
@@ -96,7 +99,7 @@ func (executor *queryGlobalLockExecutor) ExecutableWithXID(ctx context.Context, 
 			lockable bool
 		)
 		for i := 0; i < lockRetryTimes; i++ {
-			lockable, err = dt.GetDistributedTransactionManager().IsLockable(ctx,
+			lockable, err = dt.GetTransactionManager(executor.appid).IsLockable(ctx,
 				executor.conn.DataSourceName(), lockKeys)
 			if err != nil {
 				time.Sleep(lockRetryInterval)
@@ -111,7 +114,7 @@ func (executor *queryGlobalLockExecutor) ExecutableWithXID(ctx context.Context, 
 
 func (executor *queryGlobalLockExecutor) GetTableMeta(ctx context.Context) (schema.TableMeta, error) {
 	dbName := executor.conn.DataSourceName()
-	db := resource.GetDBManager().GetDB(dbName)
+	db := resource.GetDBManager(executor.appid).GetDB(dbName)
 	return meta.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
 }
 

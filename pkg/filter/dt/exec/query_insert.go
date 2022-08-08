@@ -34,16 +34,19 @@ import (
 )
 
 type queryInsertExecutor struct {
+	appid  string
 	conn   *driver.BackendConnection
 	stmt   *ast.InsertStmt
 	result proto.Result
 }
 
 func NewQueryInsertExecutor(
+	appid string,
 	conn *driver.BackendConnection,
 	stmt *ast.InsertStmt,
 	result proto.Result) Executor {
 	return &queryInsertExecutor{
+		appid:  appid,
 		conn:   conn,
 		stmt:   stmt,
 		result: result,
@@ -115,7 +118,7 @@ func (executor *queryInsertExecutor) buildAfterImageSql(tableMeta schema.TableMe
 
 func (executor *queryInsertExecutor) GetTableMeta(ctx context.Context) (schema.TableMeta, error) {
 	dbName := executor.conn.DataSourceName()
-	db := resource.GetDBManager().GetDB(dbName)
+	db := resource.GetDBManager(executor.appid).GetDB(dbName)
 	return meta.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
 }
 

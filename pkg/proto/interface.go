@@ -26,11 +26,23 @@ import (
 	"github.com/valyala/fasthttp"
 
 	"github.com/cectc/dbpack/pkg/config"
+	"github.com/cectc/dbpack/pkg/dt/api"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 )
 
 type (
 	DBStatus uint8
+
+	DistributedTransactionManager interface {
+		Begin(ctx context.Context, transactionName string, timeout int32) (string, error)
+		Commit(ctx context.Context, xid string) (api.GlobalSession_GlobalStatus, error)
+		Rollback(ctx context.Context, xid string) (api.GlobalSession_GlobalStatus, error)
+		BranchRegister(ctx context.Context, in *api.BranchRegisterRequest) (string, int64, error)
+		BranchReport(ctx context.Context, branchID string, status api.BranchSession_BranchStatus) error
+		ReleaseLockKeys(ctx context.Context, resourceID string, lockKeys []string) (bool, error)
+		IsLockable(ctx context.Context, resourceID, lockKey string) (bool, error)
+		IsLockableWithXID(ctx context.Context, resourceID, lockKey, xid string) (bool, error)
+	}
 
 	Listener interface {
 		Listen()
@@ -42,10 +54,29 @@ type (
 		SetExecutor(executor Executor)
 	}
 
-	Connection interface {
-		DataSourceName() string
-		Connect(ctx context.Context) error
-		Close()
+	// Executor ...
+	Executor interface {
+		GetPreFilters() []DBPreFilter
+
+		GetPostFilters() []DBPostFilter
+
+		ExecuteMode() config.ExecuteMode
+
+		ProcessDistributedTransaction() bool
+
+		InLocalTransaction(ctx context.Context) bool
+
+		InGlobalTransaction(ctx context.Context) bool
+
+		ExecuteUseDB(ctx context.Context, db string) error
+
+		ExecuteFieldList(ctx context.Context, table, wildcard string) ([]Field, error)
+
+		ExecutorComQuery(ctx context.Context, sql string) (Result, uint16, error)
+
+		ExecutorComStmtExecute(ctx context.Context, stmt *Stmt) (Result, uint16, error)
+
+		ConnectionClose(ctx context.Context)
 	}
 
 	Filter interface {
@@ -85,7 +116,13 @@ type (
 	}
 
 	FilterFactory interface {
-		NewFilter(config map[string]interface{}) (Filter, error)
+		NewFilter(appid string, config map[string]interface{}) (Filter, error)
+	}
+
+	Connection interface {
+		DataSourceName() string
+		Connect(ctx context.Context) error
+		Close()
 	}
 
 	DB interface {
@@ -112,7 +149,7 @@ type (
 		IdleClosed() int64
 		Exhausted() int64
 		StatsJSON() string
-		Ping()
+		Ping() error
 		Close()
 		IsClosed() (closed bool)
 	}
@@ -123,31 +160,6 @@ type (
 		ExecuteSql(ctx context.Context, sql string, args ...interface{}) (Result, uint16, error)
 		Commit(ctx context.Context) (Result, error)
 		Rollback(ctx context.Context, stmt *ast.RollbackStmt) (Result, error)
-	}
-
-	// Executor ...
-	Executor interface {
-		GetPreFilters() []DBPreFilter
-
-		GetPostFilters() []DBPostFilter
-
-		ExecuteMode() config.ExecuteMode
-
-		ProcessDistributedTransaction() bool
-
-		InLocalTransaction(ctx context.Context) bool
-
-		InGlobalTransaction(ctx context.Context) bool
-
-		ExecuteUseDB(ctx context.Context, db string) error
-
-		ExecuteFieldList(ctx context.Context, table, wildcard string) ([]Field, error)
-
-		ExecutorComQuery(ctx context.Context, sql string) (Result, uint16, error)
-
-		ExecutorComStmtExecute(ctx context.Context, stmt *Stmt) (Result, uint16, error)
-
-		ConnectionClose(ctx context.Context)
 	}
 
 	DBManager interface {

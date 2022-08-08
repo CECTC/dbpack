@@ -47,7 +47,7 @@ func TestOptimizeQueryOnSingleDB(t *testing.T) {
 	}
 	stmt.Accept(&visitor.ParamVisitor{})
 
-	resource.SetDBManager(&resource.DBManager{})
+	resource.SetDBManager("app1", &resource.DBManager{})
 	var cache *meta.MysqlTableMetaCache
 	patches := gomonkey.ApplyMethodFunc(cache, "GetTableMeta", func(ctx context.Context, db proto.DB, tableName string) (schema.TableMeta, error) {
 		return schema.TableMeta{
@@ -156,7 +156,7 @@ func TestOptimizeQueryOnMultiDB(t *testing.T) {
 	}
 	stmt.Accept(&visitor.ParamVisitor{})
 
-	resource.SetDBManager(&resource.DBManager{})
+	resource.SetDBManager("app1", &resource.DBManager{})
 	var cache *meta.MysqlTableMetaCache
 	patches := gomonkey.ApplyMethodFunc(cache, "GetTableMeta", func(ctx context.Context, db proto.DB, tableName string) (schema.TableMeta, error) {
 		return schema.TableMeta{
@@ -313,7 +313,7 @@ func TestOptimizeInsert(t *testing.T) {
 	}
 	stmt.Accept(&visitor.ParamVisitor{})
 
-	resource.SetDBManager(&resource.DBManager{})
+	resource.SetDBManager("app1", &resource.DBManager{})
 	var cache *meta.MysqlTableMetaCache
 	patches := gomonkey.ApplyMethodFunc(cache, "GetTableMeta", func(ctx context.Context, db proto.DB, tableName string) (schema.TableMeta, error) {
 		return schema.TableMeta{
@@ -420,6 +420,7 @@ func mockOptimizer() *Optimizer {
 	}
 
 	o := &Optimizer{
+		appid:            "app1",
 		dbGroupExecutors: mockDBGroupExecutors(),
 		algorithms:       algorithms,
 		topologies:       topologies,
