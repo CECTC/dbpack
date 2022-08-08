@@ -38,7 +38,7 @@ import (
 
 const (
 	cryptoFilter = "CryptoFilter"
-	aesIV        = "awesome789dbpack"
+	aesIV        = "greatdbpack!"
 )
 
 type _factory struct{}
@@ -301,7 +301,7 @@ func encryptInsertValues(columns []*columnIndex, config *ColumnCrypto, valueList
 			if param, ok := arg.(*driver.ValueExpr); ok {
 				value := param.GetBytes()
 				if len(value) != 0 {
-					encoded, err := misc.AesEncryptCBC(value, []byte(config.AesKey), []byte(aesIV))
+					encoded, err := misc.AesEncryptGCM(value, []byte(config.AesKey), []byte(aesIV))
 					if err != nil {
 						return errors.Wrapf(err, "Encryption of %s failed", column.Column)
 					}
@@ -323,7 +323,7 @@ func encryptUpdateValues(updateStmt *ast.UpdateStmt, config *ColumnCrypto) error
 			if param, ok := arg.(*driver.ValueExpr); ok {
 				value := param.GetBytes()
 				if len(value) != 0 {
-					encoded, err := misc.AesEncryptCBC(value, []byte(config.AesKey), []byte(aesIV))
+					encoded, err := misc.AesEncryptGCM(value, []byte(config.AesKey), []byte(aesIV))
 					if err != nil {
 						return errors.Wrapf(err, "Encryption of %s failed", column.Column)
 					}
@@ -342,14 +342,14 @@ func encryptBindVars(columns []*columnIndex, config *ColumnCrypto, args *map[str
 		parameterID := fmt.Sprintf("v%d", column.Index+1)
 		param := (*args)[parameterID]
 		if arg, ok := param.(string); ok {
-			encoded, err := misc.AesEncryptCBC([]byte(arg), []byte(config.AesKey), []byte(aesIV))
+			encoded, err := misc.AesEncryptGCM([]byte(arg), []byte(config.AesKey), []byte(aesIV))
 			if err != nil {
 				return errors.Errorf("Encryption of %s failed: %v", column.Column, err)
 			}
 			val := hex.EncodeToString(encoded)
 			(*args)[parameterID] = val
 		} else if arg, ok := param.([]byte); ok {
-			encoded, err := misc.AesEncryptCBC(arg, []byte(config.AesKey), []byte(aesIV))
+			encoded, err := misc.AesEncryptGCM(arg, []byte(config.AesKey), []byte(aesIV))
 			if err != nil {
 				return errors.Errorf("Encryption of %s failed: %v", column.Column, err)
 			}
@@ -369,7 +369,7 @@ func decryptDecodedResult(decodedResult *mysql.DecodedResult, config *ColumnCryp
 				if protoValue != nil {
 					if originalVal, ok := protoValue.Val.([]byte); ok {
 						if n, err := hex.Decode(originalVal, originalVal); err == nil {
-							if decodedVal, err := misc.AesDecryptCBC(originalVal[:n], []byte(config.AesKey), []byte(aesIV)); err == nil {
+							if decodedVal, err := misc.AesDecryptGCM(originalVal[:n], []byte(config.AesKey), []byte(aesIV)); err == nil {
 								r.Values[column.Index].Val = decodedVal
 							}
 						}
@@ -382,7 +382,7 @@ func decryptDecodedResult(decodedResult *mysql.DecodedResult, config *ColumnCryp
 				if protoValue != nil {
 					if originalVal, ok := protoValue.Val.([]byte); ok {
 						if n, err := hex.Decode(originalVal, originalVal); err == nil {
-							if decodedVal, err := misc.AesDecryptCBC(originalVal[:n], []byte(config.AesKey), []byte(aesIV)); err == nil {
+							if decodedVal, err := misc.AesDecryptGCM(originalVal[:n], []byte(config.AesKey), []byte(aesIV)); err == nil {
 								r.Values[column.Index].Val = decodedVal
 							}
 						}
