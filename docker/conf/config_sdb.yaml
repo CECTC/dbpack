@@ -1,6 +1,7 @@
 probe_port: 9999
 termination_drain_duration: 3s
 app_config:
+  # appid, replace with your own appid
   svc:
     distributed_transaction:
       retry_dead_threshold: 130000
