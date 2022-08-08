@@ -26,14 +26,18 @@ import (
 	"github.com/cectc/dbpack/third_party/pools"
 )
 
-var dbManager proto.DBManager
+var managers = make(map[string]proto.DBManager)
 
 type DBManager struct {
 	dataSources   []*config.DataSource
 	resourcePools map[string]proto.DB
 }
 
-func InitDBManager(dataSources []*config.DataSource, factory func(dbName, dsn string) pools.Factory) {
+func (manager *DBManager) GetDB(name string) proto.DB {
+	return manager.resourcePools[name]
+}
+
+func RegisterDBManager(appid string, dataSources []*config.DataSource, factory func(dbName, dsn string) pools.Factory) {
 	resourcePools := make(map[string]proto.DB, 0)
 
 	initResourcePool := func(dataSourceConfig *config.DataSource) *pools.ResourcePool {
@@ -69,29 +73,27 @@ func InitDBManager(dataSources []*config.DataSource, factory func(dbName, dsn st
 		db.SetConnectionPostFilters(connectionPostFilters)
 		resourcePools[dataSource.Name] = db
 	}
-	dbManager = &DBManager{
+	managers[appid] = &DBManager{
 		dataSources:   dataSources,
 		resourcePools: resourcePools,
 	}
 }
 
-func GetDBManager() proto.DBManager {
-	return dbManager
+func GetDBManager(appid string) proto.DBManager {
+	return managers[appid]
 }
 
-func SetDBManager(manager proto.DBManager) {
-	dbManager = manager
+func SetDBManager(appid string, manager proto.DBManager) {
+	managers[appid] = manager
 }
 
-func (manager *DBManager) GetDB(name string) proto.DB {
-	return manager.resourcePools[name]
-}
-
-func (manager *DBManager) GetResourcePoolStatus() error {
-	for _, dataSource := range manager.resourcePools {
-		db := dataSource.(*sql.DB)
-		if err := db.TestConn(); err != nil {
-			return fmt.Errorf("datasource %s is not ready, err: %+v", db.Name(), err)
+func DetectDBs() error {
+	for _, manager := range managers {
+		dbManager := manager.(*DBManager)
+		for _, db := range dbManager.resourcePools {
+			if err := db.Ping(); err != nil {
+				return fmt.Errorf("datasource %s is not ready, err: %+v", db.Name(), err)
+			}
 		}
 	}
 	return nil

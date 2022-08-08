@@ -34,6 +34,7 @@ import (
 )
 
 type prepareGlobalLockExecutor struct {
+	appid      string
 	conn       *driver.BackendConnection
 	isUpdate   bool
 	deleteStmt *ast.DeleteStmt
@@ -42,12 +43,14 @@ type prepareGlobalLockExecutor struct {
 }
 
 func NewPrepareGlobalLockExecutor(
+	appid string,
 	conn *driver.BackendConnection,
 	isUpdate bool,
 	deleteStmt *ast.DeleteStmt,
 	updateStmt *ast.UpdateStmt,
 	args map[string]interface{}) GlobalLockExecutor {
 	return &prepareGlobalLockExecutor{
+		appid:      appid,
 		conn:       conn,
 		isUpdate:   isUpdate,
 		deleteStmt: deleteStmt,
@@ -71,7 +74,7 @@ func (executor *prepareGlobalLockExecutor) Executable(ctx context.Context, lockR
 			lockable bool
 		)
 		for i := 0; i < lockRetryTimes; i++ {
-			lockable, err = dt.GetDistributedTransactionManager().IsLockable(ctx,
+			lockable, err = dt.GetTransactionManager(executor.appid).IsLockable(ctx,
 				executor.conn.DataSourceName(), lockKeys)
 			if err != nil {
 				time.Sleep(lockRetryInterval)
@@ -86,7 +89,7 @@ func (executor *prepareGlobalLockExecutor) Executable(ctx context.Context, lockR
 
 func (executor *prepareGlobalLockExecutor) GetTableMeta(ctx context.Context) (schema.TableMeta, error) {
 	dbName := executor.conn.DataSourceName()
-	db := resource.GetDBManager().GetDB(dbName)
+	db := resource.GetDBManager(executor.appid).GetDB(dbName)
 	return meta.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
 }
 

@@ -86,11 +86,14 @@ func TestQueryGlobalLock(t *testing.T) {
 		},
 	}
 
-	patches1 := isLockablePatch()
-	defer patches1.Reset()
+	patch0 := getTransactionManagerPatch()
+	defer patch0.Reset()
 
-	patches2 := beforeImagePatch2()
-	defer patches2.Reset()
+	patch1 := isLockablePatch()
+	defer patch1.Reset()
+
+	patch2 := beforeImagePatch2()
+	defer patch2.Reset()
 
 	for _, c := range testCases {
 		t.Run(c.sql, func(t *testing.T) {
@@ -121,10 +124,10 @@ func TestQueryGlobalLock(t *testing.T) {
 			var executor GlobalLockExecutor
 			if c.isUpdate {
 				updateStmt := stmt.(*ast.UpdateStmt)
-				executor = NewQueryGlobalLockExecutor(&driver.BackendConnection{}, c.isUpdate, nil, updateStmt)
+				executor = NewQueryGlobalLockExecutor("app1", &driver.BackendConnection{}, c.isUpdate, nil, updateStmt)
 			} else {
 				deleteStmt := stmt.(*ast.DeleteStmt)
-				executor = NewQueryGlobalLockExecutor(&driver.BackendConnection{}, c.isUpdate, deleteStmt, nil)
+				executor = NewQueryGlobalLockExecutor("app1", &driver.BackendConnection{}, c.isUpdate, deleteStmt, nil)
 			}
 			tableName := executor.GetTableName()
 			assert.Equal(t, c.expectedTableName, tableName)

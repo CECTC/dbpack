@@ -1,67 +1,68 @@
-listeners:
-  - protocol_type: mysql
-    socket_address:
-      address: 0.0.0.0
-      port: 13306
-    config:
-      users:
-        dksl: "123456"
-      server_version: "8.0.27"
-    executor: redirect
+probe_port: 9999
+termination_drain_duration: 3s
+app_config:
+  svc:
+    distributed_transaction:
+      retry_dead_threshold: 130000
+      rollback_retry_timeout_unlock_enable: true
+      etcd_config:
+        endpoints:
+          - etcd:2379
 
-executors:
-  - name: redirect
-    mode: rws
-    config:
-      load_balance_algorithm: RandomWeight
-      data_sources:
-        - name: employees-master
-          weight: r0w10
-        - name: employees-slave
-          weight: r10w0
+    listeners:
+      - protocol_type: mysql
+        socket_address:
+          address: 0.0.0.0
+          port: 13306
+        config:
+          users:
+            dksl: "123456"
+          server_version: "8.0.27"
+        executor: redirect
+
+    executors:
+      - name: redirect
+        mode: rws
+        config:
+          load_balance_algorithm: RandomWeight
+          data_sources:
+            - name: employees-master
+              weight: r0w10
+            - name: employees-slave
+              weight: r10w0
+        filters:
+          - cryptoFilter
+
+    data_source_cluster:
+      - name: employees-master
+        capacity: 10
+        max_capacity: 20
+        idle_timeout: 60s
+        dsn: root:123456@tcp(dbpack-mysql1:3306)/employees?timeout=1s&readTimeout=1s&writeTimeout=1s&parseTime=true&loc=Local&charset=utf8mb4,utf8
+        ping_interval: 20s
+        ping_times_for_change_status: 3
+        filters:
+          - mysqlDTFilter
+
+      - name: employees-slave
+        capacity: 10
+        max_capacity: 20
+        idle_timeout: 60s
+        dsn: root:123456@tcp(dbpack-mysql2:3306)/employees?timeout=60s&readTimeout=60s&writeTimeout=60s&parseTime=true&loc=Local&charset=utf8mb4,utf8
+        ping_interval: 20s
+        ping_times_for_change_status: 3
+
     filters:
-      - cryptoFilter
-
-data_source_cluster:
-  - name: employees-master
-    capacity: 10
-    max_capacity: 20
-    idle_timeout: 60s
-    dsn: root:123456@tcp(dbpack-mysql1:3306)/employees?timeout=1s&readTimeout=1s&writeTimeout=1s&parseTime=true&loc=Local&charset=utf8mb4,utf8
-    ping_interval: 20s
-    ping_times_for_change_status: 3
-    filters:
-      - mysqlDTFilter
-
-  - name: employees-slave
-    capacity: 10
-    max_capacity: 20
-    idle_timeout: 60s
-    dsn: root:123456@tcp(dbpack-mysql2:3306)/employees?timeout=60s&readTimeout=60s&writeTimeout=60s&parseTime=true&loc=Local&charset=utf8mb4,utf8
-    ping_interval: 20s
-    ping_times_for_change_status: 3
-
-filters:
-  - name: mysqlDTFilter
-    kind: MysqlDistributedTransaction
-    conf:
-      appid: svc
-      lock_retry_interval: 50ms
-      lock_retry_times: 30
-  - name: cryptoFilter
-    kind: CryptoFilter
-    conf:
-      column_crypto_list:
-        - table: departments
-          columns: ["dept_name"]
-          aeskey: 123456789abcdefg
-
-distributed_transaction:
-  appid: svc
-  retry_dead_threshold: 130000
-  rollback_retry_timeout_unlock_enable: true
-  etcd_config:
-    endpoints:
-      - etcd:2379
-
-http_listen_port: 9999
+      - name: mysqlDTFilter
+        kind: MysqlDistributedTransaction
+        conf:
+          appid: svc
+          lock_retry_interval: 50ms
+          lock_retry_times: 30
+      - name: cryptoFilter
+        kind: CryptoFilter
+        conf:
+          column_crypto_list:
+            - table: departments
+              columns: [ "dept_name" ]
+              aeskey: 123456789abcdefg

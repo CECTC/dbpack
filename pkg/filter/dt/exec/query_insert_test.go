@@ -53,7 +53,7 @@ func TestQueryInsert(t *testing.T) {
 			stmt.Accept(&visitor.ParamVisitor{})
 
 			insert := stmt.(*ast.InsertStmt)
-			executor := NewQueryInsertExecutor(&driver.BackendConnection{}, insert, nil)
+			executor := NewQueryInsertExecutor("app1", &driver.BackendConnection{}, insert, nil)
 
 			tableName := executor.GetTableName()
 			assert.Equal(t, c.expectedTableName, tableName)

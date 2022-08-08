@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -31,94 +30,8 @@ import (
 	"github.com/cectc/dbpack/pkg/log"
 )
 
-type Configuration struct {
-	Listeners []*Listener `yaml:"listeners" json:"listeners"`
-
-	Executors []*Executor `yaml:"executors" json:"executors"`
-
-	Filters []*Filter `yaml:"filters" json:"filters"`
-
-	DataSources []*DataSource `yaml:"data_source_cluster" json:"data_source_cluster"`
-
-	DistributedTransaction *DistributedTransaction `yaml:"distributed_transaction" json:"distributed_transaction"`
-
-	TerminationDrainDuration time.Duration `yaml:"termination_drain_duration" json:"termination_drain_duration"`
-
-	HTTPListenPort *int `yaml:"http_listen_port"`
-
-	Trace *Trace `yaml:"trace"`
-}
-
-type (
-	// ProtocolType protocol type enum
-	ProtocolType int32
-
-	// SocketAddress specify either a logical or physical address and port, which are
-	// used to tell server where to bind/listen, connect to upstream and find
-	// management servers
-	SocketAddress struct {
-		Address string `default:"0.0.0.0" yaml:"address" json:"address"`
-		Port    int    `default:"8881" yaml:"port" json:"port"`
-	}
-
-	// Parameters defines a key-value parameters mapping
-	Parameters map[string]interface{}
-
-	Filter struct {
-		Name   string     `yaml:"name" json:"name"`
-		Kind   string     `yaml:"kind" json:"kind"`
-		Config Parameters `yaml:"conf,omitempty" json:"conf,omitempty"`
-	}
-
-	Executor struct {
-		Name    string      `yaml:"name" json:"name"`
-		Mode    ExecuteMode `yaml:"mode" json:"mode"`
-		Config  Parameters  `yaml:"config" json:"config"`
-		Filters []string    `yaml:"filters" json:"filters"`
-	}
-
-	Listener struct {
-		ProtocolType  ProtocolType  `yaml:"protocol_type" json:"protocol_type"`
-		SocketAddress SocketAddress `yaml:"socket_address" json:"socket_address"`
-		Filters       []string      `yaml:"filters" json:"filters"`
-		Config        Parameters    `yaml:"config" json:"config"`
-		Executor      string        `yaml:"executor" json:"executor"`
-	}
-
-	// Storage defines the configuration for registry object storage
-	Storage map[string]Parameters
-
-	DistributedTransaction struct {
-		ApplicationID                    string `yaml:"appid" json:"appid"`
-		RetryDeadThreshold               int64  `yaml:"retry_dead_threshold" json:"retry_dead_threshold"`
-		RollbackRetryTimeoutUnlockEnable bool   `yaml:"rollback_retry_timeout_unlock_enable" json:"rollback_retry_timeout_unlock_enable"`
-
-		EtcdConfig clientv3.Config `yaml:"etcd_config" json:"etcd_config"`
-	}
-
-	EnforcementPolicy struct {
-		MinTime             time.Duration `yaml:"min_time" json:"min_time"`
-		PermitWithoutStream bool          `yaml:"permit_without_stream" json:"permit_without_stream"`
-	}
-
-	ServerParameters struct {
-		MaxConnectionIdle     time.Duration `yaml:"max_connection_idle" json:"max_connection_idle"`
-		MaxConnectionAge      time.Duration `yaml:"max_connection_age" json:"max_connection_age"`
-		MaxConnectionAgeGrace time.Duration `yaml:"max_connection_age_grace" json:"max_connection_age_grace"`
-		Time                  time.Duration `yaml:"time" json:"time"`
-		Timeout               time.Duration `yaml:"timeout" json:"Timeout"`
-	}
-
-	ClientParameters struct {
-		Time                time.Duration `yaml:"time" json:"-"`
-		Timeout             time.Duration `yaml:"timeout" json:"-"`
-		PermitWithoutStream bool          `yaml:"permit_without_stream"`
-	}
-
-	Trace struct {
-		JaegerEndpoint string `yaml:"jaeger_endpoint"`
-	}
-)
+// ProtocolType protocol type enum
+type ProtocolType int32
 
 const (
 	Http ProtocolType = iota
@@ -147,51 +60,205 @@ func (t *ProtocolType) unmarshalText(text []byte) bool {
 	return true
 }
 
-// Type returns the storage driver type, such as filesystem or s3
-func (storage Storage) Type() string {
-	var storageType []string
+type Configuration struct {
+	ProbePort                int           `default:"18888" yaml:"probe_port" json:"probe_port"`
+	Tracer                   *TracerConfig `yaml:"tracer" json:"tracer"`
+	TerminationDrainDuration time.Duration `default:"3s" yaml:"termination_drain_duration" json:"termination_drain_duration"`
 
-	// Return only key in this map
-	for k := range storage {
-		storageType = append(storageType, k)
-	}
-	if len(storageType) > 1 {
-		log.Panic("multiple storage drivers specified in distributed transaction config: " + strings.Join(storageType, ", "))
-	}
-	if len(storageType) == 1 {
-		return storageType[0]
-	}
-	return ""
+	AppConfig AppConfig `yaml:"app_config" json:"app_config"`
 }
 
-// Parameters returns the Parameters map for a Storage configuration
-func (storage Storage) Parameters() Parameters {
-	return storage[storage.Type()]
+type AppConfig map[string]*DBPackConfig
+
+type DBPackConfig struct {
+	AppID                  string                  `yaml:"-" json:"-"`
+	DistributedTransaction *DistributedTransaction `yaml:"distributed_transaction" json:"distributed_transaction"`
+
+	Listeners   []*Listener   `yaml:"listeners" json:"listeners"`
+	Executors   []*Executor   `yaml:"executors" json:"executors"`
+	DataSources []*DataSource `yaml:"data_source_cluster" json:"data_source_cluster"`
+	Filters     []*Filter     `yaml:"filters" json:"filters"`
 }
 
-// setParameter changes the parameter at the provided key to the new value
-func (storage Storage) setParameter(key string, value interface{}) {
-	storage[storage.Type()][key] = value
+type TracerConfig struct {
+	JaegerEndpoint string `yaml:"jaeger_endpoint" json:"jaeger_endpoint"`
 }
 
-func parse(content []byte) *Configuration {
-	cfg := &Configuration{
-		TerminationDrainDuration: time.Second * 3,
+type DistributedTransaction struct {
+	AppID                            string `yaml:"appid" json:"appid"`
+	RetryDeadThreshold               int64  `yaml:"retry_dead_threshold" json:"retry_dead_threshold"`
+	RollbackRetryTimeoutUnlockEnable bool   `yaml:"rollback_retry_timeout_unlock_enable" json:"rollback_retry_timeout_unlock_enable"`
+
+	EtcdConfig *clientv3.Config `yaml:"etcd_config" json:"etcd_config"`
+}
+
+type Listener struct {
+	AppID         string        `yaml:"-" json:"-"`
+	ProtocolType  ProtocolType  `yaml:"protocol_type" json:"protocol_type"`
+	SocketAddress SocketAddress `yaml:"socket_address" json:"socket_address"`
+	Config        Parameters    `yaml:"config" json:"config"`
+	Executor      string        `yaml:"executor" json:"executor"`
+	Filters       []string      `yaml:"filters" json:"filters"`
+}
+
+type Executor struct {
+	AppID   string      `yaml:"-" json:"-"`
+	Name    string      `yaml:"name" json:"name"`
+	Mode    ExecuteMode `yaml:"mode" json:"mode"`
+	Config  Parameters  `yaml:"config" json:"config"`
+	Filters []string    `yaml:"filters" json:"filters"`
+}
+
+type Filter struct {
+	AppID  string     `yaml:"-" json:"-"`
+	Name   string     `yaml:"name" json:"name"`
+	Kind   string     `yaml:"kind" json:"kind"`
+	Config Parameters `yaml:"conf,omitempty" json:"conf,omitempty"`
+}
+
+// SocketAddress specify either a logical or physical address and port, which are
+// used to tell server where to bind/listen, connect to upstream and find
+// management servers
+type SocketAddress struct {
+	Address string `default:"0.0.0.0" yaml:"address" json:"address"`
+	Port    int    `default:"8881" yaml:"port" json:"port"`
+}
+
+// Parameters defines a key-value parameters mapping
+type Parameters map[string]interface{}
+
+func (config Configuration) DBPackConfig(appID string) *DBPackConfig {
+	return config.AppConfig[appID]
+}
+
+func (conf *DBPackConfig) GetEtcdConfig() *clientv3.Config {
+	if conf.DistributedTransaction != nil && conf.DistributedTransaction.EtcdConfig != nil {
+		return conf.DistributedTransaction.EtcdConfig
 	}
-	if err := yaml.Unmarshal(content, cfg); err != nil {
-		log.Fatalf("[config] [default load] yaml unmarshal config failed, error: %v", err)
-	}
-
-	return cfg
+	return nil
 }
+
+func (conf *DBPackConfig) Normalize() error {
+	if conf.AppID == "" {
+		return errors.New("AppID can not be empty")
+	}
+	if err := conf._validateListeners(); err != nil {
+		return err
+	}
+	if err := conf._validateExecutors(); err != nil {
+		return err
+	}
+	if err := conf._validateDataSources(); err != nil {
+		return err
+	}
+	for _, filter := range conf.Filters {
+		filter.AppID = conf.AppID
+	}
+	if conf.DistributedTransaction != nil {
+		conf.DistributedTransaction.AppID = conf.AppID
+	}
+	return nil
+}
+
+func (conf *DBPackConfig) _validateListeners() error {
+	for _, listener := range conf.Listeners {
+		if listener.Executor != "" {
+			var _executor *Executor
+			for _, executor := range conf.Executors {
+				if executor.Name == listener.Executor {
+					_executor = executor
+				}
+			}
+			if _executor == nil {
+				return errors.Errorf("Listener %s doesn't have a valid executor", listener.SocketAddress)
+			}
+		}
+		for _, filterName := range listener.Filters {
+			var _filter *Filter
+			for _, filter := range conf.Filters {
+				if filter.Name == filterName {
+					_filter = filter
+				}
+			}
+			if _filter == nil {
+				return errors.Errorf("Listener %s doesn't have a valid filter %s", listener.SocketAddress, filterName)
+			}
+		}
+		listener.AppID = conf.AppID
+	}
+	return nil
+}
+
+func (conf *DBPackConfig) _validateExecutors() error {
+	for _, executor := range conf.Executors {
+		for _, filterName := range executor.Filters {
+			var _filter *Filter
+			for _, filter := range conf.Filters {
+				if filter.Name == filterName {
+					_filter = filter
+				}
+			}
+			if _filter == nil {
+				return errors.Errorf("Executor %s doesn't have a valid filter %s", executor.Name, filterName)
+			}
+		}
+		executor.AppID = conf.AppID
+	}
+	return nil
+}
+
+func (conf *DBPackConfig) _validateDataSources() error {
+	for _, dataSource := range conf.DataSources {
+		for _, filterName := range dataSource.Filters {
+			var _filter *Filter
+			for _, filter := range conf.Filters {
+				if filter.Name == filterName {
+					_filter = filter
+				}
+			}
+			if _filter == nil {
+				return errors.Errorf("DataSource %s doesn't have a valid filter %s", dataSource.Name, filterName)
+			}
+		}
+	}
+	return nil
+}
+
+func (sa SocketAddress) String() string {
+	return fmt.Sprintf("%s:%d", sa.Address, sa.Port)
+}
+
+var _configuration = new(Configuration)
 
 // Load config file and parse
-func Load(path string) *Configuration {
+func Load(path string) (*Configuration, error) {
 	configPath, _ := filepath.Abs(path)
 	log.Infof("load config from :  %s", configPath)
 	content, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		log.Fatalf("[config] [default load] load config failed, error: %v", err)
+		return nil, errors.Wrap(err, "[config] load config failed")
 	}
-	return parse(content)
+	configuration, err := _parse(content)
+	if err == nil {
+		for appID, config := range configuration.AppConfig {
+			config.AppID = appID
+			if err := config.Normalize(); err != nil {
+				return nil, err
+			}
+		}
+		_configuration = configuration
+	}
+	return configuration, err
+}
+
+func GetDBPackConfig(appID string) *DBPackConfig {
+	return _configuration.DBPackConfig(appID)
+}
+
+func _parse(content []byte) (*Configuration, error) {
+	var configuration Configuration
+	if err := yaml.Unmarshal(content, &configuration); err != nil {
+		return nil, errors.Wrap(err, "[config] yaml unmarshal config failed")
+	}
+	return &configuration, nil
 }

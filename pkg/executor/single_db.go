@@ -35,6 +35,7 @@ import (
 )
 
 type SingleDBExecutor struct {
+	conf        *config.Executor
 	PreFilters  []proto.DBPreFilter
 	PostFilters []proto.DBPostFilter
 
@@ -63,6 +64,7 @@ func NewSingleDBExecutor(conf *config.Executor) (proto.Executor, error) {
 	}
 
 	executor := &SingleDBExecutor{
+		conf:                conf,
 		PreFilters:          make([]proto.DBPreFilter, 0),
 		PostFilters:         make([]proto.DBPostFilter, 0),
 		dataSource:          v.DataSource,
@@ -114,12 +116,12 @@ func (executor *SingleDBExecutor) InGlobalTransaction(ctx context.Context) bool 
 }
 
 func (executor *SingleDBExecutor) ExecuteUseDB(ctx context.Context, schema string) error {
-	db := resource.GetDBManager().GetDB(executor.dataSource)
+	db := resource.GetDBManager(executor.conf.AppID).GetDB(executor.dataSource)
 	return db.UseDB(ctx, schema)
 }
 
 func (executor *SingleDBExecutor) ExecuteFieldList(ctx context.Context, table, wildcard string) ([]proto.Field, error) {
-	db := resource.GetDBManager().GetDB(executor.dataSource)
+	db := resource.GetDBManager(executor.conf.AppID).GetDB(executor.dataSource)
 	return db.ExecuteFieldList(ctx, table, wildcard)
 }
 
@@ -164,7 +166,7 @@ func (executor *SingleDBExecutor) ExecutorComQuery(
 	spanCtx = proto.WithSqlText(spanCtx, sql)
 
 	log.Debugf("connectionID: %d, query: %s", connectionID, sql)
-	db = resource.GetDBManager().GetDB(executor.dataSource)
+	db = resource.GetDBManager(executor.conf.AppID).GetDB(executor.dataSource)
 	switch stmt := queryStmt.(type) {
 	case *ast.SetStmt:
 		if shouldStartTransaction(stmt) {
@@ -253,7 +255,7 @@ func (executor *SingleDBExecutor) ExecutorComStmtExecute(
 		tx := txi.(proto.Tx)
 		return tx.ExecuteStmt(spanCtx, stmt)
 	}
-	db := resource.GetDBManager().GetDB(executor.dataSource)
+	db := resource.GetDBManager(executor.conf.AppID).GetDB(executor.dataSource)
 	return db.ExecuteStmt(spanCtx, stmt)
 }
 

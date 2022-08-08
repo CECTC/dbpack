@@ -38,6 +38,8 @@ import (
 )
 
 type ReadWriteSplittingExecutor struct {
+	conf *config.Executor
+
 	PreFilters  []proto.DBPreFilter
 	PostFilters []proto.DBPostFilter
 
@@ -64,7 +66,7 @@ func NewReadWriteSplittingExecutor(conf *config.Executor) (proto.Executor, error
 		return nil, err
 	}
 
-	all, masters, reads, err := groupDataSourceRefs(rwConfig.DataSources)
+	all, masters, reads, err := groupDataSourceRefs(conf.AppID, rwConfig.DataSources)
 	if err != nil {
 		return nil, err
 	}
@@ -85,6 +87,7 @@ func NewReadWriteSplittingExecutor(conf *config.Executor) (proto.Executor, error
 	}
 
 	executor := &ReadWriteSplittingExecutor{
+		conf:                conf,
 		PreFilters:          make([]proto.DBPreFilter, 0),
 		PostFilters:         make([]proto.DBPostFilter, 0),
 		all:                 all,
@@ -269,7 +272,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
 		}
 		withSlaveCtx := proto.WithSlave(spanCtx)
 		if has, dsName := misc.HasUseDBHint(stmt.TableHints); has {
-			protoDB := resource.GetDBManager().GetDB(dsName)
+			protoDB := resource.GetDBManager(executor.conf.AppID).GetDB(dsName)
 			if protoDB == nil {
 				log.Debugf("data source %d not found", dsName)
 				db = executor.reads.Next(withSlaveCtx).(*DataSourceBrief)
@@ -329,7 +332,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComStmtExecute(
 	case *ast.SelectStmt:
 		var db *DataSourceBrief
 		if has, dsName := misc.HasUseDBHint(st.TableHints); has {
-			protoDB := resource.GetDBManager().GetDB(dsName)
+			protoDB := resource.GetDBManager(executor.conf.AppID).GetDB(dsName)
 			if protoDB == nil {
 				log.Debugf("data source %d not found", dsName)
 				db = executor.reads.Next(proto.WithSlave(spanCtx)).(*DataSourceBrief)

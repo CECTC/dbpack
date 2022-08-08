@@ -128,6 +128,7 @@ func (l *HttpListener) Listen() {
 		request.SetHost(l.conf.BackendHost)
 		if err := fasthttp.Do(request, &fastHttpCtx.Response); err != nil {
 			log.Error(err)
+			fastHttpCtx.Response.SetStatusCode(http.StatusServiceUnavailable)
 		}
 		if err := l.doPostFilter(spanCtx, fastHttpCtx); err != nil {
 			tracing.RecordErrorSpan(span, err)

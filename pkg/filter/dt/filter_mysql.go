@@ -46,7 +46,7 @@ const (
 type _mysqlFactory struct {
 }
 
-func (factory *_mysqlFactory) NewFilter(config map[string]interface{}) (proto.Filter, error) {
+func (factory *_mysqlFactory) NewFilter(appid string, config map[string]interface{}) (proto.Filter, error) {
 	var (
 		err     error
 		content []byte
@@ -57,7 +57,6 @@ func (factory *_mysqlFactory) NewFilter(config map[string]interface{}) (proto.Fi
 	}
 
 	v := &struct {
-		ApplicationID        string        `yaml:"appid" json:"appid"`
 		LockRetryInterval    time.Duration `yaml:"lock_retry_interval" json:"-"`
 		LockRetryIntervalStr string        `yaml:"-" json:"lock_retry_interval"`
 		LockRetryTimes       int           `yaml:"lock_retry_times" json:"lock_retry_times"`
@@ -72,7 +71,7 @@ func (factory *_mysqlFactory) NewFilter(config map[string]interface{}) (proto.Fi
 	}
 
 	return &_mysqlFilter{
-		applicationID:     v.ApplicationID,
+		applicationID:     appid,
 		lockRetryInterval: v.LockRetryInterval,
 		lockRetryTimes:    v.LockRetryTimes,
 	}, nil
@@ -196,7 +195,7 @@ func (f *_mysqlFilter) registerBranchTransaction(ctx context.Context, xid, resou
 		ApplicationData: nil,
 	}
 	for retryCount := 0; retryCount < f.lockRetryTimes; retryCount++ {
-		_, branchID, err = dt.GetDistributedTransactionManager().BranchRegister(spanCtx, br)
+		_, branchID, err = dt.GetTransactionManager(f.applicationID).BranchRegister(spanCtx, br)
 		if err == nil {
 			break
 		}

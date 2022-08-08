@@ -273,9 +273,11 @@ func (mr *MockDBMockRecorder) Name() *gomock.Call {
 }
 
 // Ping mocks base method.
-func (m *MockDB) Ping() {
+func (m *MockDB) Ping() error {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Ping")
+	ret := m.ctrl.Call(m, "Ping")
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Ping indicates an expected call of Ping.

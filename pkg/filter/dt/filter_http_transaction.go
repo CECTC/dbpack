@@ -38,7 +38,7 @@ func (f *_httpFilter) handleHttp1GlobalBegin(ctx context.Context, fastHttpCtx *f
 	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionBegin)
 	span.SetAttributes(attribute.KeyValue{Key: "global-transaction-name", Value: attribute.StringValue(globalTransactionName)})
 	defer span.End()
-	transactionManager := dt.GetDistributedTransactionManager()
+	transactionManager := dt.GetTransactionManager(f.conf.ApplicationID)
 	xid, err := transactionManager.Begin(spanCtx, globalTransactionName, transactionInfo.Timeout)
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)
@@ -119,7 +119,7 @@ func (f *_httpFilter) handleHttp1BranchRegister(ctx context.Context, fastHttpCtx
 		return false, errors.Errorf("encode request context failed, request context: %v, err: %v", requestContext, err)
 	}
 
-	transactionManager := dt.GetDistributedTransactionManager()
+	transactionManager := dt.GetTransactionManager(f.conf.ApplicationID)
 	branchID, _, err := transactionManager.BranchRegister(spanCtx, &api.BranchRegisterRequest{
 		XID:             string(xid),
 		ResourceID:      string(fastHttpCtx.Request.RequestURI()),
@@ -146,7 +146,7 @@ func (f *_httpFilter) handleHttp1BranchEnd(ctx context.Context, fastHttpCtx *fas
 	branchID := branchIDParam.(string)
 
 	if fastHttpCtx.Response.StatusCode() != http.StatusOK {
-		transactionManager := dt.GetDistributedTransactionManager()
+		transactionManager := dt.GetTransactionManager(f.conf.ApplicationID)
 		err := transactionManager.BranchReport(spanCtx, branchID, api.PhaseOneFailed)
 		if err != nil {
 			tracing.RecordErrorSpan(span, err)
@@ -165,7 +165,7 @@ func (f *_httpFilter) globalCommit(ctx context.Context, xid string) error {
 	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionCommit)
 	defer span.End()
 
-	transactionManager := dt.GetDistributedTransactionManager()
+	transactionManager := dt.GetTransactionManager(f.conf.ApplicationID)
 	status, err = transactionManager.Commit(spanCtx, xid)
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)
@@ -182,7 +182,7 @@ func (f *_httpFilter) globalRollback(ctx context.Context, xid string) error {
 	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.GlobalTransactionRollback)
 	defer span.End()
 
-	transactionManager := dt.GetDistributedTransactionManager()
+	transactionManager := dt.GetTransactionManager(f.conf.ApplicationID)
 	status, err = transactionManager.Rollback(spanCtx, xid)
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)

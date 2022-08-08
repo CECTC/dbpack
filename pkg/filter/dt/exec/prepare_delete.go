@@ -33,19 +33,22 @@ import (
 )
 
 type prepareDeleteExecutor struct {
-	conn *driver.BackendConnection
-	stmt *ast.DeleteStmt
-	args map[string]interface{}
+	appid string
+	conn  *driver.BackendConnection
+	stmt  *ast.DeleteStmt
+	args  map[string]interface{}
 }
 
 func NewPrepareDeleteExecutor(
+	appid string,
 	conn *driver.BackendConnection,
 	stmt *ast.DeleteStmt,
 	args map[string]interface{}) Executor {
 	return &prepareDeleteExecutor{
-		conn: conn,
-		stmt: stmt,
-		args: args,
+		appid: appid,
+		conn:  conn,
+		stmt:  stmt,
+		args:  args,
 	}
 }
 
@@ -80,7 +83,7 @@ func (executor *prepareDeleteExecutor) AfterImage(ctx context.Context) (*schema.
 
 func (executor *prepareDeleteExecutor) GetTableMeta(ctx context.Context) (schema.TableMeta, error) {
 	dbName := executor.conn.DataSourceName()
-	db := resource.GetDBManager().GetDB(dbName)
+	db := resource.GetDBManager(executor.appid).GetDB(dbName)
 	return meta.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
 }
 

@@ -51,7 +51,7 @@ func (brief *DataSourceBrief) Weight(ctx context.Context) int {
 	return brief.ReadWeight
 }
 
-func castToDataSourceBrief(ref *config.DataSourceRef) (*DataSourceBrief, error) {
+func castToDataSourceBrief(appid string, ref *config.DataSourceRef) (*DataSourceBrief, error) {
 	weightRegexp := regexp.MustCompile(weightRegex)
 	params := weightRegexp.FindStringSubmatch(ref.Weight)
 	if len(params) != 3 {
@@ -67,7 +67,7 @@ func castToDataSourceBrief(ref *config.DataSourceRef) (*DataSourceBrief, error) 
 	if err != nil {
 		return nil, errors.Errorf("cast write weight for datasource reference '%s' failed, write weight: %s", ref.Name, readWeight)
 	}
-	db := resource.GetDBManager().GetDB(ref.Name)
+	db := resource.GetDBManager(appid).GetDB(ref.Name)
 	return &DataSourceBrief{
 		Name:        ref.Name,
 		WriteWeight: ww,
@@ -78,10 +78,10 @@ func castToDataSourceBrief(ref *config.DataSourceRef) (*DataSourceBrief, error) 
 }
 
 // groupDataSourceRefs cast DataSourceRef to DataSourceBrief, then group them.
-func groupDataSourceRefs(dataSources []*config.DataSourceRef) (all, masters, reads []*DataSourceBrief, err error) {
+func groupDataSourceRefs(appid string, dataSources []*config.DataSourceRef) (all, masters, reads []*DataSourceBrief, err error) {
 	for i := 0; i < len(dataSources); i++ {
 		ds := dataSources[i]
-		brief, err := castToDataSourceBrief(ds)
+		brief, err := castToDataSourceBrief(appid, ds)
 		if err != nil {
 			return nil, nil, nil, err
 		}

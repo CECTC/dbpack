@@ -53,7 +53,7 @@ func TestPrepareInsert(t *testing.T) {
 			stmt.Accept(&visitor.ParamVisitor{})
 
 			insert := stmt.(*ast.InsertStmt)
-			executor := NewPrepareInsertExecutor(&driver.BackendConnection{}, insert, map[string]interface{}{
+			executor := NewPrepareInsertExecutor("app1", &driver.BackendConnection{}, insert, map[string]interface{}{
 				"v1": 10,
 				"v2": "scott",
 				"v3": 18,

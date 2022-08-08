@@ -33,6 +33,7 @@ import (
 )
 
 type prepareUpdateExecutor struct {
+	appid       string
 	conn        *driver.BackendConnection
 	stmt        *ast.UpdateStmt
 	args        map[string]interface{}
@@ -40,11 +41,13 @@ type prepareUpdateExecutor struct {
 }
 
 func NewPrepareUpdateExecutor(
+	appid string,
 	conn *driver.BackendConnection,
 	stmt *ast.UpdateStmt,
 	args map[string]interface{},
 	beforeImage *schema.TableRecords) Executor {
 	return &prepareUpdateExecutor{
+		appid:       appid,
 		conn:        conn,
 		stmt:        stmt,
 		args:        args,
@@ -104,7 +107,7 @@ func (executor *prepareUpdateExecutor) AfterImage(ctx context.Context) (*schema.
 
 func (executor *prepareUpdateExecutor) GetTableMeta(ctx context.Context) (schema.TableMeta, error) {
 	dbName := executor.conn.DataSourceName()
-	db := resource.GetDBManager().GetDB(dbName)
+	db := resource.GetDBManager(executor.appid).GetDB(dbName)
 	return meta.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
 }
 

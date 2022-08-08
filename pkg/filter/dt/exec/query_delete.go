@@ -33,16 +33,19 @@ import (
 )
 
 type queryDeleteExecutor struct {
-	conn *driver.BackendConnection
-	stmt *ast.DeleteStmt
+	appid string
+	conn  *driver.BackendConnection
+	stmt  *ast.DeleteStmt
 }
 
 func NewQueryDeleteExecutor(
+	appid string,
 	conn *driver.BackendConnection,
 	stmt *ast.DeleteStmt) Executor {
 	return &queryDeleteExecutor{
-		conn: conn,
-		stmt: stmt,
+		appid: appid,
+		conn:  conn,
+		stmt:  stmt,
 	}
 }
 
@@ -69,7 +72,7 @@ func (executor *queryDeleteExecutor) AfterImage(ctx context.Context) (*schema.Ta
 
 func (executor *queryDeleteExecutor) GetTableMeta(ctx context.Context) (schema.TableMeta, error) {
 	dbName := executor.conn.DataSourceName()
-	db := resource.GetDBManager().GetDB(dbName)
+	db := resource.GetDBManager(executor.appid).GetDB(dbName)
 	return meta.GetTableMetaCache().GetTableMeta(ctx, db, executor.GetTableName())
 }
 

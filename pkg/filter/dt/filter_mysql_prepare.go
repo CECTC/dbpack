@@ -34,7 +34,7 @@ import (
 
 func (f *_mysqlFilter) processBeforePrepareDelete(ctx context.Context, conn *driver.BackendConnection, stmt *proto.Stmt, deleteStmt *ast.DeleteStmt) error {
 	if misc.HasGlobalLockHint(deleteStmt.TableHints) {
-		executor := exec.NewPrepareGlobalLockExecutor(conn, false, deleteStmt, nil, stmt.BindVars)
+		executor := exec.NewPrepareGlobalLockExecutor(f.applicationID, conn, false, deleteStmt, nil, stmt.BindVars)
 		result, err := executor.Executable(ctx, f.lockRetryInterval, f.lockRetryTimes)
 		if err != nil {
 			return err
@@ -47,7 +47,7 @@ func (f *_mysqlFilter) processBeforePrepareDelete(ctx context.Context, conn *dri
 	if has, _ := misc.HasXIDHint(deleteStmt.TableHints); !has {
 		return nil
 	}
-	executor := exec.NewPrepareDeleteExecutor(conn, deleteStmt, stmt.BindVars)
+	executor := exec.NewPrepareDeleteExecutor(f.applicationID, conn, deleteStmt, stmt.BindVars)
 	bi, err := executor.BeforeImage(ctx)
 	if err != nil {
 		return err
@@ -60,7 +60,7 @@ func (f *_mysqlFilter) processBeforePrepareDelete(ctx context.Context, conn *dri
 
 func (f *_mysqlFilter) processBeforePrepareUpdate(ctx context.Context, conn *driver.BackendConnection, stmt *proto.Stmt, updateStmt *ast.UpdateStmt) error {
 	if misc.HasGlobalLockHint(updateStmt.TableHints) {
-		executor := exec.NewPrepareGlobalLockExecutor(conn, true, nil, updateStmt, stmt.BindVars)
+		executor := exec.NewPrepareGlobalLockExecutor(f.applicationID, conn, true, nil, updateStmt, stmt.BindVars)
 		result, err := executor.Executable(ctx, f.lockRetryInterval, f.lockRetryTimes)
 		if err != nil {
 			return err
@@ -73,7 +73,7 @@ func (f *_mysqlFilter) processBeforePrepareUpdate(ctx context.Context, conn *dri
 	if has, _ := misc.HasXIDHint(updateStmt.TableHints); !has {
 		return nil
 	}
-	executor := exec.NewPrepareUpdateExecutor(conn, updateStmt, stmt.BindVars, nil)
+	executor := exec.NewPrepareUpdateExecutor(f.applicationID, conn, updateStmt, stmt.BindVars, nil)
 	bi, err := executor.BeforeImage(ctx)
 	if err != nil {
 		return err
@@ -91,7 +91,7 @@ func (f *_mysqlFilter) processAfterPrepareDelete(ctx context.Context, conn *driv
 		return nil
 	}
 
-	executor := exec.NewPrepareDeleteExecutor(conn, deleteStmt, stmt.BindVars)
+	executor := exec.NewPrepareDeleteExecutor(f.applicationID, conn, deleteStmt, stmt.BindVars)
 	bi := proto.Variable(ctx, beforeImage)
 	if bi == nil {
 		return errors.New("before image should not be nil")
@@ -121,7 +121,7 @@ func (f *_mysqlFilter) processAfterPrepareInsert(ctx context.Context, conn *driv
 		return nil
 	}
 
-	executor := exec.NewPrepareInsertExecutor(conn, insertStmt, stmt.BindVars, result)
+	executor := exec.NewPrepareInsertExecutor(f.applicationID, conn, insertStmt, stmt.BindVars, result)
 	afterImage, err := executor.AfterImage(ctx)
 	if err != nil {
 		return err
@@ -154,7 +154,7 @@ func (f *_mysqlFilter) processAfterPrepareUpdate(ctx context.Context, conn *driv
 		return errors.New("before image should not be nil")
 	}
 	beforeImage := bi.(*schema.TableRecords)
-	executor := exec.NewPrepareUpdateExecutor(conn, updateStmt, stmt.BindVars, beforeImage)
+	executor := exec.NewPrepareUpdateExecutor(f.applicationID, conn, updateStmt, stmt.BindVars, beforeImage)
 	afterImage, err := executor.AfterImage(ctx)
 	if err != nil {
 		return err
@@ -183,7 +183,7 @@ func (f *_mysqlFilter) processPrepareSelectForUpdate(ctx context.Context, conn *
 		return nil
 	}
 
-	executor := exec.NewPrepareSelectForUpdateExecutor(conn, selectStmt, stmt.BindVars, result)
+	executor := exec.NewPrepareSelectForUpdateExecutor(f.applicationID, conn, selectStmt, stmt.BindVars, result)
 	_, err := executor.Executable(ctx, xid, f.lockRetryInterval, f.lockRetryTimes)
 	return err
 }

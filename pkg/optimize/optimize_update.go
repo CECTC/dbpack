@@ -92,6 +92,7 @@ func (o Optimizer) optimizeUpdate(ctx context.Context, stmt *ast.UpdateStmt, arg
 	}
 
 	multiPlan := &plan.MultiUpdatePlan{
+		AppID: o.appid,
 		Stmt:  stmt,
 		Plans: plans,
 	}

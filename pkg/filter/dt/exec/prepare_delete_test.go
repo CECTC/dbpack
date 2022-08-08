@@ -53,7 +53,7 @@ func TestPrepareDelete(t *testing.T) {
 			stmt.Accept(&visitor.ParamVisitor{})
 
 			deleteStmt := stmt.(*ast.DeleteStmt)
-			executor := NewPrepareDeleteExecutor(&driver.BackendConnection{}, deleteStmt, map[string]interface{}{
+			executor := NewPrepareDeleteExecutor("app1", &driver.BackendConnection{}, deleteStmt, map[string]interface{}{
 				"v1": 10,
 			})
 

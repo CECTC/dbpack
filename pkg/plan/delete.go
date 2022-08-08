@@ -152,6 +152,7 @@ func (p *DeletePlan) generate(sb *strings.Builder, table string, hints ...*ast.T
 }
 
 type MultiDeletePlan struct {
+	AppID string
 	Stmt  *ast.DeleteStmt
 	Plans []*DeletePlan
 }
@@ -165,7 +166,7 @@ func (p *MultiDeletePlan) Execute(ctx context.Context, _ ...*ast.TableOptimizerH
 	)
 	if has, _ := misc.HasXIDHint(p.Stmt.TableHints); !has {
 		tableName := p.Stmt.TableRefs.TableRefs.Left.(*ast.TableSource).Source.(*ast.TableName).Name.String()
-		transactionManager := dt.GetDistributedTransactionManager()
+		transactionManager := dt.GetTransactionManager(p.AppID)
 		timeoutVariable := proto.Variable(ctx, constant.TransactionTimeout)
 		timeout, ok := timeoutVariable.(int32)
 		if !ok {

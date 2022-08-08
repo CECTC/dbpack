@@ -70,7 +70,7 @@ func (t *MatchType) unmarshalText(text []byte) bool {
 type _httpFactory struct {
 }
 
-func (factory *_httpFactory) NewFilter(config map[string]interface{}) (proto.Filter, error) {
+func (factory *_httpFactory) NewFilter(appid string, config map[string]interface{}) (proto.Filter, error) {
 	var (
 		err          error
 		content      []byte
@@ -85,6 +85,7 @@ func (factory *_httpFactory) NewFilter(config map[string]interface{}) (proto.Fil
 		return nil, err
 	}
 
+	filterConfig.ApplicationID = appid
 	f := &_httpFilter{
 		conf:               filterConfig,
 		transactionInfoMap: make(map[string]*TransactionInfo),
@@ -127,7 +128,7 @@ type TccResourceInfo struct {
 
 // HttpFilterConfig http filter config
 type HttpFilterConfig struct {
-	ApplicationID string `yaml:"appid" json:"appid"`
+	ApplicationID string `yaml:"-" json:"-"`
 
 	TransactionInfos []*TransactionInfo `yaml:"transaction_infos" json:"transaction_infos"`
 	TCCResourceInfos []*TccResourceInfo `yaml:"tcc_resource_infos" json:"tcc_resource_infos"`

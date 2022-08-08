@@ -75,82 +75,87 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			//h := initHolmes()
 			//h.Start()
-			conf := config.Load(configPath)
-
-			for _, filterConf := range conf.Filters {
-				factory := filter.GetFilterFactory(filterConf.Kind)
-				if factory == nil {
-					log.Fatalf("there is no filter factory for filter: %s", filterConf.Kind)
-				}
-				f, err := factory.NewFilter(filterConf.Config)
-				if err != nil {
-					log.Fatal(errors.WithMessagef(err, "failed to create filter: %s", filterConf.Name))
-				}
-				filter.RegisterFilter(filterConf.Name, f)
+			conf, err := config.Load(configPath)
+			if err != nil {
+				log.Fatal(err)
 			}
 
-			resource.InitDBManager(conf.DataSources, func(dbName, dsn string) pools.Factory {
-				collector, err := driver.NewConnector(dbName, dsn)
-				if err != nil {
-					log.Fatal(err)
-				}
-				return collector.NewBackendConnection
-			})
-
-			executors := make(map[string]proto.Executor)
-			for _, executorConf := range conf.Executors {
-				if executorConf.Mode == config.SDB {
-					executor, err := executor.NewSingleDBExecutor(executorConf)
-					if err != nil {
-						log.Fatal(err)
-					}
-					executors[executorConf.Name] = executor
-				}
-				if executorConf.Mode == config.RWS {
-					executor, err := executor.NewReadWriteSplittingExecutor(executorConf)
-					if err != nil {
-						log.Fatal(err)
-					}
-					executors[executorConf.Name] = executor
-				}
-				if executorConf.Mode == config.SHD {
-					executor, err := executor.NewShardingExecutor(executorConf)
-					if err != nil {
-						log.Fatal(err)
-					}
-					executors[executorConf.Name] = executor
-				}
-			}
-
-			if conf.DistributedTransaction != nil {
-				dbpackHttp.DistributedTransactionEnabled = true
-				dt.InitDistributedTransactionManager(conf.DistributedTransaction)
-			}
-
-			dbpackHttp.Listeners = conf.Listeners
 			dbpack := server.NewServer()
-			for _, listenerConf := range conf.Listeners {
-				switch listenerConf.ProtocolType {
-				case config.Mysql:
-					listener, err := listener.NewMysqlListener(listenerConf)
+			for appid, dbpackConf := range conf.AppConfig {
+				for _, filterConf := range dbpackConf.Filters {
+					factory := filter.GetFilterFactory(filterConf.Kind)
+					if factory == nil {
+						log.Fatalf("there is no filter factory for filter: %s", filterConf.Kind)
+					}
+					f, err := factory.NewFilter(appid, filterConf.Config)
 					if err != nil {
-						log.Fatalf("create mysql listener failed %v", err)
+						log.Fatal(errors.Wrapf(err, "failed to create filter: %s", filterConf.Name))
 					}
-					dbListener := listener.(proto.DBListener)
-					executor := executors[listenerConf.Executor]
-					if executor == nil {
-						log.Fatalf("executor: %s is not exists for mysql listener", listenerConf.Executor)
-					}
-					dbListener.SetExecutor(executor)
-					dbpack.AddListener(dbListener)
-				case config.Http:
-					listener, err := listener.NewHttpListener(listenerConf)
+					filter.RegisterFilter(filterConf.Name, f)
+				}
+
+				resource.RegisterDBManager(appid, dbpackConf.DataSources, func(dbName, dsn string) pools.Factory {
+					collector, err := driver.NewConnector(dbName, dsn)
 					if err != nil {
-						log.Fatalf("create http listener failed %v", err)
+						log.Fatal(err)
 					}
-					dbpack.AddListener(listener)
-				default:
-					log.Fatalf("unsupported %v listener protocol type", listenerConf.ProtocolType)
+					return collector.NewBackendConnection
+				})
+
+				executors := make(map[string]proto.Executor)
+				for _, executorConf := range dbpackConf.Executors {
+					if executorConf.Mode == config.SDB {
+						executor, err := executor.NewSingleDBExecutor(executorConf)
+						if err != nil {
+							log.Fatal(err)
+						}
+						executors[executorConf.Name] = executor
+					}
+					if executorConf.Mode == config.RWS {
+						executor, err := executor.NewReadWriteSplittingExecutor(executorConf)
+						if err != nil {
+							log.Fatal(err)
+						}
+						executors[executorConf.Name] = executor
+					}
+					if executorConf.Mode == config.SHD {
+						executor, err := executor.NewShardingExecutor(executorConf)
+						if err != nil {
+							log.Fatal(err)
+						}
+						executors[executorConf.Name] = executor
+					}
+				}
+
+				dbpackHttp.Listeners = dbpackConf.Listeners
+				for _, listenerConf := range dbpackConf.Listeners {
+					switch listenerConf.ProtocolType {
+					case config.Mysql:
+						listener, err := listener.NewMysqlListener(listenerConf)
+						if err != nil {
+							log.Fatalf("create mysql listener failed %v", err)
+						}
+						dbListener := listener.(proto.DBListener)
+						executor := executors[listenerConf.Executor]
+						if executor == nil {
+							log.Fatalf("executor: %s is not exists for mysql listener", listenerConf.Executor)
+						}
+						dbListener.SetExecutor(executor)
+						dbpack.AddListener(dbListener)
+					case config.Http:
+						listener, err := listener.NewHttpListener(listenerConf)
+						if err != nil {
+							log.Fatalf("create http listener failed %v", err)
+						}
+						dbpack.AddListener(listener)
+					default:
+						log.Fatalf("unsupported %v listener protocol type", listenerConf.ProtocolType)
+					}
+				}
+
+				if dbpackConf.DistributedTransaction != nil {
+					dbpackHttp.DistributedTransactionEnabled = true
+					dt.RegisterTransactionManager(dbpackConf.DistributedTransaction)
 				}
 			}
 
@@ -173,8 +178,8 @@ var (
 			// default listen at 18888
 			var lis net.Listener
 			var lisErr error
-			if conf.HTTPListenPort != nil {
-				lis, lisErr = net.Listen("tcp4", fmt.Sprintf(":%d", *conf.HTTPListenPort))
+			if conf.ProbePort > 0 {
+				lis, lisErr = net.Listen("tcp4", fmt.Sprintf(":%d", conf.ProbePort))
 			} else {
 				lis, lisErr = net.Listen("tcp4", fmt.Sprintf(":%d", defaultHTTPListenPort))
 			}
@@ -185,8 +190,8 @@ var (
 
 			go initServer(ctx, lis)
 
-			if conf.Trace != nil {
-				go initTracing(ctx, conf.Trace.JaegerEndpoint)
+			if conf.Tracer != nil {
+				go initTracing(ctx, conf.Tracer.JaegerEndpoint)
 			}
 
 			dbpack.Start(ctx)

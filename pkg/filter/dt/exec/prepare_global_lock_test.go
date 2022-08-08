@@ -195,11 +195,14 @@ func TestPrepareGlobalLock(t *testing.T) {
 		},
 	}
 
-	patches1 := isLockablePatch()
-	defer patches1.Reset()
+	patch0 := getTransactionManagerPatch()
+	defer patch0.Reset()
 
-	patches2 := beforeImagePatch()
-	defer patches2.Reset()
+	patch1 := isLockablePatch()
+	defer patch1.Reset()
+
+	patch2 := beforeImagePatch()
+	defer patch2.Reset()
 
 	for _, c := range testCases {
 		t.Run(c.sql, func(t *testing.T) {
@@ -230,10 +233,10 @@ func TestPrepareGlobalLock(t *testing.T) {
 			var executor GlobalLockExecutor
 			if c.isUpdate {
 				updateStmt := stmt.(*ast.UpdateStmt)
-				executor = NewPrepareGlobalLockExecutor(&driver.BackendConnection{}, c.isUpdate, nil, updateStmt, protoStmt.BindVars)
+				executor = NewPrepareGlobalLockExecutor("app1", &driver.BackendConnection{}, c.isUpdate, nil, updateStmt, protoStmt.BindVars)
 			} else {
 				deleteStmt := stmt.(*ast.DeleteStmt)
-				executor = NewPrepareGlobalLockExecutor(&driver.BackendConnection{}, c.isUpdate, deleteStmt, nil, protoStmt.BindVars)
+				executor = NewPrepareGlobalLockExecutor("app1", &driver.BackendConnection{}, c.isUpdate, deleteStmt, nil, protoStmt.BindVars)
 			}
 			tableName := executor.GetTableName()
 			assert.Equal(t, c.expectedTableName, tableName)
@@ -245,6 +248,12 @@ func TestPrepareGlobalLock(t *testing.T) {
 			assert.Equal(t, c.expectedErr, executeErr)
 		})
 	}
+}
+
+func getTransactionManagerPatch() *gomonkey.Patches {
+	return gomonkey.ApplyFunc(dt.GetTransactionManager, func(appid string) proto.DistributedTransactionManager {
+		return &dt.DistributedTransactionManager{}
+	})
 }
 
 func isLockablePatch() *gomonkey.Patches {

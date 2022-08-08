@@ -124,11 +124,12 @@ func TestSingleDBExecutor(t *testing.T) {
 
 	manager := testdata.NewMockDBManager(ctrl)
 	manager.EXPECT().GetDB(gomock.Any()).AnyTimes().Return(db)
-	resource.SetDBManager(manager)
+	resource.SetDBManager("app1", manager)
 
 	executor, err := NewSingleDBExecutor(&config.Executor{
-		Name: "sdb",
-		Mode: config.SDB,
+		AppID: "app1",
+		Name:  "sdb",
+		Mode:  config.SDB,
 		Config: map[string]interface{}{
 			"data_source_ref": "employee",
 		},

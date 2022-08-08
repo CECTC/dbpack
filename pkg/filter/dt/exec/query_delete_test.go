@@ -53,7 +53,7 @@ func TestQueryDelete(t *testing.T) {
 			stmt.Accept(&visitor.ParamVisitor{})
 
 			deleteStmt := stmt.(*ast.DeleteStmt)
-			executor := NewQueryDeleteExecutor(&driver.BackendConnection{}, deleteStmt)
+			executor := NewQueryDeleteExecutor("app1", &driver.BackendConnection{}, deleteStmt)
 
 			tableName := executor.GetTableName()
 			assert.Equal(t, c.expectedTableName, tableName)

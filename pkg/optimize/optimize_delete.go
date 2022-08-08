@@ -92,6 +92,7 @@ func (o Optimizer) optimizeDelete(ctx context.Context, stmt *ast.DeleteStmt, arg
 	}
 
 	multiPlan := &plan.MultiDeletePlan{
+		AppID: o.appid,
 		Stmt:  stmt,
 		Plans: plans,
 	}
