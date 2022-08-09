@@ -16,7 +16,11 @@
 
 package filter
 
-import "github.com/cectc/dbpack/pkg/proto"
+import (
+	"strings"
+
+	"github.com/cectc/dbpack/pkg/proto"
+)
 
 var (
 	filterFactories = make(map[string]proto.FilterFactory)
@@ -31,10 +35,12 @@ func GetFilterFactory(kind string) proto.FilterFactory {
 	return filterFactories[kind]
 }
 
-func RegisterFilter(name string, filter proto.Filter) {
-	filters[name] = filter
+func RegisterFilter(appid, name string, filter proto.Filter) {
+	key := strings.Join([]string{appid, name}, "-")
+	filters[key] = filter
 }
 
-func GetFilter(name string) proto.Filter {
-	return filters[name]
+func GetFilter(appid, name string) proto.Filter {
+	key := strings.Join([]string{appid, name}, "-")
+	return filters[key]
 }

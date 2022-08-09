@@ -91,7 +91,7 @@ var (
 					if err != nil {
 						log.Fatal(errors.Wrapf(err, "failed to create filter: %s", filterConf.Name))
 					}
-					filter.RegisterFilter(filterConf.Name, f)
+					filter.RegisterFilter(appid, filterConf.Name, f)
 				}
 
 				resource.RegisterDBManager(appid, dbpackConf.DataSources, func(dbName, dsn string) pools.Factory {
