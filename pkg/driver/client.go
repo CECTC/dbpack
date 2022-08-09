@@ -505,7 +505,7 @@ func (conn *BackendConnection) WriteComStmtClose(statementID uint32) (err error)
 }
 
 // ReadQueryResult gets the result from the last written query.
-func (conn *BackendConnection) ReadQueryResult(wantFields bool) (result *mysql.Result, more bool, warnings uint16, err error) {
+func (conn *BackendConnection) ReadQueryResult(ctx context.Context, wantFields bool) (result *mysql.Result, more bool, warnings uint16, err error) {
 	// Get the result.
 	affectedRows, lastInsertID, colNumber, more, warnings, err := conn.ReadComQueryResponse()
 	if err != nil {
@@ -565,8 +565,57 @@ func (conn *BackendConnection) ReadQueryResult(wantFields bool) (result *mysql.R
 		}
 	}
 
-	result.Rows = mysql.NewRows(conn.Conn, result.Fields)
-	return
+	// read each row until EOF or OK packet.
+	for {
+		data, err := conn.ReadPacket()
+		if err != nil {
+			return nil, false, 0, err
+		}
+
+		if packet.IsEOFPacket(data) {
+			// Strip the partial Fields before returning.
+			if !wantFields {
+				result.Fields = nil
+			}
+			result.AffectedRows = uint64(len(result.Rows))
+
+			// The deprecated EOF packets change means that this is either an
+			// EOF packet or an OK packet with the EOF type code.
+			if conn.capabilities&constant.CapabilityClientDeprecateEOF == 0 {
+				warnings, more, err = packet.ParseEOFPacket(data)
+				if err != nil {
+					return nil, false, 0, err
+				}
+			} else {
+				var statusFlags uint16
+				_, _, statusFlags, warnings, err = packet.ParseOKPacket(data)
+				if err != nil {
+					return nil, false, 0, err
+				}
+				more = (statusFlags & constant.ServerMoreResultsExists) != 0
+			}
+			return result, more, warnings, nil
+
+		} else if packet.IsErrorPacket(data) {
+			// Error packet.
+			return nil, false, 0, packet.ParseErrorPacket(data)
+		}
+
+		//// Check we're not over the limit before we add more.
+		//if len(result.Rows) == maxrows {
+		//	if err := conn.DrainResults(); err != nil {
+		//		return nil, false, 0, err
+		//	}
+		//	return nil, false, 0, err2.NewSQLError(constant.ERMaxRowsExceeded, constant.SSUnknownSQLState, "Row count exceeded %d")
+		//}
+
+		// Regular row.
+		row, err := conn.ParseRow(ctx, data, result.Fields)
+		if err != nil {
+			return nil, false, 0, err
+		}
+		result.Rows = append(result.Rows, row)
+	}
 }
 
 func (conn *BackendConnection) ReadComQueryResponse() (affectedRows uint64, lastInsertID uint64, status int, more bool, warnings uint16, err error) {
@@ -775,24 +824,6 @@ func (conn *BackendConnection) ReadColumnDefinitionType(field *mysql.Field, inde
 	return nil
 }
 
-// DrainResults will read all packets for a result set and ignore them.
-func (conn *BackendConnection) DrainResults() error {
-	for {
-		data, err := conn.ReadEphemeralPacket()
-		if err != nil {
-			return err2.NewSQLError(constant.CRServerLost, constant.SSUnknownSQLState, "%v", err)
-		}
-		if packet.IsEOFPacket(data) {
-			conn.RecycleReadPacket()
-			return nil
-		} else if packet.IsErrorPacket(data) {
-			defer conn.RecycleReadPacket()
-			return packet.ParseErrorPacket(data)
-		}
-		conn.RecycleReadPacket()
-	}
-}
-
 func (conn *BackendConnection) ReadColumnDefinitions() ([]*mysql.Field, error) {
 	result := make([]*mysql.Field, 0)
 	i := 0
@@ -847,15 +878,15 @@ func (conn *BackendConnection) Ping(ctx context.Context) (err error) {
 //
 // 2. if the server closes the connection when a command is in flight,
 //    ReadComQueryResponse will fail, and we'll return CRServerLost(2013).
-func (conn *BackendConnection) Execute(query string, wantFields bool) (result *mysql.Result, err error) {
-	result, _, err = conn.ExecuteMulti(query, wantFields)
+func (conn *BackendConnection) Execute(ctx context.Context, query string, wantFields bool) (result *mysql.Result, err error) {
+	result, _, err = conn.ExecuteMulti(ctx, query, wantFields)
 	return
 }
 
 // ExecuteMulti is for fetching multiple results from a multi-statement result.
 // It returns an additional 'more' flag. If it is set, you must fetch the additional
 // results using ReadQueryResult.
-func (conn *BackendConnection) ExecuteMulti(query string, wantFields bool) (result *mysql.Result, more bool, err error) {
+func (conn *BackendConnection) ExecuteMulti(ctx context.Context, query string, wantFields bool) (result *mysql.Result, more bool, err error) {
 	defer func() {
 		if err != nil {
 			if sqlerr, ok := err.(*err2.SQLError); ok {
@@ -869,7 +900,7 @@ func (conn *BackendConnection) ExecuteMulti(query string, wantFields bool) (resu
 		return nil, false, err
 	}
 
-	result, more, _, err = conn.ReadQueryResult(wantFields)
+	result, more, _, err = conn.ReadQueryResult(ctx, wantFields)
 	return
 }
 
@@ -893,16 +924,16 @@ func (conn *BackendConnection) ExecuteWithWarningCount(ctx context.Context, quer
 		return nil, 0, err
 	}
 
-	result, _, warnings, err = conn.ReadQueryResult(wantFields)
+	result, _, warnings, err = conn.ReadQueryResult(ctx, wantFields)
 	return
 }
 
-func (conn *BackendConnection) PrepareExecuteArgs(query string, args []interface{}) (result *mysql.Result, warnings uint16, err error) {
+func (conn *BackendConnection) PrepareExecuteArgs(ctx context.Context, query string, args []interface{}) (result *mysql.Result, warnings uint16, err error) {
 	stmt, err := conn.prepare(query)
 	if err != nil {
 		return nil, 0, err
 	}
-	return stmt.execArgs(args)
+	return stmt.execArgs(ctx, args)
 }
 
 func (conn *BackendConnection) PrepareQueryArgs(ctx context.Context, query string, args []interface{}) (Result *mysql.Result, warnings uint16, err error) {
@@ -914,10 +945,10 @@ func (conn *BackendConnection) PrepareQueryArgs(ctx context.Context, query strin
 		span.RecordError(err)
 		return nil, 0, err
 	}
-	return stmt.queryArgs(args)
+	return stmt.queryArgs(ctx, args)
 }
 
-func (conn *BackendConnection) PrepareExecute(query string, data []byte) (result *mysql.Result, warnings uint16, err error) {
+func (conn *BackendConnection) PrepareExecute(ctx context.Context, query string, data []byte) (result *mysql.Result, warnings uint16, err error) {
 	stmt, err := conn.prepare(query)
 	if err != nil {
 		return nil, 0, err
@@ -925,12 +956,12 @@ func (conn *BackendConnection) PrepareExecute(query string, data []byte) (result
 	return stmt.exec(data)
 }
 
-func (conn *BackendConnection) PrepareQuery(query string, data []byte) (Result *mysql.Result, warnings uint16, err error) {
+func (conn *BackendConnection) PrepareQuery(ctx context.Context, query string, data []byte) (Result *mysql.Result, warnings uint16, err error) {
 	stmt, err := conn.prepare(query)
 	if err != nil {
 		return nil, 0, err
 	}
-	return stmt.query(data)
+	return stmt.query(ctx, data)
 }
 
 func (conn *BackendConnection) prepare(query string) (*BackendStatement, error) {

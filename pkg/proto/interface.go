@@ -129,8 +129,10 @@ type (
 		UseDB(ctx context.Context, schema string) error
 		ExecuteFieldList(ctx context.Context, table, wildcard string) ([]Field, error)
 		Query(ctx context.Context, query string) (Result, uint16, error)
+		QueryDirectly(query string) (Result, uint16, error)
 		ExecuteStmt(ctx context.Context, stmt *Stmt) (Result, uint16, error)
 		ExecuteSql(ctx context.Context, sql string, args ...interface{}) (Result, uint16, error)
+		ExecuteSqlDirectly(sql string, args ...interface{}) (Result, uint16, error)
 		Begin(ctx context.Context) (Tx, Result, error)
 		SetConnectionPreFilters(filters []DBConnectionPreFilter)
 		SetConnectionPostFilters(filters []DBConnectionPostFilter)
@@ -156,8 +158,10 @@ type (
 
 	Tx interface {
 		Query(ctx context.Context, query string) (Result, uint16, error)
+		QueryDirectly(query string) (Result, uint16, error)
 		ExecuteStmt(ctx context.Context, stmt *Stmt) (Result, uint16, error)
 		ExecuteSql(ctx context.Context, sql string, args ...interface{}) (Result, uint16, error)
+		ExecuteSqlDirectly(sql string, args ...interface{}) (Result, uint16, error)
 		Commit(ctx context.Context) (Result, error)
 		Rollback(ctx context.Context, stmt *ast.RollbackStmt) (Result, error)
 	}

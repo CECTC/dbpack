@@ -24,9 +24,10 @@ import (
 	context "context"
 	reflect "reflect"
 
+	gomock "github.com/golang/mock/gomock"
+
 	proto "github.com/cectc/dbpack/pkg/proto"
 	ast "github.com/cectc/dbpack/third_party/parser/ast"
-	gomock "github.com/golang/mock/gomock"
 )
 
 // MockTx is a mock of Tx interface.
@@ -88,6 +89,27 @@ func (mr *MockTxMockRecorder) ExecuteSql(arg0, arg1 interface{}, arg2 ...interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteSql", reflect.TypeOf((*MockTx)(nil).ExecuteSql), varargs...)
 }
 
+// ExecuteSqlDirectly mocks base method.
+func (m *MockTx) ExecuteSqlDirectly(arg0 string, arg1 ...interface{}) (proto.Result, uint16, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ExecuteSqlDirectly", varargs...)
+	ret0, _ := ret[0].(proto.Result)
+	ret1, _ := ret[1].(uint16)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ExecuteSqlDirectly indicates an expected call of ExecuteSqlDirectly.
+func (mr *MockTxMockRecorder) ExecuteSqlDirectly(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteSqlDirectly", reflect.TypeOf((*MockTx)(nil).ExecuteSqlDirectly), varargs...)
+}
+
 // ExecuteStmt mocks base method.
 func (m *MockTx) ExecuteStmt(arg0 context.Context, arg1 *proto.Stmt) (proto.Result, uint16, error) {
 	m.ctrl.T.Helper()
@@ -118,6 +140,22 @@ func (m *MockTx) Query(arg0 context.Context, arg1 string) (proto.Result, uint16,
 func (mr *MockTxMockRecorder) Query(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Query", reflect.TypeOf((*MockTx)(nil).Query), arg0, arg1)
+}
+
+// QueryDirectly mocks base method.
+func (m *MockTx) QueryDirectly(arg0 string) (proto.Result, uint16, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QueryDirectly", arg0)
+	ret0, _ := ret[0].(proto.Result)
+	ret1, _ := ret[1].(uint16)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// QueryDirectly indicates an expected call of QueryDirectly.
+func (mr *MockTxMockRecorder) QueryDirectly(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryDirectly", reflect.TypeOf((*MockTx)(nil).QueryDirectly), arg0)
 }
 
 // Rollback mocks base method.

@@ -83,18 +83,12 @@ func BuildLockKey(lockKeyRecords *TableRecords) string {
 	return sb.String()
 }
 
-func BuildBinaryRecords(meta TableMeta, result *mysql.Result) *TableRecords {
+func BuildTableRecords(meta TableMeta, result *mysql.Result) *TableRecords {
 	records := NewTableRecords(meta)
 	rs := make([]*Row, 0)
 
-	for {
-		row, err := result.Rows.Next()
-		if err != nil {
-			break
-		}
-
-		binaryRow := mysql.BinaryRow{Row: row}
-		values, err := binaryRow.Decode()
+	for _, row := range result.Rows {
+		values, err := row.Decode()
 		if err != nil {
 			break
 		}
@@ -115,45 +109,7 @@ func BuildBinaryRecords(meta TableMeta, result *mysql.Result) *TableRecords {
 		r := &Row{Fields: fields}
 		rs = append(rs, r)
 	}
-	if len(rs) == 0 {
-		return nil
-	}
-	records.Rows = rs
-	return records
-}
 
-func BuildTextRecords(meta TableMeta, result *mysql.Result) *TableRecords {
-	records := NewTableRecords(meta)
-	rs := make([]*Row, 0)
-
-	for {
-		row, err := result.Rows.Next()
-		if err != nil {
-			break
-		}
-
-		textRow := mysql.TextRow{Row: row}
-		values, err := textRow.Decode()
-		if err != nil {
-			break
-		}
-		fields := make([]*Field, 0, len(result.Fields))
-		for i, col := range result.Fields {
-			field := &Field{
-				Name: col.FiledName(),
-				Type: meta.AllColumns[col.FiledName()].DataType,
-			}
-			if values[i] != nil {
-				field.Value = values[i].Val
-			}
-			if strings.EqualFold(col.FiledName(), meta.GetPKName()) {
-				field.KeyType = PrimaryKey
-			}
-			fields = append(fields, field)
-		}
-		r := &Row{Fields: fields}
-		rs = append(rs, r)
-	}
 	if len(rs) == 0 {
 		return nil
 	}

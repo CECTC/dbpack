@@ -18,6 +18,7 @@ package mysql
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"flag"
@@ -423,6 +424,43 @@ func (c *Conn) ReadPacketFacade() ([]byte, error) {
 	return result, err
 }
 
+// ParseRow parses an individual row.
+// Returns a SQLError.
+func (c *Conn) ParseRow(ctx context.Context, data []byte, fields []*Field) (proto.Row, error) {
+	row := &row{
+		Content: data,
+		ResultSet: &ResultSet{
+			Columns: fields,
+		},
+	}
+	switch proto.CommandType(ctx) {
+	case constant.ComQuery:
+		return &TextRow{row: row}, nil
+	case constant.ComStmtExecute:
+		return &BinaryRow{row: row}, nil
+	default:
+		return nil, errors.New("must specific command type")
+	}
+}
+
+// DrainResults will read all packets for a result set and ignore them.
+func (c *Conn) DrainResults() error {
+	for {
+		data, err := c.ReadEphemeralPacket()
+		if err != nil {
+			return err2.NewSQLError(constant.CRServerLost, constant.SSUnknownSQLState, "%v", err)
+		}
+		if packet.IsEOFPacket(data) {
+			c.RecycleReadPacket()
+			return nil
+		} else if packet.IsErrorPacket(data) {
+			defer c.RecycleReadPacket()
+			return packet.ParseErrorPacket(data)
+		}
+		c.RecycleReadPacket()
+	}
+}
+
 // WritePacket writes a packet, possibly cutting it into multiple
 // chunks.  Note this is not very efficient, as the client probably
 // has to build the []byte and that makes a memory copy.
@@ -654,16 +692,8 @@ func (c *Conn) writeTextRow(row []*proto.Value) error {
 
 // WriteTextRows sends the rows of a Result.
 func (c *Conn) WriteTextRows(result *Result) error {
-	for {
-		row, err := result.Rows.Next()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-		textRow := TextRow{Row: row}
-		values, err := textRow.Decode()
+	for _, row := range result.Rows {
+		values, err := row.Decode()
 		if err != nil {
 			return err
 		}
@@ -810,14 +840,7 @@ func (c *Conn) writeBinaryRows(fields []*Field, row []*proto.Value) error {
 }
 
 func (c *Conn) WriteBinaryRows(result *Result) error {
-	for {
-		row, err := result.Rows.Next()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
+	for _, row := range result.Rows {
 		if err := c.WritePacket(row.Data()); err != nil {
 			return err
 		}
@@ -825,7 +848,7 @@ func (c *Conn) WriteBinaryRows(result *Result) error {
 	return nil
 }
 
-func (c *Conn) WriteRows(result *DecodedResult) error {
+func (c *Conn) WriteRows(result *Result) error {
 	for _, row := range result.Rows {
 		switch r := row.(type) {
 		case *TextRow:

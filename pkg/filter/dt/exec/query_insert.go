@@ -95,7 +95,7 @@ func (executor *queryInsertExecutor) buildTableRecords(ctx context.Context, pkVa
 	if err != nil {
 		return nil, err
 	}
-	return schema.BuildTextRecords(tableMeta, result), nil
+	return schema.BuildTableRecords(tableMeta, result), nil
 }
 
 func (executor *queryInsertExecutor) buildAfterImageSql(tableMeta schema.TableMeta, pkValues []interface{}) string {

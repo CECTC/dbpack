@@ -159,7 +159,7 @@ func (f *_filter) PostHandle(ctx context.Context, result proto.Result) error {
 	case constant.ComQuery:
 		stmt := proto.QueryStmt(ctx)
 		if stmtNode, ok := stmt.(*ast.SelectStmt); ok {
-			if decodedResult, is := result.(*mysql.DecodedResult); is && len(decodedResult.Rows) > 0 {
+			if decodedResult, is := result.(*mysql.Result); is && len(decodedResult.Rows) > 0 {
 				config, err := f.checkSelectTable(stmtNode)
 				if err != nil {
 					log.Error(err)
@@ -183,7 +183,7 @@ func (f *_filter) PostHandle(ctx context.Context, result proto.Result) error {
 			return errors.New("prepare stmt should not be nil")
 		}
 		if stmtNode, ok := stmt.StmtNode.(*ast.SelectStmt); ok {
-			if decodedResult, is := result.(*mysql.DecodedResult); is && len(decodedResult.Rows) > 0 {
+			if decodedResult, is := result.(*mysql.Result); is && len(decodedResult.Rows) > 0 {
 				config, err := f.checkSelectTable(stmtNode)
 				if err != nil {
 					log.Error(err)
@@ -280,7 +280,7 @@ func retrieveNeedEncryptionUpdateColumns(updateStmt *ast.UpdateStmt, config *Col
 	return result, nil
 }
 
-func retrieveNeedDecryptionSelectColumns(decodedResult *mysql.DecodedResult, config *ColumnCrypto) ([]*columnIndex, error) {
+func retrieveNeedDecryptionSelectColumns(decodedResult *mysql.Result, config *ColumnCrypto) ([]*columnIndex, error) {
 	var result []*columnIndex
 	for i, column := range decodedResult.Fields {
 		if column.Name != "" && contains(config.Columns, column.Name) {
@@ -360,7 +360,7 @@ func encryptBindVars(columns []*columnIndex, config *ColumnCrypto, args *map[str
 	return nil
 }
 
-func decryptDecodedResult(decodedResult *mysql.DecodedResult, config *ColumnCrypto, columns []*columnIndex) {
+func decryptDecodedResult(decodedResult *mysql.Result, config *ColumnCrypto, columns []*columnIndex) {
 	for _, row := range decodedResult.Rows {
 		switch r := row.(type) {
 		case *mysql.TextRow:

@@ -64,7 +64,7 @@ func TestQuerySelectForUpdate(t *testing.T) {
 	patch2 := getQueryTableMetaPatch()
 	defer patch2.Reset()
 
-	patch3 := buildTextRecordsPatch()
+	patch3 := BuildTextRecordsPatch()
 	defer patch3.Reset()
 
 	for _, c := range testCases {
@@ -110,8 +110,8 @@ func getQueryTableMetaPatch() *gomonkey.Patches {
 	})
 }
 
-func buildTextRecordsPatch() *gomonkey.Patches {
-	return gomonkey.ApplyFunc(schema.BuildTextRecords, func(meta schema.TableMeta, result *mysql.Result) *schema.TableRecords {
+func BuildTextRecordsPatch() *gomonkey.Patches {
+	return gomonkey.ApplyFunc(schema.BuildTableRecords, func(meta schema.TableMeta, result *mysql.Result) *schema.TableRecords {
 		return &schema.TableRecords{
 			TableMeta: tableMeta,
 			TableName: "t",

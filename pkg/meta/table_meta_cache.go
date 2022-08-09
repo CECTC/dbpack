@@ -159,21 +159,16 @@ func GetColumns(ctx context.Context, db proto.DB, tableName string) ([]schema.Co
 	}
 
 	// should use new context, otherwise, some filters will be executed repeatedly.
-	dataTable, _, err := db.ExecuteSql(context.Background(), s, dbName, table)
+	dataTable, _, err := db.ExecuteSqlDirectly(s, dbName, table)
 	if err != nil {
 		return nil, err
 	}
 
 	dt := dataTable.(*mysql.Result)
 	result := make([]schema.ColumnMeta, 0)
-	for {
-		row, err := dt.Rows.Next()
-		if err != nil {
-			break
-		}
 
-		binaryRow := mysql.BinaryRow{Row: row}
-		values, err := binaryRow.Decode()
+	for _, row := range dt.Rows {
+		values, err := row.Decode()
 		if err != nil {
 			break
 		}
@@ -253,21 +248,16 @@ func GetIndexes(ctx context.Context, db proto.DB, tableName string) ([]schema.In
 	}
 
 	// should use new context, otherwise, some filters will be executed repeatedly.
-	dataTable, _, err := db.ExecuteSql(context.Background(), s, dbName, table)
+	dataTable, _, err := db.ExecuteSqlDirectly(s, dbName, table)
 	if err != nil {
 		return nil, err
 	}
 
 	dt := dataTable.(*mysql.Result)
 	result := make([]schema.IndexMeta, 0)
-	for {
-		row, err := dt.Rows.Next()
-		if err != nil {
-			break
-		}
 
-		binaryRow := mysql.BinaryRow{Row: row}
-		values, err := binaryRow.Decode()
+	for _, row := range dt.Rows {
+		values, err := row.Decode()
 		if err != nil {
 			break
 		}
@@ -309,5 +299,6 @@ func GetIndexes(ctx context.Context, db proto.DB, tableName string) ([]schema.In
 
 		result = append(result, index)
 	}
+
 	return result, nil
 }

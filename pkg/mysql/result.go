@@ -22,7 +22,7 @@ type Result struct {
 	Fields       []*Field // Columns information
 	AffectedRows uint64
 	InsertId     uint64
-	Rows         *Rows
+	Rows         []proto.Row
 }
 
 func (res *Result) LastInsertId() (uint64, error) {
@@ -30,20 +30,5 @@ func (res *Result) LastInsertId() (uint64, error) {
 }
 
 func (res *Result) RowsAffected() (uint64, error) {
-	return res.AffectedRows, nil
-}
-
-type DecodedResult struct {
-	Fields       []*Field
-	AffectedRows uint64
-	InsertId     uint64
-	Rows         []proto.Row
-}
-
-func (res *DecodedResult) LastInsertId() (uint64, error) {
-	return res.InsertId, nil
-}
-
-func (res *DecodedResult) RowsAffected() (uint64, error) {
 	return res.AffectedRows, nil
 }
