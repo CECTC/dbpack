@@ -98,7 +98,7 @@ func NewReadWriteSplittingExecutor(conf *config.Executor) (proto.Executor, error
 
 	for i := 0; i < len(conf.Filters); i++ {
 		filterName := conf.Filters[i]
-		f := filter.GetFilter(filterName)
+		f := filter.GetFilter(conf.AppID, filterName)
 		if f != nil {
 			preFilter, ok := f.(proto.DBPreFilter)
 			if ok {

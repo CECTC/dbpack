@@ -56,7 +56,7 @@ func RegisterDBManager(appid string, dataSources []*config.DataSource, factory f
 		db := sql.NewDB(dataSource.Name, dataSource.PingInterval, dataSource.PingTimesForChangeStatus, resourcePool)
 		for j := 0; j < len(dataSource.Filters); j++ {
 			filterName := dataSource.Filters[j]
-			f := filter.GetFilter(filterName)
+			f := filter.GetFilter(appid, filterName)
 			if f != nil {
 				preFilter, ok := f.(proto.DBConnectionPreFilter)
 				if ok {

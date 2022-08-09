@@ -86,7 +86,7 @@ func NewHttpListener(conf *config.Listener) (proto.Listener, error) {
 
 	for i := 0; i < len(conf.Filters); i++ {
 		filterName := conf.Filters[i]
-		f := filter.GetFilter(filterName)
+		f := filter.GetFilter(conf.AppID, filterName)
 		if f != nil {
 			preFilter, ok := f.(proto.HttpPreFilter)
 			if ok {
