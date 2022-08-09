@@ -17,8 +17,17 @@
 package misc
 
 import (
+	"regexp"
 	"strings"
 	"unicode"
+)
+
+const (
+	Numeric = "^[0-9]+$"
+)
+
+var (
+	rxNumeric = regexp.MustCompile(Numeric)
 )
 
 func FirstNonEmptyString(first string, second string, others ...string) string {
@@ -147,4 +156,12 @@ func IsBlank(s string) bool {
 	return strings.IndexFunc(s, func(r rune) bool {
 		return !unicode.IsSpace(r)
 	}) == -1
+}
+
+// IsNumeric checks if the string contains only numbers. Empty string is valid.
+func IsNumeric(str string) bool {
+	if len(str) == 0 {
+		return true
+	}
+	return rxNumeric.MatchString(str)
 }
