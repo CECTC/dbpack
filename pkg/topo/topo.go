@@ -88,7 +88,7 @@ func ParseTopology(dbName, tableName string, topology map[int]string) (*Topology
 				return nil, err
 			}
 			if begin >= end {
-				return nil, errors.Errorf("incorrect topology, begin index must less than end index")
+				return nil, errors.Errorf("incorrect topology, begin index must be less than end index")
 			}
 			for j := begin; j <= end; j++ {
 				index := j
