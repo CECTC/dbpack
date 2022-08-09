@@ -36,18 +36,25 @@ type ResultSet struct {
 }
 
 type Rows struct {
-	conn    *Conn
-	columns []*Field
+	conn        *Conn
+	columns     []*Field
+	releaseConn func()
 }
 
-func NewRows(conn *Conn, columns []*Field) *Rows {
+func NewRows(conn *Conn, columns []*Field, releaseConn func()) *Rows {
 	return &Rows{
-		conn:    conn,
-		columns: columns,
+		conn:        conn,
+		columns:     columns,
+		releaseConn: releaseConn,
 	}
 }
 
-func (rows *Rows) Next() (*Row, error) {
+func (rows *Rows) Next() (row *Row, err error) {
+	defer func() {
+		if err != nil && rows.releaseConn != nil {
+			rows.releaseConn()
+		}
+	}()
 	data, err := rows.conn.ReadPacket()
 	if err != nil {
 		return nil, err

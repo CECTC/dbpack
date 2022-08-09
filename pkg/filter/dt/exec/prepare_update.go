@@ -72,7 +72,7 @@ func (executor *prepareUpdateExecutor) BeforeImage(ctx context.Context) (*schema
 		args = append(args, executor.args[parameterID])
 	}
 
-	result, _, err := executor.conn.PrepareQueryArgs(spanCtx, sql, args)
+	result, _, err := executor.conn.PrepareQueryArgs(spanCtx, sql, args, nil)
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)
 		return nil, err
@@ -97,7 +97,7 @@ func (executor *prepareUpdateExecutor) AfterImage(ctx context.Context) (*schema.
 	for _, field := range executor.beforeImage.PKFields() {
 		args = append(args, field.Value)
 	}
-	result, _, err := executor.conn.PrepareQueryArgs(spanCtx, afterImageSql, args)
+	result, _, err := executor.conn.PrepareQueryArgs(spanCtx, afterImageSql, args, nil)
 	if err != nil {
 		tracing.RecordErrorSpan(span, err)
 		return nil, err

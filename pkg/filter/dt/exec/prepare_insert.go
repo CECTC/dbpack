@@ -105,7 +105,7 @@ func (executor *prepareInsertExecutor) buildTableRecords(ctx context.Context, pk
 	}
 
 	afterImageSql := executor.buildAfterImageSql(tableMeta, pkValues)
-	result, _, err := executor.conn.PrepareQueryArgs(ctx, afterImageSql, pkValues)
+	result, _, err := executor.conn.PrepareQueryArgs(ctx, afterImageSql, pkValues, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -126,18 +126,22 @@ func (db *DB) Query(ctx context.Context, query string) (proto.Result, uint16, er
 		err = errors.WithStack(err)
 		return nil, 0, err
 	}
-	defer db.pool.Put(r)
 
 	conn := r.(*driver.BackendConnection)
 	if err := db.doConnectionPreFilter(spanCtx, conn); err != nil {
+		db.pool.Put(r)
 		return nil, 0, err
 	}
 
-	result, warn, err := conn.ExecuteWithWarningCount(spanCtx, query, true)
+	result, warn, err := conn.ExecuteWithWarningCount(spanCtx, query, true, func() {
+		db.pool.Put(r)
+	})
 	if err != nil {
+		db.pool.Put(r)
 		return result, warn, err
 	}
 	if err := db.doConnectionPostFilter(spanCtx, result, conn); err != nil {
+		db.pool.Put(r)
 		return nil, 0, err
 	}
 	return result, warn, err
@@ -165,21 +169,25 @@ func (db *DB) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, 
 		err = errors.WithStack(err)
 		return nil, 0, err
 	}
-	defer db.pool.Put(r)
 
 	conn := r.(*driver.BackendConnection)
 	if err := db.doConnectionPreFilter(spanCtx, conn); err != nil {
+		db.pool.Put(r)
 		return nil, 0, err
 	}
 	for i := 0; i < len(stmt.BindVars); i++ {
 		parameterID := fmt.Sprintf("v%d", i+1)
 		args = append(args, stmt.BindVars[parameterID])
 	}
-	result, warn, err = conn.PrepareQueryArgs(spanCtx, query, args)
+	result, warn, err = conn.PrepareQueryArgs(spanCtx, query, args, func() {
+		db.pool.Put(r)
+	})
 	if err != nil {
+		db.pool.Put(r)
 		return result, warn, err
 	}
 	if err := db.doConnectionPostFilter(spanCtx, result, conn); err != nil {
+		db.pool.Put(r)
 		return nil, 0, err
 	}
 	return result, warn, err
@@ -199,17 +207,21 @@ func (db *DB) ExecuteSql(ctx context.Context, sql string, args ...interface{}) (
 		err = errors.WithStack(err)
 		return nil, 0, err
 	}
-	defer db.pool.Put(r)
+
 	conn := r.(*driver.BackendConnection)
 	if err := db.doConnectionPreFilter(spanCtx, conn); err != nil {
+		db.pool.Put(r)
 		return nil, 0, err
 	}
-	// TODO PrepareQueryArgs support ctx
-	result, warn, err := conn.PrepareQueryArgs(spanCtx, sql, args)
+	result, warn, err := conn.PrepareQueryArgs(spanCtx, sql, args, func() {
+		db.pool.Put(r)
+	})
 	if err != nil {
+		db.pool.Put(r)
 		return result, warn, err
 	}
 	if err := db.doConnectionPostFilter(spanCtx, result, conn); err != nil {
+		db.pool.Put(r)
 		return nil, 0, err
 	}
 	return result, warn, err
@@ -233,7 +245,7 @@ func (db *DB) Begin(ctx context.Context) (proto.Tx, proto.Result, error) {
 	}
 	conn = r.(*driver.BackendConnection)
 
-	if result, err = conn.Execute("START TRANSACTION", false); err != nil {
+	if result, err = conn.Execute("START TRANSACTION", false, nil); err != nil {
 		db.pool.Put(r)
 		return nil, nil, err
 	}

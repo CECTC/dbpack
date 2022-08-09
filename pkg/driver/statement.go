@@ -395,7 +395,7 @@ func (stmt *BackendStatement) execArgs(args []interface{}) (*mysql.Result, uint1
 	}, warnings, nil
 }
 
-func (stmt *BackendStatement) queryArgs(args []interface{}) (*mysql.Result, uint16, error) {
+func (stmt *BackendStatement) queryArgs(args []interface{}, releaseConn func()) (*mysql.Result, uint16, error) {
 	nargs := make([]interface{}, len(args))
 	for i, arg := range args {
 		var err error
@@ -410,7 +410,7 @@ func (stmt *BackendStatement) queryArgs(args []interface{}) (*mysql.Result, uint
 		return nil, 0, err
 	}
 
-	result, _, warnings, err := stmt.conn.ReadQueryResult(true)
+	result, _, warnings, err := stmt.conn.ReadQueryResult(true, releaseConn)
 	return result, warnings, err
 }
 
@@ -457,7 +457,7 @@ func (stmt *BackendStatement) exec(args []byte) (*mysql.Result, uint16, error) {
 	}, warnings, nil
 }
 
-func (stmt *BackendStatement) query(args []byte) (*mysql.Result, uint16, error) {
+func (stmt *BackendStatement) query(args []byte, releaseConn func()) (*mysql.Result, uint16, error) {
 	args[1] = byte(stmt.id)
 	args[2] = byte(stmt.id >> 8)
 	args[3] = byte(stmt.id >> 16)
@@ -471,6 +471,6 @@ func (stmt *BackendStatement) query(args []byte) (*mysql.Result, uint16, error) 
 		return nil, 0, err
 	}
 
-	result, _, warnings, err := stmt.conn.ReadQueryResult(true)
+	result, _, warnings, err := stmt.conn.ReadQueryResult(true, releaseConn)
 	return result, warnings, err
 }

@@ -139,7 +139,7 @@ func (executor *queryGlobalLockExecutor) BeforeImage(ctx context.Context) (*sche
 	}
 
 	sql := executor.buildBeforeImageSql(tableMeta)
-	result, _, err := executor.conn.ExecuteWithWarningCount(ctx, sql, true)
+	result, _, err := executor.conn.ExecuteWithWarningCount(ctx, sql, true, nil)
 	if err != nil {
 		return nil, err
 	}

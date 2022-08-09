@@ -48,7 +48,7 @@ func (tx *Tx) Query(ctx context.Context, query string) (proto.Result, uint16, er
 	if err := tx.db.doConnectionPreFilter(spanCtx, tx.conn); err != nil {
 		return nil, 0, err
 	}
-	result, warn, err := tx.conn.ExecuteWithWarningCount(spanCtx, query, true)
+	result, warn, err := tx.conn.ExecuteWithWarningCount(spanCtx, query, true, nil)
 	if err != nil {
 		return result, warn, err
 	}
@@ -82,7 +82,7 @@ func (tx *Tx) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, 
 		parameterID := fmt.Sprintf("v%d", i+1)
 		args = append(args, stmt.BindVars[parameterID])
 	}
-	result, warn, err = tx.conn.PrepareQueryArgs(spanCtx, query, args)
+	result, warn, err = tx.conn.PrepareQueryArgs(spanCtx, query, args, nil)
 	if err != nil {
 		return result, warn, err
 	}
@@ -104,7 +104,7 @@ func (tx *Tx) ExecuteSql(ctx context.Context, sql string, args ...interface{}) (
 	if err := tx.db.doConnectionPreFilter(spanCtx, tx.conn); err != nil {
 		return nil, 0, err
 	}
-	result, warn, err := tx.conn.PrepareQueryArgs(spanCtx, sql, args)
+	result, warn, err := tx.conn.PrepareQueryArgs(spanCtx, sql, args, nil)
 	if err != nil {
 		return result, warn, err
 	}
@@ -125,7 +125,7 @@ func (tx *Tx) Commit(ctx context.Context) (result proto.Result, err error) {
 	if tx.db == nil || tx.db.IsClosed() {
 		return nil, err2.ErrInvalidConn
 	}
-	result, err = tx.conn.Execute("COMMIT", false)
+	result, err = tx.conn.Execute("COMMIT", false, nil)
 	tx.db.pool.Put(tx.conn)
 	tx.Close()
 	return
@@ -143,9 +143,9 @@ func (tx *Tx) Rollback(ctx context.Context, stmt *ast.RollbackStmt) (result prot
 		return nil, err2.ErrInvalidConn
 	}
 	if stmt != nil && stmt.SavepointName != "" {
-		result, err = tx.conn.Execute(fmt.Sprintf("ROLLBACK TO %s", stmt.SavepointName), false)
+		result, err = tx.conn.Execute(fmt.Sprintf("ROLLBACK TO %s", stmt.SavepointName), false, nil)
 	} else {
-		result, err = tx.conn.Execute("ROLLBACK", false)
+		result, err = tx.conn.Execute("ROLLBACK", false, nil)
 	}
 	tx.db.pool.Put(tx.conn)
 	tx.Close()
