@@ -143,7 +143,7 @@ func (executor *queryGlobalLockExecutor) BeforeImage(ctx context.Context) (*sche
 	if err != nil {
 		return nil, err
 	}
-	return schema.BuildTextRecords(tableMeta, result), nil
+	return schema.BuildTableRecords(tableMeta, result), nil
 }
 
 func (executor *queryGlobalLockExecutor) buildBeforeImageSql(tableMeta schema.TableMeta) string {

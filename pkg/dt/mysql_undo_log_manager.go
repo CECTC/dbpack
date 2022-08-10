@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/driver"
 	"github.com/cectc/dbpack/pkg/dt/undolog"
 	"github.com/cectc/dbpack/pkg/log"
@@ -76,21 +77,15 @@ func (manager MysqlUndoLogManager) Undo(db proto.DB, xid string) ([]string, erro
 		return lockKeys, err
 	}
 
-	if result, _, err = tx.ExecuteSql(context.Background(), SelectUndoLogSql, xid); err != nil {
+	if result, _, err = tx.ExecuteSqlDirectly(SelectUndoLogSql, xid); err != nil {
 		return lockKeys, err
 	}
 
 	exists := false
 	undoLogs := make([]*undolog.SqlUndoLog, 0)
 	rlt := result.(*mysql.Result)
-	for {
-		row, err := rlt.Rows.Next()
-		if err != nil {
-			break
-		}
-
-		binaryRow := mysql.BinaryRow{Row: row}
-		values, err := binaryRow.Decode()
+	for _, row := range rlt.Rows {
+		values, err := row.Decode()
 		if err != nil {
 			break
 		}
@@ -133,7 +128,7 @@ func (manager MysqlUndoLogManager) Undo(db proto.DB, xid string) ([]string, erro
 	}
 
 	if exists {
-		_, _, err := tx.ExecuteSql(context.Background(), DeleteUndoLogByXIDSql, xid)
+		_, _, err := tx.ExecuteSqlDirectly(DeleteUndoLogByXIDSql, xid)
 		if err != nil {
 			if _, err := tx.Rollback(context.Background(), nil); err != nil {
 				return lockKeys, err
@@ -154,7 +149,7 @@ func (manager MysqlUndoLogManager) Undo(db proto.DB, xid string) ([]string, erro
 }
 
 func (manager MysqlUndoLogManager) DeleteUndoLogByID(db proto.DB, id int64) error {
-	result, _, err := db.ExecuteSql(context.Background(), DeleteUndoLogByIDSql, id)
+	result, _, err := db.ExecuteSqlDirectly(DeleteUndoLogByIDSql, id)
 	if err != nil {
 		return err
 	}
@@ -164,7 +159,7 @@ func (manager MysqlUndoLogManager) DeleteUndoLogByID(db proto.DB, id int64) erro
 }
 
 func (manager MysqlUndoLogManager) DeleteUndoLogByXID(db proto.DB, xid string) error {
-	result, _, err := db.ExecuteSql(context.Background(), DeleteUndoLogByXIDSql, xid)
+	result, _, err := db.ExecuteSqlDirectly(DeleteUndoLogByXIDSql, xid)
 	if err != nil {
 		return err
 	}
@@ -175,7 +170,7 @@ func (manager MysqlUndoLogManager) DeleteUndoLogByXID(db proto.DB, xid string) e
 
 func (manager MysqlUndoLogManager) DeleteUndoLogByLogCreated(db proto.DB, logCreated time.Time, limitRows int) error {
 	// TODO pass ctx.
-	result, _, err := db.ExecuteSql(context.Background(), DeleteUndoLogByCreateSql, logCreated, limitRows)
+	result, _, err := db.ExecuteSqlDirectly(DeleteUndoLogByCreateSql, logCreated, limitRows)
 	if err != nil {
 		return err
 	}
@@ -200,7 +195,8 @@ func (manager MysqlUndoLogManager) insertUndoLog(conn proto.Connection, xid stri
 	undoLogContent []byte, state State) error {
 	bc := conn.(*driver.BackendConnection)
 	args := []interface{}{xid, branchID, rollbackCtx, undoLogContent, state}
-	_, _, err := bc.PrepareExecuteArgs(InsertUndoLogSql, args)
+	ctx := proto.WithCommandType(context.Background(), constant.ComQuery)
+	_, _, err := bc.PrepareExecuteArgs(ctx, InsertUndoLogSql, args)
 	return err
 }
 

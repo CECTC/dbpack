@@ -236,20 +236,20 @@ func (executor MysqlUndoExecutor) queryCurrentRecords(tx proto.Tx) (*schema.Tabl
 
 	if executor.sqlUndoLog.IsBinary {
 		selectSql := executor.buildCurrentRecordsForPrepareSql(tableMeta, pkName, pkValues)
-		dataTable, _, err := tx.ExecuteSql(context.Background(), selectSql, pkValues...)
+		dataTable, _, err := tx.ExecuteSqlDirectly(selectSql, pkValues...)
 		if err != nil {
 			return nil, err
 		}
 		dt := dataTable.(*mysql.Result)
-		return schema.BuildBinaryRecords(tableMeta, dt), nil
+		return schema.BuildTableRecords(tableMeta, dt), nil
 	} else {
 		selectSql := executor.buildCurrentRecordsForQuerySql(tableMeta, pkName, pkValues)
-		dataTable, _, err := tx.Query(context.Background(), selectSql)
+		dataTable, _, err := tx.QueryDirectly(selectSql)
 		if err != nil {
 			return nil, err
 		}
 		dt := dataTable.(*mysql.Result)
-		return schema.BuildTextRecords(tableMeta, dt), nil
+		return schema.BuildTableRecords(tableMeta, dt), nil
 	}
 }
 

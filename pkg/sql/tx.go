@@ -23,6 +23,7 @@ import (
 	"github.com/uber-go/atomic"
 	"go.opentelemetry.io/otel/attribute"
 
+	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/driver"
 	err2 "github.com/cectc/dbpack/pkg/errors"
 	"github.com/cectc/dbpack/pkg/proto"
@@ -55,6 +56,15 @@ func (tx *Tx) Query(ctx context.Context, query string) (proto.Result, uint16, er
 	if err := tx.db.doConnectionPostFilter(spanCtx, result, tx.conn); err != nil {
 		return nil, 0, err
 	}
+	return result, warn, err
+}
+
+func (tx *Tx) QueryDirectly(query string) (proto.Result, uint16, error) {
+	tx.db.inflightRequests.Inc()
+	defer tx.db.inflightRequests.Dec()
+
+	ctx := proto.WithCommandType(context.Background(), constant.ComQuery)
+	result, warn, err := tx.conn.ExecuteWithWarningCount(ctx, query, true)
 	return result, warn, err
 }
 
@@ -114,6 +124,15 @@ func (tx *Tx) ExecuteSql(ctx context.Context, sql string, args ...interface{}) (
 	return result, warn, err
 }
 
+func (tx *Tx) ExecuteSqlDirectly(sql string, args ...interface{}) (proto.Result, uint16, error) {
+	tx.db.inflightRequests.Inc()
+	defer tx.db.inflightRequests.Dec()
+
+	ctx := proto.WithCommandType(context.Background(), constant.ComStmtExecute)
+	result, warn, err := tx.conn.PrepareQueryArgs(ctx, sql, args)
+	return result, warn, err
+}
+
 func (tx *Tx) Commit(ctx context.Context) (result proto.Result, err error) {
 	_, span := tracing.GetTraceSpan(ctx, tracing.TxCommit)
 	span.SetAttributes(attribute.KeyValue{Key: "db", Value: attribute.StringValue(tx.db.name)})
@@ -125,7 +144,7 @@ func (tx *Tx) Commit(ctx context.Context) (result proto.Result, err error) {
 	if tx.db == nil || tx.db.IsClosed() {
 		return nil, err2.ErrInvalidConn
 	}
-	result, err = tx.conn.Execute("COMMIT", false)
+	result, err = tx.conn.Execute(ctx, "COMMIT", false)
 	tx.db.pool.Put(tx.conn)
 	tx.Close()
 	return
@@ -143,9 +162,9 @@ func (tx *Tx) Rollback(ctx context.Context, stmt *ast.RollbackStmt) (result prot
 		return nil, err2.ErrInvalidConn
 	}
 	if stmt != nil && stmt.SavepointName != "" {
-		result, err = tx.conn.Execute(fmt.Sprintf("ROLLBACK TO %s", stmt.SavepointName), false)
+		result, err = tx.conn.Execute(ctx, fmt.Sprintf("ROLLBACK TO %s", stmt.SavepointName), false)
 	} else {
-		result, err = tx.conn.Execute("ROLLBACK", false)
+		result, err = tx.conn.Execute(ctx, "ROLLBACK", false)
 	}
 	tx.db.pool.Put(tx.conn)
 	tx.Close()

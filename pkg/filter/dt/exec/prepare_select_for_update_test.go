@@ -63,7 +63,7 @@ func TestPrepareSelectForUpdate(t *testing.T) {
 	patch2 := getPrepareTableMetaPatch()
 	defer patch2.Reset()
 
-	patch3 := buildBinaryRecordsPatch()
+	patch3 := BuildBinaryRecordsPatch()
 	defer patch3.Reset()
 
 	for _, c := range testCases {
@@ -111,8 +111,8 @@ func getPrepareTableMetaPatch() *gomonkey.Patches {
 	})
 }
 
-func buildBinaryRecordsPatch() *gomonkey.Patches {
-	return gomonkey.ApplyFunc(schema.BuildBinaryRecords, func(meta schema.TableMeta, result *mysql.Result) *schema.TableRecords {
+func BuildBinaryRecordsPatch() *gomonkey.Patches {
+	return gomonkey.ApplyFunc(schema.BuildTableRecords, func(meta schema.TableMeta, result *mysql.Result) *schema.TableRecords {
 		return &schema.TableRecords{
 			TableMeta: tableMeta,
 			TableName: "t",

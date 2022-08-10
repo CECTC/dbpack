@@ -591,27 +591,6 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 					tracing.RecordErrorSpan(span, err)
 					return err
 				}
-				err = c.WriteTextRows(rlt)
-				if err != nil {
-					tracing.RecordErrorSpan(span, err)
-					return err
-				}
-			}
-			if rlt, ok := result.(*mysql.DecodedResult); ok {
-				if len(rlt.Fields) == 0 {
-					// A successful callback with no fields means that this was a
-					// DML or other write-only operation.
-					//
-					// We should not send any more packets after this, but make sure
-					// to extract the affected rows and last insert id from the result
-					// struct here since clients expect it.
-					return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, c.StatusFlags(), warn)
-				}
-				err = c.WriteFields(l.capabilities, rlt.Fields)
-				if err != nil {
-					tracing.RecordErrorSpan(span, err)
-					return err
-				}
 				err = c.WriteRows(rlt)
 				if err != nil {
 					tracing.RecordErrorSpan(span, err)
@@ -761,27 +740,6 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 					return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, flag, warn)
 				}
 
-				err = c.WriteFields(l.capabilities, rlt.Fields)
-				if err != nil {
-					tracing.RecordErrorSpan(span, err)
-					return err
-				}
-				err = c.WriteBinaryRows(rlt)
-				if err != nil {
-					tracing.RecordErrorSpan(span, err)
-					return err
-				}
-			}
-			if rlt, ok := result.(*mysql.DecodedResult); ok {
-				if len(rlt.Fields) == 0 {
-					// A successful callback with no fields means that this was a
-					// DML or other write-only operation.
-					//
-					// We should not send any more packets after this, but make sure
-					// to extract the affected rows and last insert id from the result
-					// struct here since clients expect it.
-					return c.WriteOKPacket(rlt.AffectedRows, rlt.InsertId, c.StatusFlags(), warn)
-				}
 				err = c.WriteFields(l.capabilities, rlt.Fields)
 				if err != nil {
 					tracing.RecordErrorSpan(span, err)

@@ -109,7 +109,7 @@ func (executor *prepareInsertExecutor) buildTableRecords(ctx context.Context, pk
 	if err != nil {
 		return nil, err
 	}
-	return schema.BuildBinaryRecords(tableMeta, result), nil
+	return schema.BuildTableRecords(tableMeta, result), nil
 }
 
 func (executor *prepareInsertExecutor) buildAfterImageSql(tableMeta schema.TableMeta, pkValues []interface{}) string {

@@ -25,6 +25,7 @@ import (
 	"github.com/uber-go/atomic"
 	"go.opentelemetry.io/otel/attribute"
 
+	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/driver"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/proto"
@@ -143,6 +144,23 @@ func (db *DB) Query(ctx context.Context, query string) (proto.Result, uint16, er
 	return result, warn, err
 }
 
+func (db *DB) QueryDirectly(query string) (proto.Result, uint16, error) {
+	db.inflightRequests.Inc()
+	defer db.inflightRequests.Dec()
+
+	r, err := db.pool.Get(context.Background())
+	if err != nil {
+		err = errors.WithStack(err)
+		return nil, 0, err
+	}
+	defer db.pool.Put(r)
+
+	conn := r.(*driver.BackendConnection)
+	ctx := proto.WithCommandType(context.Background(), constant.ComQuery)
+	result, warn, err := conn.ExecuteWithWarningCount(ctx, query, true)
+	return result, warn, err
+}
+
 func (db *DB) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, uint16, error) {
 	query := stmt.StmtNode.Text()
 	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.DBExecStmt)
@@ -204,7 +222,6 @@ func (db *DB) ExecuteSql(ctx context.Context, sql string, args ...interface{}) (
 	if err := db.doConnectionPreFilter(spanCtx, conn); err != nil {
 		return nil, 0, err
 	}
-	// TODO PrepareQueryArgs support ctx
 	result, warn, err := conn.PrepareQueryArgs(spanCtx, sql, args)
 	if err != nil {
 		return result, warn, err
@@ -212,6 +229,22 @@ func (db *DB) ExecuteSql(ctx context.Context, sql string, args ...interface{}) (
 	if err := db.doConnectionPostFilter(spanCtx, result, conn); err != nil {
 		return nil, 0, err
 	}
+	return result, warn, err
+}
+
+func (db *DB) ExecuteSqlDirectly(sql string, args ...interface{}) (proto.Result, uint16, error) {
+	db.inflightRequests.Inc()
+	defer db.inflightRequests.Dec()
+
+	r, err := db.pool.Get(context.Background())
+	if err != nil {
+		err = errors.WithStack(err)
+		return nil, 0, err
+	}
+	defer db.pool.Put(r)
+	conn := r.(*driver.BackendConnection)
+	ctx := proto.WithCommandType(context.Background(), constant.ComStmtExecute)
+	result, warn, err := conn.PrepareQueryArgs(ctx, sql, args)
 	return result, warn, err
 }
 
@@ -233,7 +266,7 @@ func (db *DB) Begin(ctx context.Context) (proto.Tx, proto.Result, error) {
 	}
 	conn = r.(*driver.BackendConnection)
 
-	if result, err = conn.Execute("START TRANSACTION", false); err != nil {
+	if result, err = conn.Execute(ctx, "START TRANSACTION", false); err != nil {
 		db.pool.Put(r)
 		return nil, nil, err
 	}

@@ -17,7 +17,6 @@
 package executor
 
 import (
-	"io"
 	"strings"
 
 	"github.com/cectc/dbpack/pkg/mysql"
@@ -47,66 +46,17 @@ func shouldStartTransaction(stmt *ast.SetStmt) (shouldStartTransaction bool) {
 	return
 }
 
-func decodeTextResult(result proto.Result) (proto.Result, error) {
+func decodeResult(result proto.Result) (proto.Result, error) {
 	if result != nil {
 		if mysqlResult, ok := result.(*mysql.Result); ok {
 			if mysqlResult.Rows != nil {
-				var rows []proto.Row
-				for {
-					row, err := mysqlResult.Rows.Next()
-					if err != nil {
-						if err == io.EOF {
-							break
-						}
-						return nil, err
-					}
-					textRow := &mysql.TextRow{Row: row}
-					_, err = textRow.Decode()
+				for _, row := range mysqlResult.Rows {
+					_, err := row.Decode()
 					if err != nil {
 						return nil, err
 					}
-					rows = append(rows, textRow)
 				}
-				decodedRow := &mysql.DecodedResult{
-					Fields:       mysqlResult.Fields,
-					AffectedRows: mysqlResult.AffectedRows,
-					InsertId:     mysqlResult.InsertId,
-					Rows:         rows,
-				}
-				return decodedRow, nil
-			}
-		}
-	}
-	return result, nil
-}
-
-func decodeBinaryResult(result proto.Result) (proto.Result, error) {
-	if result != nil {
-		if mysqlResult, ok := result.(*mysql.Result); ok {
-			if mysqlResult.Rows != nil {
-				var rows []proto.Row
-				for {
-					row, err := mysqlResult.Rows.Next()
-					if err != nil {
-						if err == io.EOF {
-							break
-						}
-						return nil, err
-					}
-					binaryRow := &mysql.BinaryRow{Row: row}
-					_, err = binaryRow.Decode()
-					if err != nil {
-						return nil, err
-					}
-					rows = append(rows, binaryRow)
-				}
-				decodedRow := &mysql.DecodedResult{
-					Fields:       mysqlResult.Fields,
-					AffectedRows: mysqlResult.AffectedRows,
-					InsertId:     mysqlResult.InsertId,
-					Rows:         rows,
-				}
-				return decodedRow, nil
+				return mysqlResult, nil
 			}
 		}
 	}

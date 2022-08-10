@@ -125,7 +125,7 @@ func (executor *prepareGlobalLockExecutor) BeforeImage(ctx context.Context) (*sc
 	if err != nil {
 		return nil, err
 	}
-	return schema.BuildBinaryRecords(tableMeta, result), nil
+	return schema.BuildTableRecords(tableMeta, result), nil
 }
 
 func (executor *prepareGlobalLockExecutor) buildBeforeImageSql(tableMeta schema.TableMeta) string {

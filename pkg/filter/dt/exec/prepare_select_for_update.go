@@ -68,7 +68,7 @@ func (executor *prepareSelectForUpdateExecutor) Executable(ctx context.Context, 
 	}
 
 	rlt := executor.result.(*mysql.Result)
-	selectPKRows := schema.BuildBinaryRecords(tableMeta, rlt)
+	selectPKRows := schema.BuildTableRecords(tableMeta, rlt)
 	lockKeys := schema.BuildLockKey(selectPKRows)
 	if lockKeys == "" {
 		return true, nil

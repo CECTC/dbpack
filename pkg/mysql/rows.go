@@ -19,14 +19,12 @@ package mysql
 import (
 	"encoding/binary"
 	"fmt"
-	"io"
 	"math"
 	"time"
 
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/errors"
 	"github.com/cectc/dbpack/pkg/misc"
-	"github.com/cectc/dbpack/pkg/packet"
 	"github.com/cectc/dbpack/pkg/proto"
 )
 
@@ -35,60 +33,24 @@ type ResultSet struct {
 	ColumnNames []string
 }
 
-type Rows struct {
-	conn    *Conn
-	columns []*Field
-}
-
-func NewRows(conn *Conn, columns []*Field) *Rows {
-	return &Rows{
-		conn:    conn,
-		columns: columns,
-	}
-}
-
-func (rows *Rows) Next() (*Row, error) {
-	data, err := rows.conn.ReadPacket()
-	if err != nil {
-		return nil, err
-	}
-
-	// EOF Packet
-	if data[0] == constant.EOFPacket && len(data) == 5 {
-		// server_status [2 bytes]
-		misc.ReadUint16(data, 3)
-		rows.conn = nil
-		return nil, io.EOF
-	}
-	if data[0] == constant.ErrPacket {
-		rows.conn = nil
-		return nil, packet.ParseErrorPacket(data)
-	}
-
-	return &Row{
-		Content: data,
-		ResultSet: &ResultSet{
-			Columns: rows.columns,
-		},
-	}, nil
-}
-
-type Row struct {
+type row struct {
 	Content   []byte
 	ResultSet *ResultSet
 }
 
 type BinaryRow struct {
-	*Row
-	Values []*proto.Value
+	*row
+	decoded bool
+	Values  []*proto.Value
 }
 
 type TextRow struct {
-	*Row
-	Values []*proto.Value
+	*row
+	decoded bool
+	Values  []*proto.Value
 }
 
-func (row *Row) Columns() []string {
+func (row *row) Columns() []string {
 	if row.ResultSet.ColumnNames != nil {
 		return row.ResultSet.ColumnNames
 	}
@@ -114,7 +76,7 @@ func (row *Row) Columns() []string {
 	return columns
 }
 
-func (row *Row) Fields() []proto.Field {
+func (row *row) Fields() []proto.Field {
 	fields := make([]proto.Field, 0, len(row.ResultSet.Columns))
 	for _, field := range row.ResultSet.Columns {
 		fields = append(fields, field)
@@ -122,15 +84,16 @@ func (row *Row) Fields() []proto.Field {
 	return fields
 }
 
-func (row *Row) Data() []byte {
+func (row *row) Data() []byte {
 	return row.Content
 }
 
-func (row *Row) Decode() ([]*proto.Value, error) {
-	return nil, nil
-}
-
 func (row *TextRow) Decode() ([]*proto.Value, error) {
+	if row.decoded {
+		return row.Values, nil
+	}
+	row.decoded = true
+
 	dest := make([]*proto.Value, len(row.ResultSet.Columns))
 
 	// RowSet Packet
@@ -180,6 +143,11 @@ func (row *TextRow) Decode() ([]*proto.Value, error) {
 }
 
 func (row *BinaryRow) Decode() ([]*proto.Value, error) {
+	if row.decoded {
+		return row.Values, nil
+	}
+	row.decoded = true
+
 	dest := make([]*proto.Value, len(row.ResultSet.Columns))
 
 	if row.Content[0] != constant.OKPacket {

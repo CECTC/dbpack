@@ -26,7 +26,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/mysql"
@@ -172,7 +171,7 @@ func (c OrderByCells) Swap(i, j int) {
 func mergeResult(ctx context.Context,
 	results []*ResultWithErr,
 	orderBy *ast.OrderByClause,
-	limit *Limit) (*mysql.DecodedResult, uint16) {
+	limit *Limit) (*mysql.Result, uint16) {
 	if orderBy == nil && limit == nil {
 		return mergeResultWithoutOrderByAndLimit(ctx, results)
 	}
@@ -190,15 +189,15 @@ func mergeResult(ctx context.Context,
 
 // mergeResultWithOutOrderByAndLimit e.g. select * from t where id between ? and ?
 func mergeResultWithoutOrderByAndLimit(ctx context.Context,
-	results []*ResultWithErr) (*mysql.DecodedResult, uint16) {
+	results []*ResultWithErr) (*mysql.Result, uint16) {
 	var (
-		fields      []*mysql.Field
-		warning     uint16 = 0
-		commandType        = proto.CommandType(ctx)
-		rows               = make([]proto.Row, 0)
+		fields  []*mysql.Field
+		warning uint16 = 0
+		rows           = make([]proto.Row, 0)
 		// Record whether mysql.Result has been traversed
-		endResult = make([]bool, len(results))
-		endCount  = 0
+		endResult  = make([]bool, len(results))
+		rowIndexes = make([]int, len(results))
+		endCount   = 0
 	)
 	for _, rlt := range results {
 		warning += rlt.Warning
@@ -209,33 +208,25 @@ func mergeResultWithoutOrderByAndLimit(ctx context.Context,
 				continue
 			}
 			result := rlt.Result.(*mysql.Result)
-			row, err := result.Rows.Next()
-			if err != nil {
+			row := result.Rows[rowIndexes[i]]
+			rowIndexes[i]++
+			if rowIndexes[i] == len(result.Rows) {
 				endResult[i] = true
 				endCount += 1
 				continue
 			}
 
-			if commandType == constant.ComQuery {
-				textRow := &mysql.TextRow{Row: row}
-				if _, err := textRow.Decode(); err != nil {
-					log.Panic(err)
-				}
-				rows = append(rows, textRow)
-			} else {
-				binaryRow := &mysql.BinaryRow{Row: row}
-				if _, err := binaryRow.Decode(); err != nil {
-					log.Panic(err)
-				}
-				rows = append(rows, binaryRow)
+			if _, err := row.Decode(); err != nil {
+				log.Panic(err)
 			}
+			rows = append(rows, row)
 		}
 		if endCount == len(endResult) {
 			break
 		}
 	}
 	fields = results[0].Result.(*mysql.Result).Fields
-	result := &mysql.DecodedResult{
+	result := &mysql.Result{
 		Fields:       fields,
 		AffectedRows: 0,
 		InsertId:     0,
@@ -247,18 +238,18 @@ func mergeResultWithoutOrderByAndLimit(ctx context.Context,
 // mergeResultWithLimit e.g. select * from t where id between ? and ? limit ?,?
 func mergeResultWithLimit(ctx context.Context,
 	results []*ResultWithErr,
-	limit *Limit) (*mysql.DecodedResult, uint16) {
+	limit *Limit) (*mysql.Result, uint16) {
 	var (
-		fields      []*mysql.Field
-		warning     uint16 = 0
-		offset      int64
-		count       int64
-		rowCount    int64
-		commandType = proto.CommandType(ctx)
-		rows        = make([]proto.Row, 0)
+		fields   []*mysql.Field
+		warning  uint16 = 0
+		offset   int64
+		count    int64
+		rowCount int64
+		rows     = make([]proto.Row, 0)
 		// Record whether mysql.Result has been traversed
-		endResult = make([]bool, len(results))
-		endCount  = 0
+		endResult  = make([]bool, len(results))
+		rowIndexes = make([]int, len(results))
+		endCount   = 0
 	)
 	for _, rlt := range results {
 		warning += rlt.Warning
@@ -272,8 +263,9 @@ func mergeResultWithLimit(ctx context.Context,
 				continue
 			}
 			result := rlt.Result.(*mysql.Result)
-			row, err := result.Rows.Next()
-			if err != nil {
+			row := result.Rows[rowIndexes[i]]
+			rowIndexes[i]++
+			if rowIndexes[i] == len(result.Rows) {
 				endResult[i] = true
 				endCount += 1
 				continue
@@ -281,22 +273,12 @@ func mergeResultWithLimit(ctx context.Context,
 			rowCount++
 			if rowCount > offset {
 				if int64(len(rows)) == count {
-					// drain connection buffer
-					continue
+					break
 				}
-				if commandType == constant.ComQuery {
-					textRow := &mysql.TextRow{Row: row}
-					if _, err := textRow.Decode(); err != nil {
-						log.Panic(err)
-					}
-					rows = append(rows, textRow)
-				} else {
-					binaryRow := &mysql.BinaryRow{Row: row}
-					if _, err := binaryRow.Decode(); err != nil {
-						log.Panic(err)
-					}
-					rows = append(rows, binaryRow)
+				if _, err := row.Decode(); err != nil {
+					log.Panic(err)
 				}
+				rows = append(rows, row)
 			}
 		}
 		if endCount == len(endResult) {
@@ -304,7 +286,7 @@ func mergeResultWithLimit(ctx context.Context,
 		}
 	}
 	fields = results[0].Result.(*mysql.Result).Fields
-	result := &mysql.DecodedResult{
+	result := &mysql.Result{
 		Fields:       fields,
 		AffectedRows: 0,
 		InsertId:     0,
@@ -317,7 +299,7 @@ func mergeResultWithLimit(ctx context.Context,
 func mergeResultWithOrderByAndLimit(ctx context.Context,
 	results []*ResultWithErr,
 	orderBy *ast.OrderByClause,
-	limit *Limit) (*mysql.DecodedResult, uint16) {
+	limit *Limit) (*mysql.Result, uint16) {
 	var (
 		fields        []*mysql.Field
 		orderByFields []*OrderField
@@ -325,10 +307,10 @@ func mergeResultWithOrderByAndLimit(ctx context.Context,
 		offset        int64
 		count         int64
 		rowCount      int64
-		commandType   = proto.CommandType(ctx)
 		rows          = make([]proto.Row, 0)
 		cells         = make([]*OrderByCell, len(results))
 		endResult     = make([]bool, len(results))
+		rowIndexes    = make([]int, len(results))
 		endCount      = 0
 	)
 	fields = results[0].Result.(*mysql.Result).Fields
@@ -340,44 +322,27 @@ func mergeResultWithOrderByAndLimit(ctx context.Context,
 		for i, rlt := range results {
 			if (cells[i] == nil || cells[i].next) && !endResult[i] {
 				result := rlt.Result.(*mysql.Result)
-				row, err := result.Rows.Next()
-				if err != nil {
+				row := result.Rows[rowIndexes[i]]
+				rowIndexes[i]++
+				if rowIndexes[i] == len(result.Rows) {
 					endResult[i] = true
 					endCount += 1
 					continue
 				}
 
 				orderFields := copyOrderFields(orderByFields)
-				if commandType == constant.ComQuery {
-					textRow := &mysql.TextRow{Row: row}
-					values, err := textRow.Decode()
-					if err != nil {
-						log.Panic(err)
-					}
-					for _, of := range orderFields {
-						of.value = values[of.fieldValueIndex].Val
-					}
+				values, err := row.Decode()
+				if err != nil {
+					log.Fatal(err)
+				}
+				for _, of := range orderFields {
+					of.value = values[of.fieldValueIndex].Val
+				}
 
-					cells[i] = &OrderByCell{
-						orderField: orderFields,
-						next:       false,
-						row:        textRow,
-					}
-				} else {
-					binaryRow := &mysql.BinaryRow{Row: row}
-					values, err := binaryRow.Decode()
-					if err != nil {
-						log.Fatal(err)
-					}
-					for _, of := range orderFields {
-						of.value = values[of.fieldValueIndex].Val
-					}
-
-					cells[i] = &OrderByCell{
-						orderField: orderFields,
-						next:       false,
-						row:        binaryRow,
-					}
+				cells[i] = &OrderByCell{
+					orderField: orderFields,
+					next:       false,
+					row:        row,
 				}
 			}
 		}
@@ -406,7 +371,7 @@ func mergeResultWithOrderByAndLimit(ctx context.Context,
 	for _, rlt := range results {
 		warning += rlt.Warning
 	}
-	result := &mysql.DecodedResult{
+	result := &mysql.Result{
 		Fields:       fields,
 		AffectedRows: 0,
 		InsertId:     0,
@@ -418,19 +383,19 @@ func mergeResultWithOrderByAndLimit(ctx context.Context,
 // mergeResultWithOrderBy e.g. select * from t where id between ? and ? order by id desc
 func mergeResultWithOrderBy(ctx context.Context,
 	results []*ResultWithErr,
-	orderBy *ast.OrderByClause) (*mysql.DecodedResult, uint16) {
+	orderBy *ast.OrderByClause) (*mysql.Result, uint16) {
 	var (
 		fields        []*mysql.Field
 		orderByFields []*OrderField
 		warning       uint16 = 0
-		commandType          = proto.CommandType(ctx)
 		// result rows
 		rows = make([]proto.Row, 0)
 		// OrderBy compare
 		cells = make([]*OrderByCell, len(results))
 		// Record whether mysql.Result has been traversed
-		endResult = make([]bool, len(results))
-		endCount  = 0
+		endResult  = make([]bool, len(results))
+		rowIndexes = make([]int, len(results))
+		endCount   = 0
 	)
 	fields = results[0].Result.(*mysql.Result).Fields
 	orderByFields = castOrderByItemsToOrderField(orderBy, fields)
@@ -438,44 +403,27 @@ func mergeResultWithOrderBy(ctx context.Context,
 		for i, rlt := range results {
 			if (cells[i] == nil || cells[i].next) && !endResult[i] {
 				result := rlt.Result.(*mysql.Result)
-				row, err := result.Rows.Next()
-				if err != nil {
+				row := result.Rows[rowIndexes[i]]
+				rowIndexes[i]++
+				if rowIndexes[i] == len(result.Rows) {
 					endResult[i] = true
 					endCount += 1
 					continue
 				}
 
 				orderFields := copyOrderFields(orderByFields)
-				if commandType == constant.ComQuery {
-					textRow := &mysql.TextRow{Row: row}
-					values, err := textRow.Decode()
-					if err != nil {
-						log.Panic(err)
-					}
-					for _, of := range orderFields {
-						of.value = values[of.fieldValueIndex].Val
-					}
+				values, err := row.Decode()
+				if err != nil {
+					log.Fatal(err)
+				}
+				for _, of := range orderFields {
+					of.value = values[of.fieldValueIndex].Val
+				}
 
-					cells[i] = &OrderByCell{
-						orderField: orderFields,
-						next:       false,
-						row:        textRow,
-					}
-				} else {
-					binaryRow := &mysql.BinaryRow{Row: row}
-					values, err := binaryRow.Decode()
-					if err != nil {
-						log.Fatal(err)
-					}
-					for _, of := range orderFields {
-						of.value = values[of.fieldValueIndex].Val
-					}
-
-					cells[i] = &OrderByCell{
-						orderField: orderFields,
-						next:       false,
-						row:        binaryRow,
-					}
+				cells[i] = &OrderByCell{
+					orderField: orderFields,
+					next:       false,
+					row:        row,
 				}
 			}
 		}
@@ -485,7 +433,6 @@ func mergeResultWithOrderBy(ctx context.Context,
 		cell := compareOrderByCells(cells)
 		rows = append(rows, cell.row)
 	}
-
 	count := countOrderByCells(cells)
 	for count > 0 {
 		cell := compareOrderByCells(cells)
@@ -496,7 +443,7 @@ func mergeResultWithOrderBy(ctx context.Context,
 	for _, rlt := range results {
 		warning += rlt.Warning
 	}
-	result := &mysql.DecodedResult{
+	result := &mysql.Result{
 		Fields:       fields,
 		AffectedRows: 0,
 		InsertId:     0,
@@ -505,7 +452,7 @@ func mergeResultWithOrderBy(ctx context.Context,
 	return result, warning
 }
 
-func aggregateResult(ctx context.Context, result *mysql.DecodedResult) {
+func aggregateResult(ctx context.Context, result *mysql.Result) {
 	sqlText := proto.SqlText(ctx)
 	funcColumns := proto.Variable(ctx, FuncColumns)
 	if funcColumns == nil {

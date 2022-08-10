@@ -135,7 +135,7 @@ func (executor *SingleDBExecutor) ExecutorComQuery(
 	}
 	defer func() {
 		if err == nil {
-			result, err = decodeTextResult(result)
+			result, err = decodeResult(result)
 			if err != nil {
 				span.RecordError(err)
 				return
@@ -237,7 +237,7 @@ func (executor *SingleDBExecutor) ExecutorComStmtExecute(
 	}
 	defer func() {
 		if err == nil {
-			result, err = decodeBinaryResult(result)
+			result, err = decodeResult(result)
 			if err != nil {
 				span.RecordError(err)
 				return

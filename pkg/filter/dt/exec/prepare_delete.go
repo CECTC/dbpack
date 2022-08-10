@@ -74,7 +74,7 @@ func (executor *prepareDeleteExecutor) BeforeImage(ctx context.Context) (*schema
 		tracing.RecordErrorSpan(span, err)
 		return nil, err
 	}
-	return schema.BuildBinaryRecords(tableMeta, result), nil
+	return schema.BuildTableRecords(tableMeta, result), nil
 }
 
 func (executor *prepareDeleteExecutor) AfterImage(ctx context.Context) (*schema.TableRecords, error) {

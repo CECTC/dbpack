@@ -63,7 +63,7 @@ func (executor *queryDeleteExecutor) BeforeImage(ctx context.Context) (*schema.T
 		tracing.RecordErrorSpan(span, err)
 		return nil, err
 	}
-	return schema.BuildTextRecords(tableMeta, result), nil
+	return schema.BuildTableRecords(tableMeta, result), nil
 }
 
 func (executor *queryDeleteExecutor) AfterImage(ctx context.Context) (*schema.TableRecords, error) {

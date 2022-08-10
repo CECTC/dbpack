@@ -25,8 +25,9 @@ import (
 	reflect "reflect"
 	time "time"
 
-	proto "github.com/cectc/dbpack/pkg/proto"
 	gomock "github.com/golang/mock/gomock"
+
+	proto "github.com/cectc/dbpack/pkg/proto"
 )
 
 // MockDB is a mock of DB interface.
@@ -156,6 +157,27 @@ func (mr *MockDBMockRecorder) ExecuteSql(arg0, arg1 interface{}, arg2 ...interfa
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteSql", reflect.TypeOf((*MockDB)(nil).ExecuteSql), varargs...)
+}
+
+// ExecuteSqlDirectly mocks base method.
+func (m *MockDB) ExecuteSqlDirectly(arg0 string, arg1 ...interface{}) (proto.Result, uint16, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ExecuteSqlDirectly", varargs...)
+	ret0, _ := ret[0].(proto.Result)
+	ret1, _ := ret[1].(uint16)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ExecuteSqlDirectly indicates an expected call of ExecuteSqlDirectly.
+func (mr *MockDBMockRecorder) ExecuteSqlDirectly(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteSqlDirectly", reflect.TypeOf((*MockDB)(nil).ExecuteSqlDirectly), varargs...)
 }
 
 // ExecuteStmt mocks base method.
@@ -300,6 +322,22 @@ func (m *MockDB) Query(arg0 context.Context, arg1 string) (proto.Result, uint16,
 func (mr *MockDBMockRecorder) Query(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Query", reflect.TypeOf((*MockDB)(nil).Query), arg0, arg1)
+}
+
+// QueryDirectly mocks base method.
+func (m *MockDB) QueryDirectly(arg0 string) (proto.Result, uint16, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "QueryDirectly", arg0)
+	ret0, _ := ret[0].(proto.Result)
+	ret1, _ := ret[1].(uint16)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// QueryDirectly indicates an expected call of QueryDirectly.
+func (mr *MockDBMockRecorder) QueryDirectly(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryDirectly", reflect.TypeOf((*MockDB)(nil).QueryDirectly), arg0)
 }
 
 // SetCapacity mocks base method.

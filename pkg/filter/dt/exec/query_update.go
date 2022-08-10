@@ -66,7 +66,7 @@ func (executor *queryUpdateExecutor) BeforeImage(ctx context.Context) (*schema.T
 		tracing.RecordErrorSpan(span, err)
 		return nil, err
 	}
-	return schema.BuildTextRecords(tableMeta, result), nil
+	return schema.BuildTableRecords(tableMeta, result), nil
 }
 
 func (executor *queryUpdateExecutor) AfterImage(ctx context.Context) (*schema.TableRecords, error) {
@@ -87,7 +87,7 @@ func (executor *queryUpdateExecutor) AfterImage(ctx context.Context) (*schema.Ta
 		tracing.RecordErrorSpan(span, err)
 		return nil, err
 	}
-	return schema.BuildTextRecords(tableMeta, result), nil
+	return schema.BuildTableRecords(tableMeta, result), nil
 }
 
 func (executor *queryUpdateExecutor) GetTableMeta(ctx context.Context) (schema.TableMeta, error) {
