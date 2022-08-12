@@ -81,7 +81,7 @@ func (factory *_httpFactory) NewFilter(appid string, config map[string]interface
 		return nil, errors.Wrap(err, "marshal http distributed transaction filter config failed.")
 	}
 	if err = json.Unmarshal(content, &filterConfig); err != nil {
-		log.Errorf("unmarshal http distributed transaction filter failed, %s", err)
+		log.Errorf("unmarshal http distributed transaction filter failed, %v", err)
 		return nil, err
 	}
 

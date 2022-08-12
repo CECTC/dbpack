@@ -56,7 +56,7 @@ func (factory *_factory) NewFilter(_ string, config map[string]interface{}) (pro
 		return nil, errors.Wrap(err, "marshal audit log filter config failed.")
 	}
 	if err = json.Unmarshal(content, &filterConfig); err != nil {
-		log.Errorf("unmarshal audit log filter failed, %s", err)
+		log.Errorf("unmarshal audit log filter failed, %v", err)
 		return nil, err
 	}
 	if filterConfig.MaxSize == 0 {

@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/pingcap/errors"
+	"github.com/pkg/errors"
 
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/filter"
@@ -55,7 +55,7 @@ func (factory *_factory) NewFilter(_ string, config map[string]interface{}) (pro
 		ColumnCryptoList []*ColumnCrypto `yaml:"column_crypto_list" json:"column_crypto_list"`
 	}{}
 	if err = json.Unmarshal(content, &v); err != nil {
-		log.Errorf("unmarshal crypto filter failed, %s", err)
+		log.Errorf("unmarshal crypto filter failed, %v", err)
 		return nil, err
 	}
 
