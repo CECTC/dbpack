@@ -102,7 +102,7 @@ type (
 	// DBPostFilter ...
 	DBPostFilter interface {
 		Filter
-		PostHandle(ctx context.Context, result Result) error
+		PostHandle(ctx context.Context, result Result, err error) error
 	}
 
 	DBConnectionPreFilter interface {

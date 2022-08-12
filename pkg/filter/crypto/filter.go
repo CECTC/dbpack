@@ -153,7 +153,10 @@ func (f *_filter) PreHandle(ctx context.Context) error {
 	return nil
 }
 
-func (f *_filter) PostHandle(ctx context.Context, result proto.Result) error {
+func (f *_filter) PostHandle(ctx context.Context, result proto.Result, err error) error {
+	if err != nil {
+		return err
+	}
 	commandType := proto.CommandType(ctx)
 	switch commandType {
 	case constant.ComQuery:

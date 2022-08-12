@@ -256,9 +256,7 @@ func (executor *ShardingExecutor) ExecutorComStmtExecute(
 		return nil, 0, err
 	}
 	defer func() {
-		if err == nil {
-			err = executor.doPostFilter(ctx, result)
-		}
+		err = executor.doPostFilter(ctx, result, err)
 	}()
 
 	var (
@@ -306,10 +304,10 @@ func (executor *ShardingExecutor) doPreFilter(ctx context.Context) error {
 	return nil
 }
 
-func (executor *ShardingExecutor) doPostFilter(ctx context.Context, result proto.Result) error {
+func (executor *ShardingExecutor) doPostFilter(ctx context.Context, result proto.Result, err error) error {
 	for i := 0; i < len(executor.PostFilters); i++ {
 		f := executor.PostFilters[i]
-		err := f.PostHandle(ctx, result)
+		err := f.PostHandle(ctx, result, err)
 		if err != nil {
 			return err
 		}
