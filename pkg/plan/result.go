@@ -208,14 +208,14 @@ func mergeResultWithoutOrderByAndLimit(ctx context.Context,
 				continue
 			}
 			result := rlt.Result.(*mysql.Result)
-			row := result.Rows[rowIndexes[i]]
-			rowIndexes[i]++
 			if rowIndexes[i] == len(result.Rows) {
 				endResult[i] = true
 				endCount += 1
 				continue
 			}
 
+			row := result.Rows[rowIndexes[i]]
+			rowIndexes[i]++
 			if _, err := row.Decode(); err != nil {
 				log.Panic(err)
 			}
@@ -263,13 +263,14 @@ func mergeResultWithLimit(ctx context.Context,
 				continue
 			}
 			result := rlt.Result.(*mysql.Result)
-			row := result.Rows[rowIndexes[i]]
-			rowIndexes[i]++
 			if rowIndexes[i] == len(result.Rows) {
 				endResult[i] = true
 				endCount += 1
 				continue
 			}
+
+			row := result.Rows[rowIndexes[i]]
+			rowIndexes[i]++
 			rowCount++
 			if rowCount > offset {
 				if int64(len(rows)) == count {
@@ -322,14 +323,14 @@ func mergeResultWithOrderByAndLimit(ctx context.Context,
 		for i, rlt := range results {
 			if (cells[i] == nil || cells[i].next) && !endResult[i] {
 				result := rlt.Result.(*mysql.Result)
-				row := result.Rows[rowIndexes[i]]
-				rowIndexes[i]++
 				if rowIndexes[i] == len(result.Rows) {
 					endResult[i] = true
 					endCount += 1
 					continue
 				}
 
+				row := result.Rows[rowIndexes[i]]
+				rowIndexes[i]++
 				orderFields := copyOrderFields(orderByFields)
 				values, err := row.Decode()
 				if err != nil {
@@ -403,14 +404,14 @@ func mergeResultWithOrderBy(ctx context.Context,
 		for i, rlt := range results {
 			if (cells[i] == nil || cells[i].next) && !endResult[i] {
 				result := rlt.Result.(*mysql.Result)
-				row := result.Rows[rowIndexes[i]]
-				rowIndexes[i]++
 				if rowIndexes[i] == len(result.Rows) {
 					endResult[i] = true
 					endCount += 1
 					continue
 				}
 
+				row := result.Rows[rowIndexes[i]]
+				rowIndexes[i]++
 				orderFields := copyOrderFields(orderByFields)
 				values, err := row.Decode()
 				if err != nil {
