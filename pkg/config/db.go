@@ -19,11 +19,16 @@ package config
 import (
 	"bytes"
 	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
+)
 
-	"github.com/cectc/dbpack/pkg/lb"
+const (
+	weightRegex = `^r([\d]+)w([\d]+)$`
 )
 
 type (
@@ -35,10 +40,13 @@ type (
 
 	ExecuteMode byte
 
+	LoadBalanceAlgorithm int32
+
 	// DataSource ...
 	DataSource struct {
 		Name                     string        `yaml:"name" json:"name"`
 		DSN                      string        `yaml:"dsn" json:"dsn"`
+		MasterName               string        `yaml:"master_name" json:"master_name"`
 		Capacity                 int           `yaml:"capacity" json:"capacity"`         // connection pool capacity
 		MaxCapacity              int           `yaml:"max_capacity" json:"max_capacity"` // max connection pool capacity
 		IdleTimeout              time.Duration `yaml:"idle_timeout" json:"idle_timeout"` // close backend direct connection after idle_timeout,unit: seconds
@@ -53,14 +61,14 @@ type (
 	}
 
 	ReadWriteSplittingConfig struct {
-		LoadBalanceAlgorithm lb.LoadBalanceAlgorithm `yaml:"load_balance_algorithm" json:"load_balance_algorithm"`
-		DataSources          []*DataSourceRef        `yaml:"data_sources" json:"data_sources"`
+		LoadBalanceAlgorithm LoadBalanceAlgorithm `yaml:"load_balance_algorithm" json:"load_balance_algorithm"`
+		DataSources          []*DataSourceRef     `yaml:"data_sources" json:"data_sources"`
 	}
 
 	DataSourceRefGroup struct {
-		Name        string                  `yaml:"name" json:"name"`
-		LBAlgorithm lb.LoadBalanceAlgorithm `yaml:"load_balance_algorithm" json:"load_balance_algorithm"`
-		DataSources []*DataSourceRef        `yaml:"data_sources" json:"data_sources"`
+		Name        string               `yaml:"name" json:"name"`
+		LBAlgorithm LoadBalanceAlgorithm `yaml:"load_balance_algorithm" json:"load_balance_algorithm"`
+		DataSources []*DataSourceRef     `yaml:"data_sources" json:"data_sources"`
 	}
 
 	ShardingRule struct {
@@ -99,6 +107,12 @@ const (
 	SDB ExecuteMode = iota
 	RWS
 	SHD
+)
+
+const (
+	Random LoadBalanceAlgorithm = iota
+	RoundRobin
+	RandomWeight
 )
 
 func (r *DataSourceRole) UnmarshalText(text []byte) error {
@@ -182,4 +196,48 @@ func (m *ExecuteMode) unmarshalText(text []byte) bool {
 		return false
 	}
 	return true
+}
+
+func (l *LoadBalanceAlgorithm) UnmarshalText(text []byte) error {
+	if l == nil {
+		return errors.New("can't unmarshal a nil *ProtocolType")
+	}
+	if !l.unmarshalText(bytes.ToLower(text)) {
+		return fmt.Errorf("unrecognized protocol type: %s", text)
+	}
+	return nil
+}
+
+func (l *LoadBalanceAlgorithm) unmarshalText(text []byte) bool {
+	alg := string(text)
+	if strings.EqualFold(alg, "Random") {
+		*l = Random
+		return true
+	}
+	if strings.EqualFold(alg, "RoundRobin") {
+		*l = RoundRobin
+		return true
+	}
+	if strings.EqualFold(alg, "RandomWeight") {
+		*l = RandomWeight
+		return true
+	}
+	return false
+}
+
+func (dataSource *DataSourceRef) ParseWeight() (readWeight int, writeWeight int, err error) {
+	weightRegexp := regexp.MustCompile(weightRegex)
+	params := weightRegexp.FindStringSubmatch(dataSource.Weight)
+	if len(params) != 3 {
+		return 0, 0, errors.Errorf("datasource reference '%s' weight invalid: %s", dataSource.Name, dataSource.Weight)
+	}
+	rw, err := strconv.Atoi(params[1])
+	if err != nil {
+		return 0, 0, errors.Errorf("cast read weight for datasource reference '%s' failed, read weight: %s", dataSource.Name, params[1])
+	}
+	ww, err := strconv.Atoi(params[2])
+	if err != nil {
+		return 0, 0, errors.Errorf("cast write weight for datasource reference '%s' failed, write weight: %s", dataSource.Name, params[2])
+	}
+	return rw, ww, nil
 }

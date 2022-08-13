@@ -119,6 +119,9 @@ func TestReadWriteSplittingExecutor(t *testing.T) {
 
 	db := testdata.NewMockDB(ctrl)
 	tx := testdata.NewMockTx(ctrl)
+	db.EXPECT().IsMaster().Return(true).MaxTimes(100)
+	db.EXPECT().SetWriteWeight(gomock.Any()).MaxTimes(100)
+	db.EXPECT().SetReadWeight(gomock.Any()).MaxTimes(100)
 	db.EXPECT().Query(gomock.Any(), gomock.Any()).Return(&mysql.Result{}, uint16(0), nil).MaxTimes(100)
 	db.EXPECT().ExecuteStmt(gomock.Any(), gomock.Any()).Return(&mysql.Result{}, uint16(0), nil).MaxTimes(100)
 	db.EXPECT().Status().Return(proto.Running).MaxTimes(10).MaxTimes(100)

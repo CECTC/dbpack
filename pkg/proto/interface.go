@@ -126,16 +126,6 @@ type (
 	}
 
 	DB interface {
-		UseDB(ctx context.Context, schema string) error
-		ExecuteFieldList(ctx context.Context, table, wildcard string) ([]Field, error)
-		Query(ctx context.Context, query string) (Result, uint16, error)
-		QueryDirectly(query string) (Result, uint16, error)
-		ExecuteStmt(ctx context.Context, stmt *Stmt) (Result, uint16, error)
-		ExecuteSql(ctx context.Context, sql string, args ...interface{}) (Result, uint16, error)
-		ExecuteSqlDirectly(sql string, args ...interface{}) (Result, uint16, error)
-		Begin(ctx context.Context) (Tx, Result, error)
-		SetConnectionPreFilters(filters []DBConnectionPreFilter)
-		SetConnectionPostFilters(filters []DBConnectionPostFilter)
 		Name() string
 		Status() DBStatus
 		SetCapacity(capacity int) error
@@ -153,7 +143,26 @@ type (
 		StatsJSON() string
 		Ping() error
 		Close()
-		IsClosed() (closed bool)
+		IsClosed() bool
+
+		IsMaster() bool
+		MasterName() string
+		SetWriteWeight(int)
+		SetReadWeight(int)
+		WriteWeight() int
+		ReadWeight() int
+
+		SetConnectionPreFilters(filters []DBConnectionPreFilter)
+		SetConnectionPostFilters(filters []DBConnectionPostFilter)
+
+		UseDB(ctx context.Context, schema string) error
+		ExecuteFieldList(ctx context.Context, table, wildcard string) ([]Field, error)
+		Query(ctx context.Context, query string) (Result, uint16, error)
+		QueryDirectly(query string) (Result, uint16, error)
+		ExecuteStmt(ctx context.Context, stmt *Stmt) (Result, uint16, error)
+		ExecuteSql(ctx context.Context, sql string, args ...interface{}) (Result, uint16, error)
+		ExecuteSqlDirectly(sql string, args ...interface{}) (Result, uint16, error)
+		Begin(ctx context.Context) (Tx, Result, error)
 	}
 
 	Tx interface {
@@ -172,11 +181,14 @@ type (
 
 	// DBGroupExecutor prepare a query, execute the statement, and then close the statement.
 	DBGroupExecutor interface {
+		GroupName() string
 		Begin(ctx context.Context) (Tx, Result, error)
 		Query(ctx context.Context, query string) (Result, uint16, error)
+		QueryAll(ctx context.Context, query string) (Result, uint16, error)
 		Execute(ctx context.Context, query string) (Result, uint16, error)
 		PrepareQuery(ctx context.Context, query string, args ...interface{}) (Result, uint16, error)
 		PrepareExecute(ctx context.Context, query string, args ...interface{}) (Result, uint16, error)
+		PrepareExecuteStmt(ctx context.Context, stmt *Stmt) (Result, uint16, error)
 	}
 
 	// Plan represents a plan for query/execute command.
