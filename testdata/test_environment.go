@@ -44,11 +44,11 @@ type ShardingTestEnvironment struct {
 }
 
 func NewShardingTestEnvironment(t *testing.T) *ShardingTestEnvironment {
-	container1, err := newMySql(t, "drug_0.sql", "dbpack-mysql1")
+	container1, err := newMySql(t, "drug_0.sql", "drug-0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	container2, err := newMySql(t, "drug_1.sql", "dbpack-mysql2")
+	container2, err := newMySql(t, "drug_1.sql", "drug-1")
 	if err != nil {
 		t.Fatal(err)
 	}

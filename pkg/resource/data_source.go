@@ -33,10 +33,6 @@ type DBManager struct {
 	resourcePools map[string]proto.DB
 }
 
-func (manager *DBManager) GetDB(name string) proto.DB {
-	return manager.resourcePools[name]
-}
-
 func RegisterDBManager(appid string, dataSources []*config.DataSource, factory func(dbName, dsn string) pools.Factory) {
 	resourcePools := make(map[string]proto.DB, 0)
 
@@ -53,7 +49,7 @@ func RegisterDBManager(appid string, dataSources []*config.DataSource, factory f
 		)
 		dataSource := dataSources[i]
 		resourcePool := initResourcePool(dataSource)
-		db := sql.NewDB(dataSource.Name, dataSource.PingInterval, dataSource.PingTimesForChangeStatus, resourcePool)
+		db := sql.NewDB(dataSource.Name, dataSource.MasterName, dataSource.PingInterval, dataSource.PingTimesForChangeStatus, resourcePool)
 		for j := 0; j < len(dataSource.Filters); j++ {
 			filterName := dataSource.Filters[j]
 			f := filter.GetFilter(appid, filterName)
@@ -85,6 +81,10 @@ func GetDBManager(appid string) proto.DBManager {
 
 func SetDBManager(appid string, manager proto.DBManager) {
 	managers[appid] = manager
+}
+
+func (manager *DBManager) GetDB(name string) proto.DB {
+	return manager.resourcePools[name]
 }
 
 func DetectDBs() error {

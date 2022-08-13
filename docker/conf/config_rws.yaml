@@ -46,6 +46,7 @@ app_config:
           - mysqlDTFilter
 
       - name: employees-slave
+        master_name: employees-master
         capacity: 10
         max_capacity: 20
         idle_timeout: 60s

@@ -24,10 +24,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	gomock "github.com/golang/mock/gomock"
-
 	proto "github.com/cectc/dbpack/pkg/proto"
 	ast "github.com/cectc/dbpack/third_party/parser/ast"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockTx is a mock of Tx interface.

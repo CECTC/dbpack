@@ -27,7 +27,7 @@ import (
 	"github.com/cectc/dbpack/pkg/config"
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/filter"
-	"github.com/cectc/dbpack/pkg/lb"
+	"github.com/cectc/dbpack/pkg/group"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/optimize"
@@ -42,7 +42,7 @@ type ShardingExecutor struct {
 	PostFilters []proto.DBPostFilter
 
 	config              *config.ShardingConfig
-	all                 []*DataSourceBrief
+	executors           []proto.DBGroupExecutor
 	optimizer           proto.Optimizer
 	localTransactionMap map[uint32]proto.Tx
 }
@@ -52,8 +52,8 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 		err            error
 		content        []byte
 		shardingConfig *config.ShardingConfig
-		all            []*DataSourceBrief
-		executors      map[string]proto.DBGroupExecutor
+		executorSlice  []proto.DBGroupExecutor
+		executorMap    = make(map[string]proto.DBGroupExecutor)
 		algorithms     map[string]cond.ShardingAlgorithm
 		topologies     map[string]*topo.Topology
 	)
@@ -66,10 +66,16 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 		log.Errorf("unmarshal read sharding executor config failed, %s", err)
 		return nil, err
 	}
-	all, executors, err = convertDBGroupConfigsToExecutors(conf.AppID, shardingConfig.DBGroups)
-	if err != nil {
-		return nil, errors.WithStack(err)
+
+	for _, groupConfig := range shardingConfig.DBGroups {
+		dbGroup, err := group.NewDBGroup(conf.AppID, groupConfig.Name, groupConfig.LBAlgorithm, groupConfig.DataSources)
+		if err != nil {
+			return nil, err
+		}
+		executorSlice = append(executorSlice, dbGroup)
+		executorMap[dbGroup.GroupName()] = dbGroup
 	}
+
 	algorithms, topologies, err = convertLogicTableConfigsToShardingAlgorithms(shardingConfig.LogicTables)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -79,8 +85,8 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 		PreFilters:          make([]proto.DBPreFilter, 0),
 		PostFilters:         make([]proto.DBPostFilter, 0),
 		config:              shardingConfig,
-		all:                 all,
-		optimizer:           optimize.NewOptimizer(conf.AppID, executors, algorithms, topologies),
+		executors:           executorSlice,
+		optimizer:           optimize.NewOptimizer(conf.AppID, executorMap, algorithms, topologies),
 		localTransactionMap: make(map[uint32]proto.Tx, 0),
 	}
 
@@ -100,43 +106,6 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 	}
 
 	return executor, nil
-}
-
-func convertDBGroupConfigsToExecutors(appid string, dbGroups []*config.DataSourceRefGroup) ([]*DataSourceBrief, map[string]proto.DBGroupExecutor, error) {
-	var (
-		all    []*DataSourceBrief
-		result = make(map[string]proto.DBGroupExecutor, 0)
-	)
-	for _, dbGroup := range dbGroups {
-		allDBs, masters, reads, err := groupDataSourceRefs(appid, dbGroup.DataSources)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		masterLB, err := lb.New(dbGroup.LBAlgorithm)
-		if err != nil {
-			return nil, nil, err
-		}
-		readLB, err := lb.New(dbGroup.LBAlgorithm)
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, master := range masters {
-			masterLB.Add(master)
-		}
-		for _, read := range reads {
-			readLB.Add(read)
-		}
-
-		exec := &DBGroupExecutor{
-			dbGroupName: dbGroup.Name,
-			masters:     masterLB,
-			reads:       readLB,
-		}
-		result[exec.dbGroupName] = exec
-		all = append(all, allDBs...)
-	}
-	return all, result, nil
 }
 
 func convertLogicTableConfigsToShardingAlgorithms(logicTables []*config.LogicTable) (
@@ -197,14 +166,24 @@ func (executor *ShardingExecutor) ExecuteFieldList(ctx context.Context, table, w
 	return nil, errors.New("unimplemented COM_FIELD_LIST in read write splitting mode")
 }
 
-func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql string) (proto.Result, uint16, error) {
-	var (
-		plan proto.Plan
-		err  error
-	)
-
+func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql string) (result proto.Result, warn uint16, err error) {
 	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.SHDComQuery)
 	defer span.End()
+
+	if err = executor.doPreFilter(spanCtx); err != nil {
+		return nil, 0, err
+	}
+	defer func() {
+		if err == nil {
+			result, err = decodeResult(result)
+		}
+		err = executor.doPostFilter(spanCtx, result, err)
+		if err != nil {
+			span.RecordError(err)
+		}
+	}()
+
+	var plan proto.Plan
 
 	log.Debugf("query: %s", sql)
 	queryStmt := proto.QueryStmt(spanCtx)
@@ -214,9 +193,9 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 
 	switch stmt := queryStmt.(type) {
 	case *ast.SetStmt:
-		for _, db := range executor.all {
-			go func(db *DataSourceBrief) {
-				if _, _, err := db.DB.Query(spanCtx, sql); err != nil {
+		for _, db := range executor.executors {
+			go func(dbGroup proto.DBGroupExecutor) {
+				if _, _, err := dbGroup.QueryAll(spanCtx, sql); err != nil {
 					log.Error(err)
 				}
 			}(db)
@@ -227,11 +206,11 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 			InsertId:     0,
 		}, 0, nil
 	case *ast.ShowStmt:
-		return executor.all[0].DB.Query(spanCtx, sql)
+		return executor.executors[0].Query(spanCtx, sql)
 	case *ast.SelectStmt:
 		if stmt.Fields != nil && len(stmt.Fields.Fields) > 0 {
 			if _, ok := stmt.Fields.Fields[0].Expr.(*ast.VariableExpr); ok {
-				return executor.all[0].DB.Query(spanCtx, sql)
+				return executor.executors[0].Query(spanCtx, sql)
 			}
 		}
 		plan, err = executor.optimizer.Optimize(spanCtx, queryStmt)

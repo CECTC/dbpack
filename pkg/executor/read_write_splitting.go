@@ -26,10 +26,9 @@ import (
 
 	"github.com/cectc/dbpack/pkg/config"
 	"github.com/cectc/dbpack/pkg/filter"
-	"github.com/cectc/dbpack/pkg/lb"
+	"github.com/cectc/dbpack/pkg/group"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
-	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
 	"github.com/cectc/dbpack/pkg/tracing"
@@ -40,12 +39,11 @@ import (
 type ReadWriteSplittingExecutor struct {
 	conf *config.Executor
 
+	dbGroup proto.DBGroupExecutor
+
 	PreFilters  []proto.DBPreFilter
 	PostFilters []proto.DBPostFilter
 
-	all     []*DataSourceBrief
-	masters lb.Interface
-	reads   lb.Interface
 	// map[uint32]proto.Tx
 	localTransactionMap *sync.Map
 }
@@ -55,6 +53,7 @@ func NewReadWriteSplittingExecutor(conf *config.Executor) (proto.Executor, error
 		err      error
 		content  []byte
 		rwConfig *config.ReadWriteSplittingConfig
+		dbGroup  proto.DBGroupExecutor
 	)
 
 	if content, err = json.Marshal(conf.Config); err != nil {
@@ -66,33 +65,16 @@ func NewReadWriteSplittingExecutor(conf *config.Executor) (proto.Executor, error
 		return nil, err
 	}
 
-	all, masters, reads, err := groupDataSourceRefs(conf.AppID, rwConfig.DataSources)
+	dbGroup, err = group.NewDBGroup(conf.AppID, "read-write-splitting", rwConfig.LoadBalanceAlgorithm, rwConfig.DataSources)
 	if err != nil {
 		return nil, err
-	}
-
-	masterLB, err := lb.New(rwConfig.LoadBalanceAlgorithm)
-	if err != nil {
-		return nil, err
-	}
-	readLB, err := lb.New(rwConfig.LoadBalanceAlgorithm)
-	if err != nil {
-		return nil, err
-	}
-	for _, master := range masters {
-		masterLB.Add(master)
-	}
-	for _, read := range reads {
-		readLB.Add(read)
 	}
 
 	executor := &ReadWriteSplittingExecutor{
 		conf:                conf,
+		dbGroup:             dbGroup,
 		PreFilters:          make([]proto.DBPreFilter, 0),
 		PostFilters:         make([]proto.DBPostFilter, 0),
-		all:                 all,
-		masters:             masterLB,
-		reads:               readLB,
 		localTransactionMap: &sync.Map{},
 	}
 
@@ -171,7 +153,6 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
 	}()
 
 	var (
-		db *DataSourceBrief
 		tx proto.Tx
 		sb strings.Builder
 	)
@@ -183,16 +164,15 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
 			format.RestoreStringWithoutDefaultCharset, &sb)); err != nil {
 		return nil, 0, err
 	}
-	sql := sb.String()
-	spanCtx = proto.WithSqlText(spanCtx, sql)
+	newSql := sb.String()
+	spanCtx = proto.WithSqlText(spanCtx, newSql)
 
-	log.Debugf("connectionID: %d, query: %s", connectionID, sql)
+	log.Debugf("connectionID: %d, query: %s", connectionID, newSql)
 	switch stmt := queryStmt.(type) {
 	case *ast.SetStmt:
 		if shouldStartTransaction(stmt) {
-			db = executor.masters.Next(proto.WithMaster(spanCtx)).(*DataSourceBrief)
 			// TODO add metrics
-			tx, result, err = db.DB.Begin(spanCtx)
+			tx, result, err = executor.dbGroup.Begin(spanCtx)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -205,22 +185,11 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
 				return tx.Query(spanCtx, sqlText)
 			}
 			// set to all db
-			for _, db := range executor.all {
-				go func(db *DataSourceBrief) {
-					if _, _, err := db.DB.Query(spanCtx, sqlText); err != nil {
-						log.Error(err)
-					}
-				}(db)
-			}
-			return &mysql.Result{
-				AffectedRows: 0,
-				InsertId:     0,
-			}, 0, nil
+			return executor.dbGroup.QueryAll(ctx, sqlText)
 		}
 	case *ast.BeginStmt:
-		db = executor.masters.Next(proto.WithMaster(spanCtx)).(*DataSourceBrief)
 		// TODO add metrics
-		tx, result, err = db.DB.Begin(spanCtx)
+		tx, result, err = executor.dbGroup.Begin(spanCtx)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -255,41 +224,37 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
 		if ok {
 			// in local transaction
 			tx = txi.(proto.Tx)
-			return tx.Query(spanCtx, sql)
+			return tx.Query(spanCtx, newSql)
 		}
 		withMasterCtx := proto.WithMaster(spanCtx)
-		db = executor.masters.Next(withMasterCtx).(*DataSourceBrief)
-		return db.DB.Query(withMasterCtx, sql)
+		return executor.dbGroup.Query(withMasterCtx, newSql)
 	case *ast.SelectStmt:
 		txi, ok := executor.localTransactionMap.Load(connectionID)
 		if ok {
 			// in local transaction
 			tx = txi.(proto.Tx)
-			return tx.Query(spanCtx, sql)
+			return tx.Query(spanCtx, newSql)
 		}
 		withSlaveCtx := proto.WithSlave(spanCtx)
 		if has, dsName := misc.HasUseDBHint(stmt.TableHints); has {
 			protoDB := resource.GetDBManager(executor.conf.AppID).GetDB(dsName)
 			if protoDB == nil {
 				log.Debugf("data source %d not found", dsName)
-				db = executor.reads.Next(withSlaveCtx).(*DataSourceBrief)
-				return db.DB.Query(withSlaveCtx, sql)
+				return executor.dbGroup.Query(withSlaveCtx, newSql)
 			} else {
-				return protoDB.Query(withSlaveCtx, sql)
+				return protoDB.Query(withSlaveCtx, newSql)
 			}
 		}
-		db = executor.reads.Next(withSlaveCtx).(*DataSourceBrief)
-		return db.DB.Query(withSlaveCtx, sql)
+		return executor.dbGroup.Query(withSlaveCtx, newSql)
 	default:
 		txi, ok := executor.localTransactionMap.Load(connectionID)
 		if ok {
 			// in local transaction
 			tx = txi.(proto.Tx)
-			return tx.Query(spanCtx, sql)
+			return tx.Query(spanCtx, newSql)
 		}
 		withSlaveCtx := proto.WithSlave(spanCtx)
-		db = executor.reads.Next(withSlaveCtx).(*DataSourceBrief)
-		return db.DB.Query(withSlaveCtx, sql)
+		return executor.dbGroup.Query(withSlaveCtx, newSql)
 	}
 }
 
@@ -321,22 +286,18 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComStmtExecute(
 	}
 	switch st := stmt.StmtNode.(type) {
 	case *ast.InsertStmt, *ast.DeleteStmt, *ast.UpdateStmt:
-		db := executor.masters.Next(proto.WithMaster(spanCtx)).(*DataSourceBrief)
-		return db.DB.ExecuteStmt(proto.WithMaster(spanCtx), stmt)
+		return executor.dbGroup.PrepareExecuteStmt(proto.WithMaster(spanCtx), stmt)
 	case *ast.SelectStmt:
-		var db *DataSourceBrief
 		if has, dsName := misc.HasUseDBHint(st.TableHints); has {
 			protoDB := resource.GetDBManager(executor.conf.AppID).GetDB(dsName)
 			if protoDB == nil {
 				log.Debugf("data source %d not found", dsName)
-				db = executor.reads.Next(proto.WithSlave(spanCtx)).(*DataSourceBrief)
-				return db.DB.ExecuteStmt(proto.WithSlave(spanCtx), stmt)
+				return executor.dbGroup.PrepareExecuteStmt(proto.WithSlave(spanCtx), stmt)
 			} else {
 				return protoDB.ExecuteStmt(proto.WithSlave(spanCtx), stmt)
 			}
 		}
-		db = executor.reads.Next(proto.WithSlave(spanCtx)).(*DataSourceBrief)
-		return db.DB.ExecuteStmt(proto.WithSlave(spanCtx), stmt)
+		return executor.dbGroup.PrepareExecuteStmt(proto.WithSlave(spanCtx), stmt)
 	default:
 		return nil, 0, errors.Errorf("unsupported %t statement", stmt.StmtNode)
 	}

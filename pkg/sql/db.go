@@ -35,10 +35,15 @@ import (
 
 type DB struct {
 	name                     string
+	status                   proto.DBStatus
 	pingInterval             time.Duration
 	pingTimesForChangeStatus int
-	status                   proto.DBStatus
 	pool                     *pools.ResourcePool
+
+	isMaster    bool
+	masterName  string
+	writeWeight int
+	readWeight  int
 
 	connectionPreFilters  []proto.DBConnectionPreFilter
 	connectionPostFilters []proto.DBConnectionPostFilter
@@ -47,19 +52,200 @@ type DB struct {
 	pingCount        *atomic.Int64
 }
 
-func NewDB(name string, pingInterval time.Duration,
-	pingTimesForChangeStatus int, pool *pools.ResourcePool) proto.DB {
+func NewDB(name string,
+	masterName string,
+	pingInterval time.Duration,
+	pingTimesForChangeStatus int,
+	pool *pools.ResourcePool) proto.DB {
 	db := &DB{
 		name:                     name,
+		status:                   proto.Running,
 		pingInterval:             pingInterval,
 		pingTimesForChangeStatus: pingTimesForChangeStatus,
-		status:                   proto.Running,
 		pool:                     pool,
-		inflightRequests:         atomic.NewInt64(0),
-		pingCount:                atomic.NewInt64(0),
+
+		isMaster:   masterName == "",
+		masterName: masterName,
+
+		inflightRequests: atomic.NewInt64(0),
+		pingCount:        atomic.NewInt64(0),
 	}
 	go db.ping()
 	return db
+}
+
+func (db *DB) Name() string {
+	return db.name
+}
+
+func (db *DB) Status() proto.DBStatus {
+	return db.status
+}
+
+func (db *DB) SetCapacity(capacity int) error {
+	return db.pool.SetCapacity(capacity)
+}
+
+func (db *DB) SetIdleTimeout(idleTimeout time.Duration) {
+	db.pool.SetIdleTimeout(idleTimeout)
+}
+
+// Capacity returns the capacity.
+func (db *DB) Capacity() int64 {
+	return db.pool.Capacity()
+}
+
+// Available returns the number of currently unused and available connections.
+func (db *DB) Available() int64 {
+	return db.pool.Available()
+}
+
+// Active returns the number of active (i.e. non-nil) connections either in the
+// pool or claimed for use
+func (db *DB) Active() int64 {
+	return db.pool.Active()
+}
+
+// InUse returns the number of claimed connections from the pool
+func (db *DB) InUse() int64 {
+	return db.pool.InUse()
+}
+
+// MaxCap returns the max capacity.
+func (db *DB) MaxCap() int64 {
+	return db.pool.MaxCap()
+}
+
+// WaitCount returns the total number of waits.
+func (db *DB) WaitCount() int64 {
+	return db.pool.WaitCount()
+}
+
+// WaitTime returns the total wait time.
+func (db *DB) WaitTime() time.Duration {
+	return db.pool.WaitTime()
+}
+
+// IdleTimeout returns the idle timeout.
+func (db *DB) IdleTimeout() time.Duration {
+	return db.pool.IdleTimeout()
+}
+
+// IdleClosed returns the count of connections closed due to idle timeout.
+func (db *DB) IdleClosed() int64 {
+	return db.pool.IdleClosed()
+}
+
+// Exhausted returns the number of times Available dropped below 1
+func (db *DB) Exhausted() int64 {
+	return db.pool.Exhausted()
+}
+
+// StatsJSON returns the stats in JSON format.
+func (db *DB) StatsJSON() string {
+	return db.pool.StatsJSON()
+}
+
+func (db *DB) Ping() error {
+	r, err := db.pool.Get(context.Background())
+	if err != nil {
+		return err
+	}
+	defer db.pool.Put(r)
+	conn := r.(*driver.BackendConnection)
+	return conn.Ping(context.Background())
+}
+
+func (db *DB) ping() {
+	timer := time.NewTimer(db.pingInterval)
+	for {
+		<-timer.C
+		err := db._ping()
+		if err != nil {
+			log.Errorf("db %s ping failed, err: %v", db.name, err)
+		}
+		timer.Reset(db.pingInterval)
+	}
+}
+
+func (db *DB) _ping() (err error) {
+	defer func() {
+		if db.status == proto.Running {
+			if err != nil {
+				db.pingCount.Inc()
+			} else {
+				db.pingCount.Dec()
+			}
+		} else {
+			if err == nil {
+				db.pingCount.Inc()
+			} else {
+				db.pingCount.Dec()
+			}
+		}
+		currentCount := db.pingCount.Load()
+		if currentCount%int64(db.pingTimesForChangeStatus) == 0 {
+			db.pingCount.Swap(0)
+			if currentCount > 0 {
+				db.status = ^db.status & 1
+			}
+		}
+	}()
+	r, err := db.pool.Get(context.Background())
+	if err != nil {
+		return err
+	}
+	defer db.pool.Put(r)
+	conn := r.(*driver.BackendConnection)
+	err = conn.Ping(context.Background())
+	return
+}
+
+func (db *DB) Close() {
+	for db.inflightRequests.Load() == 0 {
+		db.pool.Close()
+	}
+}
+
+// IsClosed returns true if the db is closed.
+func (db *DB) IsClosed() bool {
+	return db.pool.IsClosed()
+}
+
+func (db *DB) CheckAlive() error {
+	r, err := db.pool.Get(context.Background())
+	if err != nil {
+		return err
+	}
+	defer db.pool.Put(r)
+	conn := r.(*driver.BackendConnection)
+	return conn.Ping(context.Background())
+}
+
+func (db *DB) IsMaster() bool {
+	return db.isMaster
+}
+
+func (db *DB) MasterName() string {
+	return db.masterName
+}
+
+func (db *DB) SetWriteWeight(weight int) {
+	if db.isMaster {
+		db.writeWeight = weight
+	}
+}
+
+func (db *DB) SetReadWeight(weight int) {
+	db.readWeight = weight
+}
+
+func (db *DB) WriteWeight() int {
+	return db.writeWeight
+}
+
+func (db *DB) ReadWeight() int {
+	return db.readWeight
 }
 
 func (db *DB) UseDB(ctx context.Context, schema string) error {
@@ -306,142 +492,4 @@ func (db *DB) doConnectionPostFilter(ctx context.Context, result proto.Result, c
 		}
 	}
 	return nil
-}
-
-func (db *DB) Name() string {
-	return db.name
-}
-
-func (db *DB) Status() proto.DBStatus {
-	return db.status
-}
-
-func (db *DB) SetCapacity(capacity int) error {
-	return db.pool.SetCapacity(capacity)
-}
-
-func (db *DB) SetIdleTimeout(idleTimeout time.Duration) {
-	db.pool.SetIdleTimeout(idleTimeout)
-}
-
-// Capacity returns the capacity.
-func (db *DB) Capacity() int64 {
-	return db.pool.Capacity()
-}
-
-// Available returns the number of currently unused and available connections.
-func (db *DB) Available() int64 {
-	return db.pool.Available()
-}
-
-// Active returns the number of active (i.e. non-nil) connections either in the
-// pool or claimed for use
-func (db *DB) Active() int64 {
-	return db.pool.Active()
-}
-
-// InUse returns the number of claimed connections from the pool
-func (db *DB) InUse() int64 {
-	return db.pool.InUse()
-}
-
-// MaxCap returns the max capacity.
-func (db *DB) MaxCap() int64 {
-	return db.pool.MaxCap()
-}
-
-// WaitCount returns the total number of waits.
-func (db *DB) WaitCount() int64 {
-	return db.pool.WaitCount()
-}
-
-// WaitTime returns the total wait time.
-func (db *DB) WaitTime() time.Duration {
-	return db.pool.WaitTime()
-}
-
-// IdleTimeout returns the idle timeout.
-func (db *DB) IdleTimeout() time.Duration {
-	return db.pool.IdleTimeout()
-}
-
-// IdleClosed returns the count of connections closed due to idle timeout.
-func (db *DB) IdleClosed() int64 {
-	return db.pool.IdleClosed()
-}
-
-// Exhausted returns the number of times Available dropped below 1
-func (db *DB) Exhausted() int64 {
-	return db.pool.Exhausted()
-}
-
-// StatsJSON returns the stats in JSON format.
-func (db *DB) StatsJSON() string {
-	return db.pool.StatsJSON()
-}
-
-func (db *DB) Ping() error {
-	r, err := db.pool.Get(context.Background())
-	if err != nil {
-		return err
-	}
-	defer db.pool.Put(r)
-	conn := r.(*driver.BackendConnection)
-	return conn.Ping(context.Background())
-}
-
-func (db *DB) Close() {
-	for db.inflightRequests.Load() == 0 {
-		db.pool.Close()
-	}
-}
-
-// IsClosed returns true if the db is closed.
-func (db *DB) IsClosed() (closed bool) {
-	return db.pool.IsClosed()
-}
-
-func (db *DB) ping() {
-	timer := time.NewTimer(db.pingInterval)
-	for {
-		<-timer.C
-		err := db._ping()
-		if err != nil {
-			log.Errorf("db %s ping failed, err: %v", db.name, err)
-		}
-		timer.Reset(db.pingInterval)
-	}
-}
-
-func (db *DB) _ping() (err error) {
-	defer func() {
-		if db.status == proto.Running {
-			if err != nil {
-				db.pingCount.Inc()
-			} else {
-				db.pingCount.Dec()
-			}
-		} else {
-			if err == nil {
-				db.pingCount.Inc()
-			} else {
-				db.pingCount.Dec()
-			}
-		}
-		currentCount := db.pingCount.Load()
-		if currentCount%int64(db.pingTimesForChangeStatus) == 0 {
-			db.pingCount.Swap(0)
-			if currentCount > 0 {
-				db.status = ^db.status & 1
-			}
-		}
-	}()
-	r, err := db.pool.Get(context.Background())
-	if err != nil {
-		return err
-	}
-	defer db.pool.Put(r)
-	conn := r.(*driver.BackendConnection)
-	err = conn.Ping(context.Background())
-	return
 }

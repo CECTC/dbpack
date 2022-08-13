@@ -25,9 +25,8 @@ import (
 	reflect "reflect"
 	time "time"
 
-	gomock "github.com/golang/mock/gomock"
-
 	proto "github.com/cectc/dbpack/pkg/proto"
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockDB is a mock of DB interface.
@@ -266,6 +265,34 @@ func (mr *MockDBMockRecorder) IsClosed() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClosed", reflect.TypeOf((*MockDB)(nil).IsClosed))
 }
 
+// IsMaster mocks base method.
+func (m *MockDB) IsMaster() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsMaster")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsMaster indicates an expected call of IsMaster.
+func (mr *MockDBMockRecorder) IsMaster() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMaster", reflect.TypeOf((*MockDB)(nil).IsMaster))
+}
+
+// MasterName mocks base method.
+func (m *MockDB) MasterName() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MasterName")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// MasterName indicates an expected call of MasterName.
+func (mr *MockDBMockRecorder) MasterName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MasterName", reflect.TypeOf((*MockDB)(nil).MasterName))
+}
+
 // MaxCap mocks base method.
 func (m *MockDB) MaxCap() int64 {
 	m.ctrl.T.Helper()
@@ -340,6 +367,20 @@ func (mr *MockDBMockRecorder) QueryDirectly(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryDirectly", reflect.TypeOf((*MockDB)(nil).QueryDirectly), arg0)
 }
 
+// ReadWeight mocks base method.
+func (m *MockDB) ReadWeight() int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadWeight")
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// ReadWeight indicates an expected call of ReadWeight.
+func (mr *MockDBMockRecorder) ReadWeight() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadWeight", reflect.TypeOf((*MockDB)(nil).ReadWeight))
+}
+
 // SetCapacity mocks base method.
 func (m *MockDB) SetCapacity(arg0 int) error {
 	m.ctrl.T.Helper()
@@ -388,6 +429,30 @@ func (m *MockDB) SetIdleTimeout(arg0 time.Duration) {
 func (mr *MockDBMockRecorder) SetIdleTimeout(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetIdleTimeout", reflect.TypeOf((*MockDB)(nil).SetIdleTimeout), arg0)
+}
+
+// SetReadWeight mocks base method.
+func (m *MockDB) SetReadWeight(arg0 int) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetReadWeight", arg0)
+}
+
+// SetReadWeight indicates an expected call of SetReadWeight.
+func (mr *MockDBMockRecorder) SetReadWeight(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetReadWeight", reflect.TypeOf((*MockDB)(nil).SetReadWeight), arg0)
+}
+
+// SetWriteWeight mocks base method.
+func (m *MockDB) SetWriteWeight(arg0 int) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetWriteWeight", arg0)
+}
+
+// SetWriteWeight indicates an expected call of SetWriteWeight.
+func (mr *MockDBMockRecorder) SetWriteWeight(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetWriteWeight", reflect.TypeOf((*MockDB)(nil).SetWriteWeight), arg0)
 }
 
 // StatsJSON mocks base method.
@@ -458,4 +523,18 @@ func (m *MockDB) WaitTime() time.Duration {
 func (mr *MockDBMockRecorder) WaitTime() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitTime", reflect.TypeOf((*MockDB)(nil).WaitTime))
+}
+
+// WriteWeight mocks base method.
+func (m *MockDB) WriteWeight() int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteWeight")
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// WriteWeight indicates an expected call of WriteWeight.
+func (mr *MockDBMockRecorder) WriteWeight() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteWeight", reflect.TypeOf((*MockDB)(nil).WriteWeight))
 }
