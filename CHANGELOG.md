@@ -141,6 +141,6 @@
 
 ### Changes
 
-refactor: refactor config to support deploy as gateway ([231](https://github.com/CECTC/dbpack/pull/231)) ([f5f49bd](https://github.com/CECTC/dbpack/commit/f5f49bd810403aec6102337174e5f5bbb615ae20))
-refactor: isolate filter with appid ([233](https://github.com/CECTC/dbpack/pull/233)) ([12c94c4](https://github.com/CECTC/dbpack/commit/12c94c41919cabd4ad7168ee6917bf6d03fdf8f4))
-refactor: refactor db group ([242](https://github.com/CECTC/dbpack/pull/239)) ([a7ddbfc](https://github.com/CECTC/dbpack/commit/a7ddbfce74cb4071b98b6b63894468492454ccf3))
+* refactor: refactor config to support deploy as gateway ([231](https://github.com/CECTC/dbpack/pull/231)) ([f5f49bd](https://github.com/CECTC/dbpack/commit/f5f49bd810403aec6102337174e5f5bbb615ae20))
+* refactor: isolate filter with appid ([233](https://github.com/CECTC/dbpack/pull/233)) ([12c94c4](https://github.com/CECTC/dbpack/commit/12c94c41919cabd4ad7168ee6917bf6d03fdf8f4))
+* refactor: refactor db group ([242](https://github.com/CECTC/dbpack/pull/239)) ([a7ddbfc](https://github.com/CECTC/dbpack/commit/a7ddbfce74cb4071b98b6b63894468492454ccf3))
