@@ -125,3 +125,22 @@
 
 * chore: print ping failed err ([216](https://github.com/CECTC/dbpack/pull/216)) ([852a0f2](https://github.com/CECTC/dbpack/commit/852a0f21f76a270c4d5e8eba60e7c155f0f8edaa))
 
+## v0.4.0
+
+### Features
+
+* feature: support rate limit filter ([181](https://github.com/CECTC/dbpack/issues/181)) ([8d6877d](https://github.com/CECTC/dbpack/commit/8d6877deef23b8b5f2e793ccf18acfeb120311d5))
+* feature: support circuit breaker ([182](https://github.com/CECTC/dbpack/issues/182)) ([7a1a977](https://github.com/CECTC/dbpack/commit/7a1a9779f0f60006df16d2fcde91e2f93bc455cf))
+* feat: support savepoint statement ([229](https://github.com/CECTC/dbpack/issues/229)) ([146f75d](https://github.com/CECTC/dbpack/commit/146f75d4b1d9bb64b61f806d6e9e34bb2e09caac))
+
+### Bug Fixes
+
+* fix: mysql 8.0 set transaction isolation error ([226](https://github.com/CECTC/dbpack/pull/226)) ([246386a](https://github.com/CECTC/dbpack/commit/246386aa01810cbe33ca0216b5eb53ee474cb10e))
+* fix: restore string without default charset ([227](https://github.com/CECTC/dbpack/pull/227)) ([0daddb0](https://github.com/CECTC/dbpack/commit/0daddb0f6cbe619d63d5ff867d1653c55c390a9c))
+* fix: should restore xid hint ([239](https://github.com/CECTC/dbpack/pull/239)) ([66137ba](https://github.com/CECTC/dbpack/commit/66137ba7574fd211bb4102811fd4ee5ea57f8b33))
+
+### Changes
+
+refactor: refactor config to support deploy as gateway ([231](https://github.com/CECTC/dbpack/pull/231)) ([f5f49bd](https://github.com/CECTC/dbpack/commit/f5f49bd810403aec6102337174e5f5bbb615ae20))
+refactor: isolate filter with appid ([233](https://github.com/CECTC/dbpack/pull/233)) ([12c94c4](https://github.com/CECTC/dbpack/commit/12c94c41919cabd4ad7168ee6917bf6d03fdf8f4))
+refactor: refactor db group ([242](https://github.com/CECTC/dbpack/pull/239)) ([a7ddbfc](https://github.com/CECTC/dbpack/commit/a7ddbfce74cb4071b98b6b63894468492454ccf3))
