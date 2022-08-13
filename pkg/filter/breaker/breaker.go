@@ -78,9 +78,9 @@ type _filter struct {
 }
 
 type CircuitBreakerConfig struct {
-	ErrorThreshold   int
-	SuccessThreshold int
-	Timeout          int
+	ErrorThreshold   int `yaml:"error_threshold" json:"error_threshold"`
+	SuccessThreshold int `yaml:"success_threshold" json:"success_threshold"`
+	Timeout          int `yaml:"timeout" json:"timeout"`
 }
 
 func (f *_filter) GetKind() string {
