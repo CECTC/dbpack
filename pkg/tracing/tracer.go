@@ -18,14 +18,18 @@ package tracing
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/jaeger"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/exporters/zipkin"
 	"go.opentelemetry.io/otel/propagation"
 	olteResource "go.opentelemetry.io/otel/sdk/resource"
 	traceSDK "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/cectc/dbpack/pkg/misc"
@@ -36,13 +40,12 @@ const (
 	serviceName = "dbpack"
 )
 
-type TracingExporter string
+type Exporter string
 
 const (
-	ConsoleExporter TracingExporter = "console"
-	JaegerExporter  TracingExporter = "jaeger"
-	ZipkinExporter  TracingExporter = "zipkin"
-	OltpExporter    TracingExporter = "oltp"
+	ConsoleExporter Exporter = "console"
+	JaegerExporter  Exporter = "jaeger"
+	ZipkinExporter  Exporter = "zipkin"
 )
 
 type TracerController struct {
@@ -53,8 +56,22 @@ func createJaegerExporter(endpoint string) (traceSDK.SpanExporter, error) {
 	return jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(endpoint)))
 }
 
-// NewTracer create tracer controller, currently only support jaeger.
-func NewTracer(version string, jaegerEndpoint string) (*TracerController, error) {
+func createZipkinExporter(endpoint string) (traceSDK.SpanExporter, error) {
+	return zipkin.New(endpoint)
+}
+
+func createConsoleExporter() (traceSDK.SpanExporter, error) {
+	return stdouttrace.New(
+		stdouttrace.WithWriter(os.Stdout),
+		// Use human-readable output.
+		stdouttrace.WithPrettyPrint(),
+		// Do not print timestamps for the demo.
+		stdouttrace.WithoutTimestamps(),
+	)
+}
+
+// NewTracer create tracer controller, support jaeger, zipkin, console
+func NewTracer(version string, traceExporter Exporter, endpoint *string) (*TracerController, error) {
 	resource, err := olteResource.Merge(
 		olteResource.Default(),
 		olteResource.NewWithAttributes(
@@ -67,7 +84,24 @@ func NewTracer(version string, jaegerEndpoint string) (*TracerController, error)
 		return nil, err
 	}
 
-	exporter, err := createJaegerExporter(jaegerEndpoint)
+	var exporter traceSDK.SpanExporter
+	switch traceExporter {
+	case ConsoleExporter:
+		exporter, err = createConsoleExporter()
+	case JaegerExporter:
+		if endpoint == nil {
+			return nil, fmt.Errorf("jaeger trace need endpoint")
+		}
+		exporter, err = createJaegerExporter(*endpoint)
+	case ZipkinExporter:
+		if endpoint == nil {
+			return nil, fmt.Errorf("jaeger trace need endpoint")
+		}
+		exporter, err = createZipkinExporter(*endpoint)
+	default:
+		return nil, fmt.Errorf("unknown exporter %s", traceExporter)
+	}
+
 	if err != nil {
 		return nil, err
 	}
