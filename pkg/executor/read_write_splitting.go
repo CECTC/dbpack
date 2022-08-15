@@ -325,6 +325,7 @@ func (executor *ReadWriteSplittingExecutor) ConnectionClose(ctx context.Context)
 	if _, err := tx.Rollback(ctx, nil); err != nil {
 		log.Error(err)
 	}
+	executor.localTransactionMap.Delete(connectionID)
 }
 
 func (executor *ReadWriteSplittingExecutor) doPreFilter(ctx context.Context) error {

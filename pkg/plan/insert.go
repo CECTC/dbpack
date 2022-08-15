@@ -38,9 +38,10 @@ type InsertPlan struct {
 	Executor proto.DBGroupExecutor
 }
 
-func (p *InsertPlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
+func (p *InsertPlan) Execute(ctx context.Context, _ ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
 	var (
 		sb  strings.Builder
+		tx  proto.Tx
 		err error
 	)
 	if err = p.generate(&sb); err != nil {
@@ -48,6 +49,23 @@ func (p *InsertPlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHi
 	}
 	sql := sb.String()
 	log.Debugf("insert, db name: %s, sql: %s", p.Database, sql)
+
+	if complexTx := proto.ExtractDBGroupTx(ctx); complexTx != nil {
+		tx, err = complexTx.Begin(ctx, p.Executor)
+		if err != nil {
+			return nil, 0, errors.WithStack(err)
+		}
+		commandType := proto.CommandType(ctx)
+		switch commandType {
+		case constant.ComQuery:
+			return tx.Query(ctx, sql)
+		case constant.ComStmtExecute:
+			return tx.ExecuteSql(ctx, sql, p.Args...)
+		default:
+			return nil, 0, nil
+		}
+	}
+
 	commandType := proto.CommandType(ctx)
 	switch commandType {
 	case constant.ComQuery:
