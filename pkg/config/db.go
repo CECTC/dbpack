@@ -87,6 +87,7 @@ type (
 
 	ShardingConfig struct {
 		DBGroups           []*DataSourceRefGroup `yaml:"db_groups" json:"db_groups"`
+		GlobalTables       []string              `yaml:"global_tables" json:"global_tables"`
 		LogicTables        []*LogicTable         `yaml:"logic_tables" json:"logic_tables"`
 		TransactionTimeout int32                 `yaml:"transaction_timeout" json:"transaction_timeout"`
 	}

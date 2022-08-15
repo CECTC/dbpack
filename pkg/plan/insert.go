@@ -60,7 +60,7 @@ func (p *InsertPlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHi
 }
 
 func (p *InsertPlan) generate(sb *strings.Builder) (err error) {
-	ctx := format.NewRestoreCtx(format.DefaultRestoreFlags, sb)
+	ctx := format.NewRestoreCtx(format.DefaultRestoreFlags|format.RestoreStringWithoutDefaultCharset, sb)
 
 	ctx.WriteKeyWord("INSERT ")
 	ctx.WriteKeyWord("INTO ")

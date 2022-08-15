@@ -38,6 +38,34 @@ import (
 
 const FuncColumns = "FuncColumns"
 
+type QueryDirectlyPlan struct {
+	Stmt     *ast.SelectStmt
+	Args     []interface{}
+	Executor proto.DBGroupExecutor
+}
+
+func (p *QueryDirectlyPlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
+	var (
+		sb  strings.Builder
+		sql string
+		err error
+	)
+	restoreCtx := format.NewRestoreCtx(format.DefaultRestoreFlags|format.RestoreStringWithoutDefaultCharset, &sb)
+	if err = p.Stmt.Restore(restoreCtx); err != nil {
+		return nil, 0, errors.WithStack(err)
+	}
+	sql = sb.String()
+	commandType := proto.CommandType(ctx)
+	switch commandType {
+	case constant.ComQuery:
+		return p.Executor.Query(ctx, sql)
+	case constant.ComStmtExecute:
+		return p.Executor.PrepareQuery(ctx, sql, p.Args...)
+	default:
+		return nil, 0, nil
+	}
+}
+
 type QueryOnSingleDBPlan struct {
 	Database string
 	Tables   []string
@@ -108,7 +136,7 @@ func (p *QueryOnSingleDBPlan) generate(ctx context.Context, sb *strings.Builder,
 		}
 		sb.WriteString(") t ")
 		if p.Stmt.OrderBy != nil {
-			restoreCtx := format.NewRestoreCtx(format.DefaultRestoreFlags, sb)
+			restoreCtx := format.NewRestoreCtx(format.DefaultRestoreFlags|format.RestoreStringWithoutDefaultCharset, sb)
 			if err := p.Stmt.OrderBy.Restore(restoreCtx); err != nil {
 				return errors.WithStack(err)
 			}
@@ -212,7 +240,7 @@ func (p *QueryOnMultiDBPlan) Execute(ctx context.Context, _ ...*ast.TableOptimiz
 }
 
 func generateSelect(table string, stmt *ast.SelectStmt, sb *strings.Builder, limit *Limit) error {
-	ctx := format.NewRestoreCtx(format.DefaultRestoreFlags, sb)
+	ctx := format.NewRestoreCtx(format.DefaultRestoreFlags|format.RestoreStringWithoutDefaultCharset, sb)
 	ctx.WriteKeyWord(stmt.Kind.String())
 	ctx.WritePlain(" ")
 

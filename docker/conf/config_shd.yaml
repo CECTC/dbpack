@@ -37,6 +37,9 @@ app_config:
               data_sources:
                 - name: world_1
                   weight: r10w10
+          global_tables:
+            - country
+            - countrylanguage
           logic_tables:
             - db_name: world
               table_name: city
