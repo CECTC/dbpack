@@ -23,6 +23,8 @@ import (
 
 	"github.com/cznic/mathutil"
 	"github.com/pkg/errors"
+
+	"github.com/cectc/dbpack/pkg/misc"
 )
 
 const (
@@ -55,31 +57,48 @@ func ParseTopology(dbName, tableName string, topology map[int]string) (*Topology
 
 	for i := 0; i < dbLen; i++ {
 		tp := topology[i]
-		realDB := fmt.Sprintf("%s_%d", dbName, i)
-		params := topologyRegexp.FindStringSubmatch(tp)
-		if len(params) != 3 {
+		if tp == "" {
 			return nil, errors.Errorf("incorrect topology format")
 		}
-		begin, err := strconv.Atoi(params[1])
-		if err != nil {
-			return nil, err
-		}
-		end, err := strconv.Atoi(params[2])
-		if err != nil {
-			return nil, err
-		}
-		if begin >= end {
-			return nil, errors.Errorf("incorrect topology, begin index must less than end index")
-		}
+		realDB := fmt.Sprintf("%s_%d", dbName, i)
 		tableSlice := make([]string, 0)
-		for j := begin; j <= end; j++ {
-			index := j
+
+		if misc.IsNumeric(tp) {
+			index, err := strconv.Atoi(tp)
+			if err != nil {
+				return nil, err
+			}
 			realTable := fmt.Sprintf("%s_%d", tableName, index)
 			tables[realTable] = realDB
 			tableIndexMap[index] = realTable
 			tableIndexSlice = append(tableIndexSlice, index)
 			tableSlice = append(tableSlice, realTable)
 			max = mathutil.Max(max, index)
+		} else {
+			params := topologyRegexp.FindStringSubmatch(tp)
+			if len(params) != 3 {
+				return nil, errors.Errorf("incorrect topology format")
+			}
+			begin, err := strconv.Atoi(params[1])
+			if err != nil {
+				return nil, err
+			}
+			end, err := strconv.Atoi(params[2])
+			if err != nil {
+				return nil, err
+			}
+			if begin >= end {
+				return nil, errors.Errorf("incorrect topology, begin index must be less than end index")
+			}
+			for j := begin; j <= end; j++ {
+				index := j
+				realTable := fmt.Sprintf("%s_%d", tableName, index)
+				tables[realTable] = realDB
+				tableIndexMap[index] = realTable
+				tableIndexSlice = append(tableIndexSlice, index)
+				tableSlice = append(tableSlice, realTable)
+				max = mathutil.Max(max, index)
+			}
 		}
 		dbs[realDB] = tableSlice
 	}

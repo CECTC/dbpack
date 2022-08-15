@@ -441,3 +441,36 @@ func TestIsBlank(t *testing.T) {
 		})
 	}
 }
+
+func TestIsNumeric(t *testing.T) {
+	cases := map[string]struct {
+		input    string
+		expected bool
+	}{
+		"success-1": {
+			input:    "",
+			expected: true,
+		},
+		"success-2": {
+			input:    "1",
+			expected: true,
+		},
+		"false-3": {
+			input:    "a",
+			expected: false,
+		},
+		"false-4": {
+			input:    "1-9",
+			expected: false,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			actual := IsNumeric(tc.input)
+			if actual != tc.expected {
+				t.Errorf("expected %t, got %t", tc.expected, actual)
+			}
+		})
+	}
+}

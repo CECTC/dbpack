@@ -38,4 +38,14 @@ func Test_ParseTopology(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Equal(t, 100, tp.TableSliceLen)
+
+	tp, err = ParseTopology("school", "student", map[int]string{
+		0: "0",
+		1: "1",
+		2: "2",
+		3: "3",
+	})
+
+	assert.Nil(t, err)
+	assert.Equal(t, 4, tp.TableSliceLen)
 }
