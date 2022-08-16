@@ -193,7 +193,7 @@ var (
 			go initServer(ctx, lis)
 
 			if conf.Tracer != nil {
-				go initTracing(ctx, conf.Tracer.JaegerEndpoint)
+				go initTracing(ctx, conf.Tracer.ExporterType, conf.Tracer.ExporterEndpoint)
 			}
 
 			dbpack.Start(ctx)
@@ -228,8 +228,8 @@ func initServer(ctx context.Context, lis net.Listener) {
 	log.Infof("start api server :  %s", lis.Addr())
 }
 
-func initTracing(ctx context.Context, jaegerEndpoint string) {
-	traceCtl, err := tracing.NewTracer(Version, jaegerEndpoint)
+func initTracing(ctx context.Context, exporter string, endpoint *string) {
+	traceCtl, err := tracing.NewTracer(Version, tracing.Exporter(exporter), endpoint)
 	if err != nil {
 		log.Fatalf("could not setup tracing manager: %s", err.Error())
 	}

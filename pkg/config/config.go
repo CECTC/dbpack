@@ -19,7 +19,7 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -81,7 +81,8 @@ type DBPackConfig struct {
 }
 
 type TracerConfig struct {
-	JaegerEndpoint string `yaml:"jaeger_endpoint" json:"jaeger_endpoint"`
+	ExporterType     string  `yaml:"exporter_type" json:"exporter_type"`
+	ExporterEndpoint *string `yaml:"exporter_endpoint" json:"exporter_endpoint"`
 }
 
 type DistributedTransaction struct {
@@ -234,7 +235,7 @@ var _configuration = new(Configuration)
 func Load(path string) (*Configuration, error) {
 	configPath, _ := filepath.Abs(path)
 	log.Infof("load config from :  %s", configPath)
-	content, err := ioutil.ReadFile(configPath)
+	content, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "[config] load config failed")
 	}

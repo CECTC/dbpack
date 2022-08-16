@@ -920,7 +920,6 @@ func BinaryVal2MySQLLen(v *proto.Value) (int, error) {
 	return length, nil
 }
 
-//
 // Packet parsing methods, for generic packets.
 //
 // IsEOFPacket determines whether or not a Content packet is a "true" EOF. DO NOT blindly compare the
