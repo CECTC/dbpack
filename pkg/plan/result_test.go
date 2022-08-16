@@ -46,37 +46,37 @@ func (suite *_MergeResultTestSuite) SetupSuite() {
 }
 
 func (suite *_MergeResultTestSuite) TestMergeResultWithOutOrderByAndLimit() {
-	db1 := resource.GetDBManager("test").GetDB("drug_0")
+	db1 := resource.GetDBManager("test").GetDB("world_0")
 	sql1 := "SELECT * FROM (" +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_0` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_1` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_2` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_3` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_4` WHERE `id` BETWEEN ? AND ?)) t ORDER BY `id` ASC"
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_0` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_1` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_2` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_3` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_4` WHERE `id` BETWEEN ? AND ?)) t ORDER BY `id` ASC"
 	result1, warn1, err1 := db1.ExecuteSqlDirectly(sql1, 200, 210, 200, 210, 200, 210, 200, 210, 200, 210)
 	if err1 != nil {
-		suite.FailNow("query drug_0 failed, err: %s", err1)
+		suite.FailNow("query world_0 failed, err: %s", err1)
 	}
 	resultWithErr1 := &ResultWithErr{
-		Database: "drug_0",
+		Database: "world_0",
 		Result:   result1,
 		Warning:  warn1,
 		Error:    err1,
 	}
 
-	db2 := resource.GetDBManager("test").GetDB("drug_1")
+	db2 := resource.GetDBManager("test").GetDB("world_1")
 	sql2 := "SELECT * FROM (" +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_5` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_6` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_7` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_8` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_9` WHERE `id` BETWEEN ? AND ?)) t ORDER BY `id` ASC"
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_5` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_6` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_7` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_8` WHERE `id` BETWEEN ? AND ?) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_9` WHERE `id` BETWEEN ? AND ?)) t ORDER BY `id` ASC"
 	result2, warn2, err2 := db2.ExecuteSqlDirectly(sql2, 200, 210, 200, 210, 200, 210, 200, 210, 200, 210)
 	if err2 != nil {
-		suite.FailNow("query drug_1 failed, err: %s", err2)
+		suite.FailNow("query world_1 failed, err: %s", err2)
 	}
 	resultWithErr2 := &ResultWithErr{
-		Database: "drug_1",
+		Database: "world_1",
 		Result:   result2,
 		Warning:  warn2,
 		Error:    err2,
@@ -102,37 +102,37 @@ func (suite *_MergeResultTestSuite) TestMergeResultWithOutOrderByAndLimit() {
 }
 
 func (suite *_MergeResultTestSuite) TestMergeResultWithLimit() {
-	db1 := resource.GetDBManager("test").GetDB("drug_0")
+	db1 := resource.GetDBManager("test").GetDB("world_0")
 	sql1 := "SELECT * FROM (" +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_0` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_1` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_2` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_3` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_4` WHERE `id` BETWEEN ? AND ? LIMIT 30)) t ORDER BY `id` ASC"
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_0` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_1` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_2` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_3` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_4` WHERE `id` BETWEEN ? AND ? LIMIT 30)) t ORDER BY `id` ASC"
 	result1, warn1, err1 := db1.ExecuteSqlDirectly(sql1, 200, 250, 200, 250, 200, 250, 200, 250, 200, 250)
 	if err1 != nil {
-		suite.FailNow("query drug_0 failed, err: %s", err1)
+		suite.FailNow("query world_0 failed, err: %s", err1)
 	}
 	resultWithErr1 := &ResultWithErr{
-		Database: "drug_0",
+		Database: "world_0",
 		Result:   result1,
 		Warning:  warn1,
 		Error:    err1,
 	}
 
-	db2 := resource.GetDBManager("test").GetDB("drug_1")
+	db2 := resource.GetDBManager("test").GetDB("world_1")
 	sql2 := "SELECT * FROM (" +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_5` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_6` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_7` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_8` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_9` WHERE `id` BETWEEN ? AND ? LIMIT 30)) t ORDER BY `id` ASC"
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_5` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_6` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_7` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_8` WHERE `id` BETWEEN ? AND ? LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_9` WHERE `id` BETWEEN ? AND ? LIMIT 30)) t ORDER BY `id` ASC"
 	result2, warn2, err2 := db2.ExecuteSqlDirectly(sql2, 200, 250, 200, 250, 200, 250, 200, 250, 200, 250)
 	if err2 != nil {
-		suite.FailNow("query drug_1 failed, err: %s", err2)
+		suite.FailNow("query world_1 failed, err: %s", err2)
 	}
 	resultWithErr2 := &ResultWithErr{
-		Database: "drug_1",
+		Database: "world_1",
 		Result:   result2,
 		Warning:  warn2,
 		Error:    err2,
@@ -161,37 +161,37 @@ func (suite *_MergeResultTestSuite) TestMergeResultWithLimit() {
 }
 
 func (suite *_MergeResultTestSuite) TestMergeResultWithOrderByAndLimit() {
-	db1 := resource.GetDBManager("test").GetDB("drug_0")
+	db1 := resource.GetDBManager("test").GetDB("world_0")
 	sql1 := "SELECT * FROM (" +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_0` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_1` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_2` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_3` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_4` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30)) t ORDER BY `id` DESC"
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_0` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_1` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_2` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_3` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_4` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30)) t ORDER BY `id` DESC"
 	result1, warn1, err1 := db1.ExecuteSqlDirectly(sql1, 200, 300, 200, 300, 200, 300, 200, 300, 200, 300)
 	if err1 != nil {
-		suite.FailNow("query drug_0 failed, err: %s", err1)
+		suite.FailNow("query world_0 failed, err: %s", err1)
 	}
 	resultWithErr1 := &ResultWithErr{
-		Database: "drug_0",
+		Database: "world_0",
 		Result:   result1,
 		Warning:  warn1,
 		Error:    err1,
 	}
 
-	db2 := resource.GetDBManager("test").GetDB("drug_1")
+	db2 := resource.GetDBManager("test").GetDB("world_1")
 	sql2 := "SELECT * FROM (" +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_5` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_6` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_7` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_8` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`base_type`,`sale_price` FROM `drug_resource_9` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30)) t ORDER BY `id` DESC"
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_5` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_6` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_7` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_8` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_9` WHERE `id` BETWEEN ? AND ? ORDER BY `id` DESC LIMIT 30)) t ORDER BY `id` DESC"
 	result2, warn2, err2 := db2.ExecuteSqlDirectly(sql2, 200, 300, 200, 300, 200, 300, 200, 300, 200, 300)
 	if err2 != nil {
-		suite.FailNow("query drug_1 failed, err: %s", err2)
+		suite.FailNow("query world_1 failed, err: %s", err2)
 	}
 	resultWithErr2 := &ResultWithErr{
-		Database: "drug_1",
+		Database: "world_1",
 		Result:   result2,
 		Warning:  warn2,
 		Error:    err2,
@@ -234,37 +234,37 @@ func (suite *_MergeResultTestSuite) TestMergeResultWithOrderByAndLimit() {
 }
 
 func (suite *_MergeResultTestSuite) TestMergeResultWithOrderBy() {
-	db1 := resource.GetDBManager("test").GetDB("drug_0")
+	db1 := resource.GetDBManager("test").GetDB("world_0")
 	sql1 := "SELECT * FROM (" +
-		"(SELECT `id`,`drug_res_type_id`,`manufacturer_id`,`sale_price` FROM `drug_resource_0` WHERE `id` BETWEEN ? AND ? ORDER BY `manufacturer_id` DESC,`id`) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`manufacturer_id`,`sale_price` FROM `drug_resource_1` WHERE `id` BETWEEN ? AND ? ORDER BY `manufacturer_id` DESC,`id`) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`manufacturer_id`,`sale_price` FROM `drug_resource_2` WHERE `id` BETWEEN ? AND ? ORDER BY `manufacturer_id` DESC,`id`) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`manufacturer_id`,`sale_price` FROM `drug_resource_3` WHERE `id` BETWEEN ? AND ? ORDER BY `manufacturer_id` DESC,`id`) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`manufacturer_id`,`sale_price` FROM `drug_resource_4` WHERE `id` BETWEEN ? AND ? ORDER BY `manufacturer_id` DESC,`id`)) t ORDER BY `manufacturer_id` DESC,`id`"
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_0` WHERE `id` BETWEEN ? AND ? ORDER BY `district` DESC,`id`) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_1` WHERE `id` BETWEEN ? AND ? ORDER BY `district` DESC,`id`) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_2` WHERE `id` BETWEEN ? AND ? ORDER BY `district` DESC,`id`) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_3` WHERE `id` BETWEEN ? AND ? ORDER BY `district` DESC,`id`) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_4` WHERE `id` BETWEEN ? AND ? ORDER BY `district` DESC,`id`)) t ORDER BY `district` DESC,`id`"
 	result1, warn1, err1 := db1.ExecuteSqlDirectly(sql1, 200, 250, 200, 250, 200, 250, 200, 250, 200, 250)
 	if err1 != nil {
-		suite.FailNow("query drug_0 failed, err: %s", err1)
+		suite.FailNow("query world_0 failed, err: %s", err1)
 	}
 	resultWithErr1 := &ResultWithErr{
-		Database: "drug_0",
+		Database: "world_0",
 		Result:   result1,
 		Warning:  warn1,
 		Error:    err1,
 	}
 
-	db2 := resource.GetDBManager("test").GetDB("drug_1")
+	db2 := resource.GetDBManager("test").GetDB("world_1")
 	sql2 := "SELECT * FROM (" +
-		"(SELECT `id`,`drug_res_type_id`,`manufacturer_id`,`sale_price` FROM `drug_resource_5` WHERE `id` BETWEEN ? AND ? ORDER BY `manufacturer_id` DESC,`id`) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`manufacturer_id`,`sale_price` FROM `drug_resource_6` WHERE `id` BETWEEN ? AND ? ORDER BY `manufacturer_id` DESC,`id`) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`manufacturer_id`,`sale_price` FROM `drug_resource_7` WHERE `id` BETWEEN ? AND ? ORDER BY `manufacturer_id` DESC,`id`) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`manufacturer_id`,`sale_price` FROM `drug_resource_8` WHERE `id` BETWEEN ? AND ? ORDER BY `manufacturer_id` DESC,`id`) UNION ALL " +
-		"(SELECT `id`,`drug_res_type_id`,`manufacturer_id`,`sale_price` FROM `drug_resource_9` WHERE `id` BETWEEN ? AND ? ORDER BY `manufacturer_id` DESC,`id`)) t ORDER BY `manufacturer_id` DESC,`id`"
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_5` WHERE `id` BETWEEN ? AND ? ORDER BY `district` DESC,`id`) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_6` WHERE `id` BETWEEN ? AND ? ORDER BY `district` DESC,`id`) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_7` WHERE `id` BETWEEN ? AND ? ORDER BY `district` DESC,`id`) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_8` WHERE `id` BETWEEN ? AND ? ORDER BY `district` DESC,`id`) UNION ALL " +
+		"(SELECT `id`,`name`,`country_code`,`district`,`population` FROM `city_9` WHERE `id` BETWEEN ? AND ? ORDER BY `district` DESC,`id`)) t ORDER BY `district` DESC,`id`"
 	result2, warn2, err2 := db2.ExecuteSqlDirectly(sql2, 200, 250, 200, 250, 200, 250, 200, 250, 200, 250)
 	if err2 != nil {
-		suite.FailNow("query drug_1 failed, err: %s", err2)
+		suite.FailNow("query world_1 failed, err: %s", err2)
 	}
 	resultWithErr2 := &ResultWithErr{
-		Database: "drug_1",
+		Database: "world_1",
 		Result:   result2,
 		Warning:  warn2,
 		Error:    err2,
@@ -278,7 +278,7 @@ func (suite *_MergeResultTestSuite) TestMergeResultWithOrderBy() {
 				Expr: &ast.ColumnNameExpr{
 					Name: &ast.ColumnName{
 						Name: model.CIStr{
-							O: "manufacturer_id",
+							O: "`district`",
 						},
 					},
 				},

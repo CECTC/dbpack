@@ -27,7 +27,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "123456"
     volumes:
-    - ./scripts/drug_0.sql:/docker-entrypoint-initdb.d/drug_0.sql:rw
+    - ./scripts/world_0.sql:/docker-entrypoint-initdb.d/world_0.sql:rw
     command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
   mysql2:
     image: mysql:8.0
@@ -39,7 +39,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "123456"
     volumes:
-      - ./scripts/drug_1.sql:/docker-entrypoint-initdb.d/drug_1.sql:rw
+      - ./scripts/world_1.sql:/docker-entrypoint-initdb.d/world_1.sql:rw
     command: [ 'mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci' ]
   dbpack:
     build:
