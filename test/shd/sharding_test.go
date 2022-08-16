@@ -26,27 +26,19 @@ import (
 )
 
 const (
-	driverName                            = "mysql"
-	dataSourceName                        = "dksl:123456@tcp(127.0.0.1:13306)/drug?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
-	selectDrugResource                    = "select id, drug_res_type_id, base_type, sale_price from drug_resource where id between ? and ?"
-	selectDrugResourceLimit               = "select id, drug_res_type_id, base_type, sale_price from drug_resource where id between ? and ? limit ?,?"
-	selectDrugResourceOrderBy1            = "select id, drug_res_type_id, base_type, sale_price from drug_resource where id between ? and ? order by id desc"
-	selectDrugResourceOrderBy2            = "select id, drug_res_type_id, manufacturer_id, sale_price from drug_resource where id between ? and ? order by manufacturer_id desc, id asc"
-	selectDrugResourceOrderByIDDescLimit  = "select id, drug_res_type_id, base_type, sale_price from drug_resource where id between ? and ? order by id desc limit ?, ?"
-	selectDrugResourceOrderByIDDescLimit2 = "select id, drug_res_type_id, base_type, sale_price from drug_resource where id between ? and ? order by id desc limit ?"
-	selectCount                           = "select count(1) from drug_resource where manufacturer_id = ?"
+	driverName                    = "mysql"
+	dataSourceName                = "dksl:123456@tcp(127.0.0.1:13306)/world?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8"
+	selectCity                    = "select id, name, country_code, district, population from city where id between ? and ?"
+	selectCityLimit               = "select id, name, country_code, district, population from city where id between ? and ? limit ?,?"
+	selectCityOrderBy1            = "select id, name, country_code, district, population from city where id between ? and ? order by id desc"
+	selectCityOrderBy2            = "select id, name, country_code, district, population from city where id between ? and ? order by district desc, id asc"
+	selectCityOrderByIDDescLimit  = "select id, name, country_code, district, population from city where id between ? and ? order by id desc limit ?, ?"
+	selectCityOrderByIDDescLimit2 = "select id, name, country_code, district, population from city where id between ? and ? order by id desc limit ?"
+	selectCount                   = "select count(1) from city where country_code = ?"
 
-	deleteDrugResource = "delete from drug_resource where id between ? and ?"
-	insertDrugResource = "INSERT INTO `drug_resource`(`id`, `drug_res_type_id`, `base_type`, `status`, `type_id`, " +
-		"`dict_dosage_id`, `code`, `pym`, `name`, `manufacturer_id`, `approval_no`, `med_type`, `admin_code`, " +
-		"`pack_unit_id`, `min_unit_id`, `pack_quantity`, `dosage_unit_id`, `dosage_quantity`, `pack_spec`, `take_method_id`, " +
-		"`take_quantity`, `take_unit_id`, `take_unit_name`, `take_frequency`, `common_unit_type`, `purchase_price`, " +
-		"`sale_price`, `cost_category_id`, `invoice_item_id`, `expensive_flag`, `psy_flag_i`, `psy_flag_ii`, `otc_flag`, " +
-		"`nar_flag`, `inventory_upper`, `inventory_lower`, `create_time`, `modify_time`, `del_flag`, `consumable_type`, `tips`)" +
-		" VALUES (20, 'hclb_kqkcl', 2, 1, 'hclb_kqkcl', '', 'ZKW00000898', 'xczj', '吸潮纸尖', 'sccj_tjjfylqxyxgs', " +
-		"'天津械备20160055号', 3, '', 'jjdw_h', '', 1, '', 0.00, '15#', '', 0.0000, '', 'ml', '', 1, 0.0000, 0.0000, " +
-		"'fylb_clf', 'fpxm_clf', 1, 0, 0, 0, 0, 0, 0, NULL, '2018-06-05 09:53:10', 0, 0, NULL);"
-	updateDrugResource = "update drug_resource set sale_price = sale_price + 5 where id between ? and ?"
+	deleteCity = "delete from city where id between ? and ?"
+	insertCity = "INSERT INTO city (`id`, `name`, `country_code`, `district`, `population`) VALUES (20, '´s-Hertogenbosch', 'NLD', 'Noord-Brabant', 129170);"
+	updateCity = "update city set population = population + 5 where id between ? and ?"
 )
 
 type _ShardingSuite struct {
@@ -66,109 +58,121 @@ func (suite *_ShardingSuite) SetupSuite() {
 }
 
 func (suite *_ShardingSuite) TestSelect() {
-	rows, err := suite.db.Query(selectDrugResource, 200, 210)
+	rows, err := suite.db.Query(selectCity, 200, 210)
 	if suite.NoErrorf(err, "select row error: %v", err) {
 		var (
-			id            int64
-			drugResTypeId string
-			baseType      int
-			salePrice     float32
+			id          int64
+			name        string
+			countryCode string
+			district    string
+			population  int
 		)
 		for rows.Next() {
-			err := rows.Scan(&id, &drugResTypeId, &baseType, &salePrice)
+			err := rows.Scan(&id, &name, &countryCode, &district, &population)
 			suite.NoError(err)
-			suite.T().Logf("id: %d, drug resource type id: %s, base type: %d, sale price: %v", id, drugResTypeId, baseType, salePrice)
+			suite.T().Logf("id: %d, name: %s, country code: %s, district: %s, population: %d",
+				id, name, countryCode, district, population)
 		}
 	}
 }
 
 func (suite *_ShardingSuite) TestSelectLimit() {
-	rows, err := suite.db.Query(selectDrugResourceLimit, 200, 250, 20, 10)
+	rows, err := suite.db.Query(selectCityLimit, 200, 250, 20, 10)
 	if suite.NoErrorf(err, "select row error: %v", err) {
 		var (
-			id            int64
-			drugResTypeId string
-			baseType      int
-			salePrice     float32
+			id          int64
+			name        string
+			countryCode string
+			district    string
+			population  int
 		)
 		for rows.Next() {
-			err := rows.Scan(&id, &drugResTypeId, &baseType, &salePrice)
+			err := rows.Scan(&id, &name, &countryCode, &district, &population)
 			suite.NoError(err)
-			suite.T().Logf("id: %d, drug resource type id: %s, base type: %d, sale price: %v", id, drugResTypeId, baseType, salePrice)
+			suite.T().Logf("id: %d, name: %s, country code: %s, district: %s, population: %d",
+				id, name, countryCode, district, population)
 		}
 	}
 }
 
 func (suite *_ShardingSuite) TestSelectOrderBy() {
-	rows, err := suite.db.Query(selectDrugResourceOrderBy1, 200, 210)
+	rows, err := suite.db.Query(selectCityOrderBy1, 200, 210)
 	if suite.NoErrorf(err, "select row error: %v", err) {
 		var (
-			id            int64
-			drugResTypeId string
-			baseType      int
-			salePrice     float32
+			id          int64
+			name        string
+			countryCode string
+			district    string
+			population  int
 		)
 		for rows.Next() {
-			err := rows.Scan(&id, &drugResTypeId, &baseType, &salePrice)
+			err := rows.Scan(&id, &name, &countryCode, &district, &population)
 			suite.NoError(err)
-			suite.T().Logf("id: %d, drug resource type id: %s, base type: %d, sale price: %v", id, drugResTypeId, baseType, salePrice)
+			suite.T().Logf("id: %d, name: %s, country code: %s, district: %s, population: %d",
+				id, name, countryCode, district, population)
 		}
 	}
 }
 
 func (suite *_ShardingSuite) TestSelectOrderBy2() {
-	rows, err := suite.db.Query(selectDrugResourceOrderBy2, 200, 250)
+	rows, err := suite.db.Query(selectCityOrderBy2, 200, 250)
 	if suite.NoErrorf(err, "select row error: %v", err) {
 		var (
-			id             int64
-			drugResTypeId  string
-			manufacturerId string
-			salePrice      float32
+			id          int64
+			name        string
+			countryCode string
+			district    string
+			population  int
 		)
 		for rows.Next() {
-			err := rows.Scan(&id, &drugResTypeId, &manufacturerId, &salePrice)
+			err := rows.Scan(&id, &name, &countryCode, &district, &population)
 			suite.NoError(err)
-			suite.T().Logf("id: %d, drug resource type id: %s, manufacturer id: %s, sale price: %v", id, drugResTypeId, manufacturerId, salePrice)
+			suite.T().Logf("id: %d, name: %s, country code: %s, district: %s, population: %d",
+				id, name, countryCode, district, population)
 		}
 	}
 }
 
 func (suite *_ShardingSuite) TestSelectOrderByAndLimit() {
-	rows, err := suite.db.Query(selectDrugResourceOrderByIDDescLimit, 200, 300, 10, 20)
+	rows, err := suite.db.Query(selectCityOrderByIDDescLimit, 200, 300, 10, 20)
 	if suite.NoErrorf(err, "select row error: %v", err) {
 		var (
-			id            int64
-			drugResTypeId string
-			baseType      int
-			salePrice     float32
+			id          int64
+			name        string
+			countryCode string
+			district    string
+			population  int
 		)
 		for rows.Next() {
-			err := rows.Scan(&id, &drugResTypeId, &baseType, &salePrice)
+			err := rows.Scan(&id, &name, &countryCode, &district, &population)
 			suite.NoError(err)
-			suite.T().Logf("id: %d, drug resource type id: %s, base type: %d, sale price: %v", id, drugResTypeId, baseType, salePrice)
+			suite.T().Logf("id: %d, name: %s, country code: %s, district: %s, population: %d",
+				id, name, countryCode, district, population)
 		}
 	}
 }
 
 func (suite *_ShardingSuite) TestSelectOrderByAndLimit2() {
-	rows, err := suite.db.Query(selectDrugResourceOrderByIDDescLimit2, 200, 300, 10)
+	rows, err := suite.db.Query(selectCityOrderByIDDescLimit2, 200, 300, 10)
 	if suite.NoErrorf(err, "select row error: %v", err) {
 		var (
-			id            int64
-			drugResTypeId string
-			baseType      int
-			salePrice     float32
+			id          int64
+			name        string
+			countryCode string
+			district    string
+			population  int
 		)
 		for rows.Next() {
-			err := rows.Scan(&id, &drugResTypeId, &baseType, &salePrice)
+			err := rows.Scan(&id, &name, &countryCode, &district, &population)
 			suite.NoError(err)
-			suite.T().Logf("id: %d, drug resource type id: %s, base type: %d, sale price: %v", id, drugResTypeId, baseType, salePrice)
+			suite.T().Logf("id: %d, name: %s, country code: %s, district: %s, population: %d",
+				id, name, countryCode, district, population)
 		}
 	}
 }
 
 func (suite *_ShardingSuite) TestSelectCount() {
-	rows, err := suite.db.Query(selectCount, "sccj_w")
+	rows, err := suite.db.Query(selectCount, "CHN")
 	if suite.NoErrorf(err, "select row error: %v", err) {
 		var (
 			count int64
@@ -199,7 +203,7 @@ func (suite *_ShardingSuite) TestShowEngines() {
 	rows, err := suite.db.Query("SHOW ENGINES")
 	if suite.NoErrorf(err, "show engines error: %v", err) {
 		var (
-			engine, support, comment, transactions, xa, savepoints string
+			engine, support, comment, transactions, xa, savepoints interface{}
 		)
 		for rows.Next() {
 			err := rows.Scan(&engine, &support, &comment, &transactions, &xa, &savepoints)
@@ -210,7 +214,7 @@ func (suite *_ShardingSuite) TestShowEngines() {
 }
 
 func (suite *_ShardingSuite) TestShowCreateDatabase() {
-	rows, err := suite.db.Query("SHOW CREATE DATABASE drug;")
+	rows, err := suite.db.Query("SHOW CREATE DATABASE world;")
 	if suite.NoErrorf(err, "show engines error: %v", err) {
 		var (
 			database, createDatabase string
@@ -222,7 +226,7 @@ func (suite *_ShardingSuite) TestShowCreateDatabase() {
 		}
 	}
 
-	rows, err = suite.db.Query("SHOW CREATE SCHEMA drug;")
+	rows, err = suite.db.Query("SHOW CREATE SCHEMA world;")
 	if suite.NoErrorf(err, "show engines error: %v", err) {
 		var (
 			database, createDatabase string
@@ -235,8 +239,8 @@ func (suite *_ShardingSuite) TestShowCreateDatabase() {
 	}
 }
 
-func (suite *_ShardingSuite) TestDeleteDrugResource() {
-	result, err := suite.db.Exec(deleteDrugResource, 10, 20)
+func (suite *_ShardingSuite) TestDeleteCity() {
+	result, err := suite.db.Exec(deleteCity, 10, 20)
 	suite.Assert().Nil(err)
 	affectedRows, err := result.RowsAffected()
 	suite.Assert().Nil(err)
@@ -244,33 +248,35 @@ func (suite *_ShardingSuite) TestDeleteDrugResource() {
 	time.Sleep(10 * time.Second)
 }
 
-func (suite *_ShardingSuite) TestInsertDrugResource() {
-	result, err := suite.db.Exec(insertDrugResource)
+func (suite *_ShardingSuite) TestInsertCity() {
+	result, err := suite.db.Exec(insertCity)
 	suite.Assert().Nil(err)
 	affectedRows, err := result.RowsAffected()
 	suite.Assert().Nil(err)
 	suite.Assert().Equal(int64(1), affectedRows)
 }
 
-func (suite *_ShardingSuite) TestUpdateDrugResource() {
-	result, err := suite.db.Exec(updateDrugResource, 200, 210)
+func (suite *_ShardingSuite) TestUpdateCity() {
+	result, err := suite.db.Exec(updateCity, 200, 210)
 	suite.Assert().Nil(err)
 	affectedRows, err := result.RowsAffected()
 	suite.Assert().Nil(err)
 	suite.Assert().Equal(int64(11), affectedRows)
 
-	rows, err := suite.db.Query(selectDrugResourceOrderBy1, 200, 210)
+	rows, err := suite.db.Query(selectCityOrderBy1, 200, 210)
 	if suite.NoErrorf(err, "select row error: %v", err) {
 		var (
-			id            int64
-			drugResTypeId string
-			baseType      int
-			salePrice     float32
+			id          int64
+			name        string
+			countryCode string
+			district    string
+			population  int
 		)
 		for rows.Next() {
-			err := rows.Scan(&id, &drugResTypeId, &baseType, &salePrice)
+			err := rows.Scan(&id, &name, &countryCode, &district, &population)
 			suite.NoError(err)
-			suite.T().Logf("id: %d, drug resource type id: %s, base type: %d, sale price: %v", id, drugResTypeId, baseType, salePrice)
+			suite.T().Logf("id: %d, name: %s, country code: %s, district: %s, population: %d",
+				id, name, countryCode, district, population)
 		}
 	}
 }

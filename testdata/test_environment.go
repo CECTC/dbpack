@@ -44,11 +44,11 @@ type ShardingTestEnvironment struct {
 }
 
 func NewShardingTestEnvironment(t *testing.T) *ShardingTestEnvironment {
-	container1, err := newMySql(t, "drug_0.sql", "drug-0")
+	container1, err := newMySql(t, "world_0.sql", "world-0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	container2, err := newMySql(t, "drug_1.sql", "drug-1")
+	container2, err := newMySql(t, "world_1.sql", "world-1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,8 +115,8 @@ func (environment *ShardingTestEnvironment) RegisterDBResource(t *testing.T) {
 	}
 	resource.RegisterDBManager("test", []*config.DataSource{
 		{
-			Name:                     "drug_0",
-			DSN:                      fmt.Sprintf("root:123456@tcp(localhost:%d)/drug", port1.Int()),
+			Name:                     "world_0",
+			DSN:                      fmt.Sprintf("root:123456@tcp(localhost:%d)/world", port1.Int()),
 			Capacity:                 10,
 			MaxCapacity:              20,
 			IdleTimeout:              time.Minute,
@@ -125,8 +125,8 @@ func (environment *ShardingTestEnvironment) RegisterDBResource(t *testing.T) {
 			Filters:                  nil,
 		},
 		{
-			Name:                     "drug_1",
-			DSN:                      fmt.Sprintf("root:123456@tcp(localhost:%d)/drug", port2.Int()),
+			Name:                     "world_1",
+			DSN:                      fmt.Sprintf("root:123456@tcp(localhost:%d)/world", port2.Int()),
 			Capacity:                 10,
 			MaxCapacity:              20,
 			IdleTimeout:              time.Minute,
