@@ -820,6 +820,9 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 				return err
 			}
 		}
+	case constant.ComResetConnection:
+		c.RecycleReadPacket()
+		return c.WriteOKPacket(0, 0, c.StatusFlags(), 0)
 	}
 	return nil
 }
