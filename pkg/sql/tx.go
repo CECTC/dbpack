@@ -165,9 +165,25 @@ func (tx *Tx) Rollback(ctx context.Context, stmt *ast.RollbackStmt) (result prot
 		result, err = tx.conn.Execute(ctx, fmt.Sprintf("ROLLBACK TO %s", stmt.SavepointName), false)
 	} else {
 		result, err = tx.conn.Execute(ctx, "ROLLBACK", false)
+		tx.db.pool.Put(tx.conn)
+		tx.Close()
 	}
+	return
+}
+
+func (tx *Tx) ReleaseSavepoint(ctx context.Context, savepoint string) (result proto.Result, err error) {
+	_, span := tracing.GetTraceSpan(ctx, tracing.TxReleaseSavePoint)
+	span.SetAttributes(attribute.KeyValue{Key: "db", Value: attribute.StringValue(tx.db.name)})
+	defer span.End()
+
+	if tx.closed.Load() {
+		return nil, nil
+	}
+	if tx.db == nil || tx.db.IsClosed() {
+		return nil, err2.ErrInvalidConn
+	}
+	result, err = tx.conn.Execute(ctx, fmt.Sprintf("RELEASE SAVEPOINT %s", savepoint), false)
 	tx.db.pool.Put(tx.conn)
-	tx.Close()
 	return
 }
 

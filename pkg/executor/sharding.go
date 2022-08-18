@@ -291,5 +291,5 @@ func (executor *ShardingExecutor) doPostFilter(ctx context.Context, result proto
 			return err
 		}
 	}
-	return nil
+	return err
 }

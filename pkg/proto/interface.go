@@ -173,6 +173,7 @@ type (
 		ExecuteSqlDirectly(sql string, args ...interface{}) (Result, uint16, error)
 		Commit(ctx context.Context) (Result, error)
 		Rollback(ctx context.Context, stmt *ast.RollbackStmt) (Result, error)
+		ReleaseSavepoint(ctx context.Context, savepoint string) (result Result, err error)
 	}
 
 	DBManager interface {
