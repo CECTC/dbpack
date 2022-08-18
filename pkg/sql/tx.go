@@ -183,7 +183,6 @@ func (tx *Tx) ReleaseSavepoint(ctx context.Context, savepoint string) (result pr
 		return nil, err2.ErrInvalidConn
 	}
 	result, err = tx.conn.Execute(ctx, fmt.Sprintf("RELEASE SAVEPOINT %s", savepoint), false)
-	tx.db.pool.Put(tx.conn)
 	return
 }
 
