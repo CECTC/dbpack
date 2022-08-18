@@ -157,6 +157,21 @@ func (mr *MockTxMockRecorder) QueryDirectly(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryDirectly", reflect.TypeOf((*MockTx)(nil).QueryDirectly), arg0)
 }
 
+// ReleaseSavepoint mocks base method.
+func (m *MockTx) ReleaseSavepoint(arg0 context.Context, arg1 string) (proto.Result, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReleaseSavepoint", arg0, arg1)
+	ret0, _ := ret[0].(proto.Result)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReleaseSavepoint indicates an expected call of ReleaseSavepoint.
+func (mr *MockTxMockRecorder) ReleaseSavepoint(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReleaseSavepoint", reflect.TypeOf((*MockTx)(nil).ReleaseSavepoint), arg0, arg1)
+}
+
 // Rollback mocks base method.
 func (m *MockTx) Rollback(arg0 context.Context, arg1 *ast.RollbackStmt) (proto.Result, error) {
 	m.ctrl.T.Helper()

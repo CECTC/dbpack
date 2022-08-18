@@ -68,11 +68,12 @@ const (
 	DBLocalTransactionBegin = "db_local_transaction_begin"
 
 	// tx
-	TxQuery    = "tx_query"
-	TxExecSQL  = "tx_exec_sql"
-	TxExecStmt = "tx_exec_stmt"
-	TxCommit   = "db_local_transaction_commit"
-	TxRollback = "db_local_transaction_rollback"
+	TxQuery            = "tx_query"
+	TxExecSQL          = "tx_exec_sql"
+	TxExecStmt         = "tx_exec_stmt"
+	TxCommit           = "db_local_transaction_commit"
+	TxRollback         = "db_local_transaction_rollback"
+	TxReleaseSavePoint = "db_local_transaction_release_savepoint"
 
 	// conn
 	ConnQuery       = "conn_com_query"

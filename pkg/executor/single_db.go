@@ -207,10 +207,23 @@ func (executor *SingleDBExecutor) ExecutorComQuery(
 		if !ok {
 			return nil, 0, errors.New("there is no transaction")
 		}
-		defer executor.localTransactionMap.Delete(connectionID)
+		if stmt.SavepointName == "" {
+			defer executor.localTransactionMap.Delete(connectionID)
+		}
 		tx = txi.(proto.Tx)
 		// TODO add metrics
 		if result, err = tx.Rollback(spanCtx, stmt); err != nil {
+			return nil, 0, err
+		}
+		return result, 0, err
+	case *ast.ReleaseSavepointStmt:
+		txi, ok := executor.localTransactionMap.Load(connectionID)
+		if !ok {
+			return nil, 0, errors.New("there is no transaction")
+		}
+		defer executor.localTransactionMap.Delete(connectionID)
+		tx = txi.(proto.Tx)
+		if result, err = tx.ReleaseSavepoint(spanCtx, stmt.Name); err != nil {
 			return nil, 0, err
 		}
 		return result, 0, err
@@ -285,5 +298,5 @@ func (executor *SingleDBExecutor) doPostFilter(ctx context.Context, result proto
 			return err
 		}
 	}
-	return nil
+	return err
 }
