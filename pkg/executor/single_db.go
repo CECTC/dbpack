@@ -221,7 +221,6 @@ func (executor *SingleDBExecutor) ExecutorComQuery(
 		if !ok {
 			return nil, 0, errors.New("there is no transaction")
 		}
-		defer executor.localTransactionMap.Delete(connectionID)
 		tx = txi.(proto.Tx)
 		if result, err = tx.ReleaseSavepoint(spanCtx, stmt.Name); err != nil {
 			return nil, 0, err
