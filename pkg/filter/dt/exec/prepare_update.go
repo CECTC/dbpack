@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/driver"
 	"github.com/cectc/dbpack/pkg/dt/schema"
 	"github.com/cectc/dbpack/pkg/log"
@@ -113,7 +114,7 @@ func (executor *prepareUpdateExecutor) GetTableMeta(ctx context.Context) (schema
 
 func (executor *prepareUpdateExecutor) GetTableName() string {
 	var sb strings.Builder
-	if err := executor.stmt.TableRefs.TableRefs.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+	if err := executor.stmt.TableRefs.TableRefs.Restore(format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)); err != nil {
 		log.Panic(err)
 	}
 	return sb.String()
@@ -159,7 +160,7 @@ func (executor *prepareUpdateExecutor) buildAfterImageSql(tableMeta schema.Table
 
 func (executor *prepareUpdateExecutor) GetWhereCondition() string {
 	var sb strings.Builder
-	if err := executor.stmt.Where.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+	if err := executor.stmt.Where.Restore(format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)); err != nil {
 		log.Error(err)
 	}
 	return sb.String()

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/driver"
 	"github.com/cectc/dbpack/pkg/dt/schema"
 	"github.com/cectc/dbpack/pkg/log"
@@ -124,7 +125,7 @@ func (executor *queryInsertExecutor) GetTableMeta(ctx context.Context) (schema.T
 
 func (executor *queryInsertExecutor) GetTableName() string {
 	var sb strings.Builder
-	if err := executor.stmt.Table.TableRefs.Left.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+	if err := executor.stmt.Table.TableRefs.Left.Restore(format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)); err != nil {
 		log.Panic(err)
 	}
 	return sb.String()
@@ -137,7 +138,7 @@ func (executor *queryInsertExecutor) getPKValuesByColumn(ctx context.Context) ([
 		for i, value := range executor.stmt.Lists[j] {
 			if i == pkIndex {
 				var sb strings.Builder
-				if err := value.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+				if err := value.Restore(format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)); err != nil {
 					log.Panic(err)
 				}
 				pkValues = append(pkValues, sb.String())

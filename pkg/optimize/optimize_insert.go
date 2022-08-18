@@ -122,7 +122,7 @@ func getPkValue(ctx context.Context, stmt *ast.InsertStmt, pkIndex int, args []i
 	switch commandType {
 	case constant.ComQuery:
 		var sb strings.Builder
-		ctx := format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)
+		ctx := format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)
 		if err := stmt.Lists[0][pkIndex].Restore(ctx); err != nil {
 			log.Panic(err)
 		}

@@ -77,8 +77,12 @@ func TestMysqlAppendInParamWithValue(t *testing.T) {
 		in  []interface{}
 		out string
 	}{
-		"1": {
+		"0": {
 			in:  []interface{}{"abc", "xyz"},
+			out: "('abc','xyz')",
+		},
+		"1": {
+			in:  []interface{}{"'abc'", "'xyz'"},
 			out: "('abc','xyz')",
 		},
 		"2": {

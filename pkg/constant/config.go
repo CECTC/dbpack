@@ -16,7 +16,11 @@
 
 package constant
 
+import "github.com/cectc/dbpack/third_party/parser/format"
+
 const (
 	ConfigPathKey      = "config"
 	TransactionTimeout = "transaction-timeout"
+
+	DBPackRestoreFormat = format.DefaultRestoreFlags | format.RestoreStringWithoutDefaultCharset
 )

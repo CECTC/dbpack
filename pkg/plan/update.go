@@ -103,7 +103,7 @@ func (p *UpdatePlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHi
 }
 
 func (p *UpdatePlan) generate(sb *strings.Builder, table string, hints ...*ast.TableOptimizerHint) error {
-	ctx := format.NewRestoreCtx(format.DefaultRestoreFlags|format.RestoreStringWithoutDefaultCharset, sb)
+	ctx := format.NewRestoreCtx(constant.DBPackRestoreFormat, sb)
 	ctx.WriteKeyWord("UPDATE ")
 
 	if len(hints) != 0 {

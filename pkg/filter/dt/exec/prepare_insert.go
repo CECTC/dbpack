@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/driver"
 	"github.com/cectc/dbpack/pkg/dt/schema"
 	"github.com/cectc/dbpack/pkg/log"
@@ -92,7 +93,7 @@ func (executor *prepareInsertExecutor) GetTableMeta(ctx context.Context) (schema
 
 func (executor *prepareInsertExecutor) GetTableName() string {
 	var sb strings.Builder
-	if err := executor.stmt.Table.TableRefs.Left.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+	if err := executor.stmt.Table.TableRefs.Left.Restore(format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)); err != nil {
 		log.Panic(err)
 	}
 	return sb.String()
