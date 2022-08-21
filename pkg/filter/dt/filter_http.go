@@ -193,7 +193,7 @@ func (f _httpFilter) PostHandle(ctx context.Context, fastHttpCtx *fasthttp.Reque
 		return nil
 	}
 
-	_, found := f.transactionInfoMap[strings.ToLower(string(path))]
+	_, found := f.matchTransactionInfo(string(path))
 	if found {
 		if err := f.handleHttp1GlobalEnd(spanCtx, fastHttpCtx); err != nil {
 			return err
