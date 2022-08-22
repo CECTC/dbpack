@@ -28,7 +28,9 @@ import (
 )
 
 type Optimizer struct {
-	appid string
+	appid        string
+	globalTables map[string]bool
+	executors    []proto.DBGroupExecutor
 	// dbName -> DBGroupExecutor
 	dbGroupExecutors map[string]proto.DBGroupExecutor
 	// tableName -> ShardingAlgorithm
@@ -38,11 +40,15 @@ type Optimizer struct {
 }
 
 func NewOptimizer(appid string,
+	globalTables map[string]bool,
+	executors []proto.DBGroupExecutor,
 	dbGroupExecutors map[string]proto.DBGroupExecutor,
 	algorithms map[string]cond.ShardingAlgorithm,
 	topologies map[string]*topo.Topology) proto.Optimizer {
 	return &Optimizer{
 		appid:            appid,
+		globalTables:     globalTables,
+		executors:        executors,
 		dbGroupExecutors: dbGroupExecutors,
 		algorithms:       algorithms,
 		topologies:       topologies,

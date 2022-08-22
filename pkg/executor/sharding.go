@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -52,6 +53,7 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 		err            error
 		content        []byte
 		shardingConfig *config.ShardingConfig
+		globalTables   = make(map[string]bool)
 		executorSlice  []proto.DBGroupExecutor
 		executorMap    = make(map[string]proto.DBGroupExecutor)
 		algorithms     map[string]cond.ShardingAlgorithm
@@ -67,6 +69,10 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 		return nil, err
 	}
 
+	for _, globalTable := range shardingConfig.GlobalTables {
+		globalTables[strings.ToLower(globalTable)] = true
+	}
+
 	for _, groupConfig := range shardingConfig.DBGroups {
 		dbGroup, err := group.NewDBGroup(conf.AppID, groupConfig.Name, groupConfig.LBAlgorithm, groupConfig.DataSources)
 		if err != nil {
@@ -76,17 +82,18 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 		executorMap[dbGroup.GroupName()] = dbGroup
 	}
 
-	algorithms, topologies, err = convertLogicTableConfigsToShardingAlgorithms(shardingConfig.LogicTables)
+	algorithms, topologies, err = convertShardingAlgorithmsAndTopologies(shardingConfig.LogicTables)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	executor := &ShardingExecutor{
-		PreFilters:          make([]proto.DBPreFilter, 0),
-		PostFilters:         make([]proto.DBPostFilter, 0),
-		config:              shardingConfig,
-		executors:           executorSlice,
-		optimizer:           optimize.NewOptimizer(conf.AppID, executorMap, algorithms, topologies),
+		PreFilters:  make([]proto.DBPreFilter, 0),
+		PostFilters: make([]proto.DBPostFilter, 0),
+		config:      shardingConfig,
+		executors:   executorSlice,
+		optimizer: optimize.NewOptimizer(conf.AppID,
+			globalTables, executorSlice, executorMap, algorithms, topologies),
 		localTransactionMap: make(map[uint32]proto.Tx, 0),
 	}
 
@@ -108,7 +115,7 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 	return executor, nil
 }
 
-func convertLogicTableConfigsToShardingAlgorithms(logicTables []*config.LogicTable) (
+func convertShardingAlgorithmsAndTopologies(logicTables []*config.LogicTable) (
 	map[string]cond.ShardingAlgorithm,
 	map[string]*topo.Topology,
 	error) {
@@ -231,20 +238,26 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 
 func (executor *ShardingExecutor) ExecutorComStmtExecute(
 	ctx context.Context, stmt *proto.Stmt) (result proto.Result, warns uint16, err error) {
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.SHDComStmtExecute)
+	defer span.End()
+
 	if err = executor.doPreFilter(ctx); err != nil {
 		return nil, 0, err
 	}
 	defer func() {
-		err = executor.doPostFilter(ctx, result, err)
+		if err == nil {
+			result, err = decodeResult(result)
+		}
+		err = executor.doPostFilter(spanCtx, result, err)
+		if err != nil {
+			span.RecordError(err)
+		}
 	}()
 
 	var (
 		args []interface{}
 		plan proto.Plan
 	)
-
-	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.SHDComStmtExecute)
-	defer span.End()
 
 	connectionID := proto.ConnectionID(ctx)
 	log.Debugf("connectionID: %d, prepare: %s", connectionID, stmt.SqlText)

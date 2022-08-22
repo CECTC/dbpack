@@ -63,7 +63,6 @@ func newMySql(t *testing.T, initSql, name string) (testcontainers.Container, err
 	scripts := path.Dir(fmt.Sprintf("%s/../../docker/scripts/", cwd))
 	source := path.Join(scripts, initSql)
 	req := testcontainers.ContainerRequest{
-		Name:  name,
 		Image: "mysql:8.0",
 		Env: map[string]string{
 			"MYSQL_ROOT_PASSWORD": rootPassword,

@@ -103,7 +103,7 @@ func (p *DeletePlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHi
 }
 
 func (p *DeletePlan) generate(sb *strings.Builder, table string, hints ...*ast.TableOptimizerHint) error {
-	ctx := format.NewRestoreCtx(format.DefaultRestoreFlags, sb)
+	ctx := format.NewRestoreCtx(format.DefaultRestoreFlags|format.RestoreStringWithoutDefaultCharset, sb)
 	ctx.WriteKeyWord("DELETE ")
 
 	if len(hints) != 0 {
