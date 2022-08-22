@@ -94,6 +94,7 @@ func (tx *ComplexTx) Begin(ctx context.Context, executor proto.DBGroupExecutor) 
 	if err != nil {
 		return nil, err
 	}
+	log.Debugf("DBGroup %s has begun local transaction!", executor.GroupName())
 	tx.txs[executor.GroupName()] = childTx
 	return childTx, nil
 }
@@ -117,6 +118,7 @@ func (tx *ComplexTx) Commit(ctx context.Context) (result proto.Result, err error
 				log.Errorf("commit failed, db group: %s, err: %v", group, err)
 				return err
 			}
+			log.Debugf("DBGroup %s has committed local transaction!", group)
 			return nil
 		})
 	}
@@ -148,6 +150,7 @@ func (tx *ComplexTx) Rollback(ctx context.Context) (result proto.Result, err err
 				log.Errorf("rollback failed, db group: %s, err: %v", group, err)
 				return err
 			}
+			log.Debugf("DBGroup %s has rollbacked local transaction!", group)
 			return nil
 		})
 	}

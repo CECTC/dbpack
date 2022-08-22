@@ -263,22 +263,47 @@ func (suite *_ShardingSuite) TestUpdateCity() {
 	suite.Assert().Nil(err)
 	suite.Assert().Equal(int64(11), affectedRows)
 
-	rows, err := suite.db.Query(selectCityOrderBy1, 200, 210)
-	if suite.NoErrorf(err, "select row error: %v", err) {
-		var (
-			id          int64
-			name        string
-			countryCode string
-			district    string
-			population  int
-		)
-		for rows.Next() {
-			err := rows.Scan(&id, &name, &countryCode, &district, &population)
-			suite.NoError(err)
-			suite.T().Logf("id: %d, name: %s, country code: %s, district: %s, population: %d",
-				id, name, countryCode, district, population)
-		}
-	}
+	suite.TestSelectOrderBy()
+}
+
+func (suite *_ShardingSuite) TestLocalTransaction_2_Commit() {
+	suite.TestSelectOrderBy()
+	tx, err := suite.db.Begin()
+	suite.Assert().Nil(err)
+	result, err := tx.Exec(updateCity, 200, 210)
+	suite.Assert().Nil(err)
+	affectedRows, err := result.RowsAffected()
+	suite.Assert().Nil(err)
+	suite.Assert().Equal(int64(11), affectedRows)
+
+	result, err = tx.Exec(deleteCity, 30, 40)
+	suite.Assert().Nil(err)
+	affectedRows, err = result.RowsAffected()
+	suite.Assert().Nil(err)
+	suite.Assert().Equal(int64(11), affectedRows)
+	err = tx.Commit()
+	suite.Assert().Nil(err)
+	suite.TestSelectOrderBy()
+}
+
+func (suite *_ShardingSuite) TestLocalTransaction_1_Rollback() {
+	suite.TestSelectOrderBy()
+	tx, err := suite.db.Begin()
+	suite.Assert().Nil(err)
+	result, err := tx.Exec(updateCity, 200, 210)
+	suite.Assert().Nil(err)
+	affectedRows, err := result.RowsAffected()
+	suite.Assert().Nil(err)
+	suite.Assert().Equal(int64(11), affectedRows)
+
+	result, err = tx.Exec(deleteCity, 30, 40)
+	suite.Assert().Nil(err)
+	affectedRows, err = result.RowsAffected()
+	suite.Assert().Nil(err)
+	suite.Assert().Equal(int64(11), affectedRows)
+	err = tx.Rollback()
+	suite.Assert().Nil(err)
+	suite.TestSelectOrderBy()
 }
 
 func (suite *_ShardingSuite) TearDownSuite() {
