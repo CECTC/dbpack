@@ -88,7 +88,16 @@ func (conn *BackendConnection) Connect(ctx context.Context) error {
 	} else {
 		typ = conn.conf.Net
 	}
-	netConn, err := net.Dial(typ, conn.conf.Addr)
+
+	var (
+		netConn net.Conn
+		err     error
+	)
+	if conn.conf.Timeout > 0 {
+		netConn, err = net.DialTimeout(typ, conn.conf.Addr, conn.conf.Timeout)
+	} else {
+		netConn, err = net.Dial(typ, conn.conf.Addr)
+	}
 	if err != nil {
 		return err
 	}
