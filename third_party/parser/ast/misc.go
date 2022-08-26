@@ -3471,3 +3471,88 @@ var NewHexLiteral func(string) (interface{}, error)
 
 // NewBitLiteral creates a types.BitLiteral value, it's provided by parser driver.
 var NewBitLiteral func(string) (interface{}, error)
+
+type XAStartStmt struct {
+	stmtNode
+	XID ExprNode
+}
+
+func (stmt *XAStartStmt) Restore(ctx *format.RestoreCtx) error {
+	ctx.Flags = ctx.Flags | format.RestoreStringWithoutDefaultCharset
+	ctx.WriteKeyWord("XA START ")
+	return stmt.XID.Restore(ctx)
+}
+
+func (stmt *XAStartStmt) Accept(v Visitor) (Node, bool) {
+	newNode, _ := v.Enter(stmt)
+	stmt = newNode.(*XAStartStmt)
+	return v.Leave(stmt)
+}
+
+type XAEndStmt struct {
+	stmtNode
+	XID ExprNode
+}
+
+func (stmt *XAEndStmt) Restore(ctx *format.RestoreCtx) error {
+	ctx.Flags = ctx.Flags | format.RestoreStringWithoutDefaultCharset
+	ctx.WriteKeyWord("XA END ")
+	return stmt.XID.Restore(ctx)
+}
+
+func (stmt *XAEndStmt) Accept(v Visitor) (Node, bool) {
+	newNode, _ := v.Enter(stmt)
+	stmt = newNode.(*XAEndStmt)
+	return v.Leave(stmt)
+}
+
+type XAPrepareStmt struct {
+	stmtNode
+	XID ExprNode
+}
+
+func (stmt *XAPrepareStmt) Restore(ctx *format.RestoreCtx) error {
+	ctx.Flags = ctx.Flags | format.RestoreStringWithoutDefaultCharset
+	ctx.WriteKeyWord("XA PREPARE ")
+	return stmt.XID.Restore(ctx)
+}
+
+func (stmt *XAPrepareStmt) Accept(v Visitor) (Node, bool) {
+	newNode, _ := v.Enter(stmt)
+	stmt = newNode.(*XAPrepareStmt)
+	return v.Leave(stmt)
+}
+
+type XACommitStmt struct {
+	stmtNode
+	XID ExprNode
+}
+
+func (stmt *XACommitStmt) Restore(ctx *format.RestoreCtx) error {
+	ctx.Flags = ctx.Flags | format.RestoreStringWithoutDefaultCharset
+	ctx.WriteKeyWord("XA COMMIT ")
+	return stmt.XID.Restore(ctx)
+}
+
+func (stmt *XACommitStmt) Accept(v Visitor) (Node, bool) {
+	newNode, _ := v.Enter(stmt)
+	stmt = newNode.(*XACommitStmt)
+	return v.Leave(stmt)
+}
+
+type XARollbackStmt struct {
+	stmtNode
+	XID ExprNode
+}
+
+func (stmt *XARollbackStmt) Restore(ctx *format.RestoreCtx) error {
+	ctx.Flags = ctx.Flags | format.RestoreStringWithoutDefaultCharset
+	ctx.WriteKeyWord("XA ROlLBACK ")
+	return stmt.XID.Restore(ctx)
+}
+
+func (stmt *XARollbackStmt) Accept(v Visitor) (Node, bool) {
+	newNode, _ := v.Enter(stmt)
+	stmt = newNode.(*XARollbackStmt)
+	return v.Leave(stmt)
+}
