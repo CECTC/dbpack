@@ -464,6 +464,36 @@ func (db *DB) Begin(ctx context.Context) (proto.Tx, proto.Result, error) {
 	}, result, nil
 }
 
+func (db *DB) XAStart(ctx context.Context, sql string) (proto.Tx, proto.Result, error) {
+	var (
+		result proto.Result
+		conn   *driver.BackendConnection
+		err    error
+	)
+
+	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.DBXAStart)
+	span.SetAttributes(attribute.KeyValue{Key: "db", Value: attribute.StringValue(db.name)})
+	defer span.End()
+
+	r, err := db.pool.Get(spanCtx)
+	if err != nil {
+		err = errors.WithStack(err)
+		return nil, nil, err
+	}
+	conn = r.(*driver.BackendConnection)
+
+	if result, err = conn.Execute(ctx, sql, false); err != nil {
+		db.pool.Put(r)
+		return nil, nil, err
+	}
+
+	return &Tx{
+		closed: atomic.NewBool(false),
+		db:     db,
+		conn:   conn,
+	}, result, nil
+}
+
 func (db *DB) SetConnectionPreFilters(filters []proto.DBConnectionPreFilter) {
 	db.connectionPreFilters = filters
 }
