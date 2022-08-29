@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/cectc/dbpack/pkg/config"
+	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/filter"
 	"github.com/cectc/dbpack/pkg/group"
 	"github.com/cectc/dbpack/pkg/log"
@@ -159,9 +160,7 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
 
 	connectionID := proto.ConnectionID(spanCtx)
 	queryStmt := proto.QueryStmt(spanCtx)
-	if err := queryStmt.Restore(format.NewRestoreCtx(
-		format.DefaultRestoreFlags|
-			format.RestoreStringWithoutDefaultCharset, &sb)); err != nil {
+	if err := queryStmt.Restore(format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)); err != nil {
 		return nil, 0, err
 	}
 	newSql := sb.String()

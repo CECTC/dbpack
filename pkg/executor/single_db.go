@@ -25,6 +25,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/cectc/dbpack/pkg/config"
+	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/filter"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/proto"
@@ -154,9 +155,7 @@ func (executor *SingleDBExecutor) ExecutorComQuery(
 	if queryStmt == nil {
 		return nil, 0, errors.New("query stmt should not be nil")
 	}
-	if err := queryStmt.Restore(format.NewRestoreCtx(
-		format.DefaultRestoreFlags|
-			format.RestoreStringWithoutDefaultCharset, &sb)); err != nil {
+	if err := queryStmt.Restore(format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)); err != nil {
 		return nil, 0, err
 	}
 	sql := sb.String()

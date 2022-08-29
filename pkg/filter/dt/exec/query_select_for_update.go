@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/driver"
 	"github.com/cectc/dbpack/pkg/dt"
 	"github.com/cectc/dbpack/pkg/dt/schema"
@@ -97,7 +98,7 @@ func (executor *querySelectForUpdateExecutor) GetTableMeta(ctx context.Context) 
 func (executor *querySelectForUpdateExecutor) GetTableName() string {
 	var sb strings.Builder
 	table := executor.stmt.From.TableRefs.Left.(*ast.TableSource)
-	if err := table.Source.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+	if err := table.Source.Restore(format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)); err != nil {
 		log.Panic(err)
 	}
 	return sb.String()
@@ -105,6 +106,6 @@ func (executor *querySelectForUpdateExecutor) GetTableName() string {
 
 func (executor *querySelectForUpdateExecutor) GetWhereCondition() string {
 	var sb strings.Builder
-	executor.stmt.Where.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb))
+	executor.stmt.Where.Restore(format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb))
 	return sb.String()
 }

@@ -136,7 +136,7 @@ func (p *QueryOnSingleDBPlan) generate(ctx context.Context, sb *strings.Builder,
 		}
 		sb.WriteString(") t ")
 		if p.Stmt.OrderBy != nil {
-			restoreCtx := format.NewRestoreCtx(format.DefaultRestoreFlags|format.RestoreStringWithoutDefaultCharset, sb)
+			restoreCtx := format.NewRestoreCtx(constant.DBPackRestoreFormat, sb)
 			if err := p.Stmt.OrderBy.Restore(restoreCtx); err != nil {
 				return errors.WithStack(err)
 			}
@@ -240,7 +240,7 @@ func (p *QueryOnMultiDBPlan) Execute(ctx context.Context, _ ...*ast.TableOptimiz
 }
 
 func generateSelect(table string, stmt *ast.SelectStmt, sb *strings.Builder, limit *Limit) error {
-	ctx := format.NewRestoreCtx(format.DefaultRestoreFlags|format.RestoreStringWithoutDefaultCharset, sb)
+	ctx := format.NewRestoreCtx(constant.DBPackRestoreFormat, sb)
 	ctx.WriteKeyWord(stmt.Kind.String())
 	ctx.WritePlain(" ")
 

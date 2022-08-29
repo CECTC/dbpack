@@ -53,7 +53,11 @@ func MysqlAppendInParamWithValue(values []interface{}) string {
 	for i, value := range values {
 		switch val := value.(type) {
 		case string:
-			sb.WriteString(fmt.Sprintf("'%s'", val))
+			if strings.HasPrefix(val, "'") {
+				sb.WriteString(fmt.Sprintf("%s", val))
+			} else {
+				sb.WriteString(fmt.Sprintf("'%s'", val))
+			}
 		case []byte:
 			sb.WriteString(fmt.Sprintf("'%s'", val))
 		default:

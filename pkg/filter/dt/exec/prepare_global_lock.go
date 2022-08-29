@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/driver"
 	"github.com/cectc/dbpack/pkg/dt"
 	"github.com/cectc/dbpack/pkg/dt/schema"
@@ -96,11 +97,11 @@ func (executor *prepareGlobalLockExecutor) GetTableMeta(ctx context.Context) (sc
 func (executor *prepareGlobalLockExecutor) GetTableName() string {
 	var sb strings.Builder
 	if executor.isUpdate {
-		if err := executor.updateStmt.TableRefs.TableRefs.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+		if err := executor.updateStmt.TableRefs.TableRefs.Restore(format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)); err != nil {
 			log.Panic(err)
 		}
 	} else {
-		if err := executor.deleteStmt.TableRefs.TableRefs.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+		if err := executor.deleteStmt.TableRefs.TableRefs.Restore(format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)); err != nil {
 			log.Panic(err)
 		}
 	}
@@ -148,11 +149,11 @@ func (executor *prepareGlobalLockExecutor) buildBeforeImageSql(tableMeta schema.
 func (executor *prepareGlobalLockExecutor) GetWhereCondition() string {
 	var sb strings.Builder
 	if executor.isUpdate {
-		if err := executor.updateStmt.Where.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+		if err := executor.updateStmt.Where.Restore(format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)); err != nil {
 			log.Panic(err)
 		}
 	} else {
-		if err := executor.deleteStmt.Where.Restore(format.NewRestoreCtx(format.DefaultRestoreFlags, &sb)); err != nil {
+		if err := executor.deleteStmt.Where.Restore(format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)); err != nil {
 			log.Panic(err)
 		}
 	}
