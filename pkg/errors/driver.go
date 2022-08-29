@@ -42,4 +42,6 @@ var (
 	// to trigger a resend.
 	// See https://github.com/go-sql-driver/mysql/pull/302
 	ErrBadConnNoWrite = errors.New("bad connection")
+
+	ErrUnexpectedRead = errors.New("unexpected read from socket")
 )
