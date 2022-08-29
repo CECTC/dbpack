@@ -27,6 +27,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
@@ -117,6 +118,9 @@ type Conn struct {
 	// currentEphemeralBuffer for tracking allocated temporary buffer for writes and reads respectively.
 	// It can be allocated from bufPool or heap and should be recycled in the same manner.
 	currentEphemeralBuffer *[]byte
+
+	ReadTimeout  time.Duration // I/O read timeout
+	WriteTimeout time.Duration // I/O write timeout
 }
 
 // NewConn is an internal method to create a Conn. Used by client and server
@@ -474,6 +478,17 @@ func (c *Conn) WritePacket(data []byte) error {
 	w, unget := c.getWriter()
 	defer unget()
 
+	if c.ReadTimeout != 0 {
+		err := c.conn.SetReadDeadline(time.Now().Add(c.ReadTimeout))
+		if err != nil {
+			return err
+		}
+	}
+	err := connCheck(c.conn)
+	if err != nil {
+		return err
+	}
+
 	for {
 		// Packet length is capped to MaxPacketSize.
 		packetLength := length
@@ -487,6 +502,13 @@ func (c *Conn) WritePacket(data []byte) error {
 		header[1] = byte(packetLength >> 8)
 		header[2] = byte(packetLength >> 16)
 		header[3] = c.sequence
+
+		if c.WriteTimeout > 0 {
+			if err := c.conn.SetWriteDeadline(time.Now().Add(c.WriteTimeout)); err != nil {
+				return err
+			}
+		}
+
 		if n, err := w.Write(header[:]); err != nil {
 			return errors.Wrapf(err, "Write(header) failed")
 		} else if n != 4 {
@@ -995,6 +1017,14 @@ func (c *Conn) SetUserName(userName string) {
 	c.userName = userName
 }
 
+func (c *Conn) SetReadTimeout(readTimeout time.Duration) {
+	c.ReadTimeout = readTimeout
+}
+
+func (c *Conn) SetWriteTimeout(writeTimeout time.Duration) {
+	c.WriteTimeout = writeTimeout
+}
+
 // RemoteAddr returns the underlying socket RemoteAddr().
 func (c *Conn) RemoteAddr() net.Addr {
 	return c.conn.RemoteAddr()
@@ -1033,4 +1063,38 @@ func (c *Conn) Close() {
 // Close() wasn't called, this will return false.
 func (c *Conn) IsClosed() bool {
 	return c.closed.Get()
+}
+
+func connCheck(conn net.Conn) error {
+	var sysErr error
+
+	sysConn, ok := conn.(syscall.Conn)
+	if !ok {
+		return nil
+	}
+	rawConn, err := sysConn.SyscallConn()
+	if err != nil {
+		return err
+	}
+
+	err = rawConn.Read(func(fd uintptr) bool {
+		var buf [1]byte
+		n, err := syscall.Read(int(fd), buf[:])
+		switch {
+		case n == 0 && err == nil:
+			sysErr = io.EOF
+		case n > 0:
+			sysErr = err2.ErrUnexpectedRead
+		case err == syscall.EAGAIN || err == syscall.EWOULDBLOCK:
+			sysErr = nil
+		default:
+			sysErr = err
+		}
+		return true
+	})
+	if err != nil {
+		return err
+	}
+
+	return sysErr
 }

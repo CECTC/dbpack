@@ -44,4 +44,5 @@ var (
 	ErrBadConnNoWrite = errors.New("bad connection")
 
 	ErrTransactionClosed = errors.New("transaction closed")
+	ErrUnexpectedRead = errors.New("unexpected read from socket")
 )
