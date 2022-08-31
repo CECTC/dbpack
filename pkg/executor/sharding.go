@@ -129,7 +129,11 @@ func convertShardingAlgorithmsAndTopologies(logicTables []*config.LogicTable) (
 			return nil, nil, err
 		}
 		topos[table.TableName] = topology
-		alg := cond.NewNumberMod(table.ShardingRule.Column, table.AllowFullScan, topology)
+		alg, err := cond.NewShardingAlgorithm(table.ShardingRule.ShardingAlgorithm,
+			table.ShardingRule.Column, table.AllowFullScan, topology, table.ShardingRule.Config)
+		if err != nil {
+			return nil, nil, err
+		}
 		algs[table.TableName] = alg
 	}
 	return algs, topos, nil
