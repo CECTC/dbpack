@@ -86,6 +86,7 @@ func (p *QueryOnSingleDBPlan) Execute(ctx context.Context, hints ...*ast.TableOp
 	var (
 		sb   strings.Builder
 		args []interface{}
+		tx   proto.Tx
 		err  error
 	)
 	p.castLimit()
@@ -94,6 +95,23 @@ func (p *QueryOnSingleDBPlan) Execute(ctx context.Context, hints ...*ast.TableOp
 	}
 	sql := sb.String()
 	log.Debugf("query on single db, db name: %s, sql: %s", p.Database, sql)
+
+	if complexTx := proto.ExtractDBGroupTx(ctx); complexTx != nil {
+		tx, err = complexTx.Begin(ctx, p.Executor)
+		if err != nil {
+			return nil, 0, errors.WithStack(err)
+		}
+		commandType := proto.CommandType(ctx)
+		switch commandType {
+		case constant.ComQuery:
+			return tx.Query(ctx, sql)
+		case constant.ComStmtExecute:
+			return tx.ExecuteSql(ctx, sql, args...)
+		default:
+			return nil, 0, nil
+		}
+	}
+
 	commandType := proto.CommandType(ctx)
 	switch commandType {
 	case constant.ComQuery:

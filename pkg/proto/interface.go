@@ -192,6 +192,14 @@ type (
 		PrepareExecuteStmt(ctx context.Context, stmt *Stmt) (Result, uint16, error)
 	}
 
+	DBGroupTx interface {
+		Begin(ctx context.Context, executor DBGroupExecutor) (Tx, error)
+		Query(ctx context.Context, query string) (Result, uint16, error)
+		Execute(ctx context.Context, stmt ast.StmtNode, args ...interface{}) (Result, uint16, error)
+		Commit(ctx context.Context) (result Result, err error)
+		Rollback(ctx context.Context) (result Result, err error)
+	}
+
 	// Plan represents a plan for query/execute command.
 	Plan interface {
 		// Execute executes the current Plan.

@@ -139,7 +139,7 @@ func (tx *Tx) Commit(ctx context.Context) (result proto.Result, err error) {
 	defer span.End()
 
 	if tx.closed.Load() {
-		return nil, nil
+		return nil, err2.ErrTransactionClosed
 	}
 	if tx.db == nil || tx.db.IsClosed() {
 		return nil, err2.ErrInvalidConn
@@ -156,7 +156,7 @@ func (tx *Tx) Rollback(ctx context.Context, stmt *ast.RollbackStmt) (result prot
 	defer span.End()
 
 	if tx.closed.Load() {
-		return nil, nil
+		return nil, err2.ErrTransactionClosed
 	}
 	if tx.db == nil || tx.db.IsClosed() {
 		return nil, err2.ErrInvalidConn
