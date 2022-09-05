@@ -239,6 +239,43 @@ func (suite *_ShardingSuite) TestShowCreateDatabase() {
 	}
 }
 
+func (suite *_ShardingSuite) TestShowTableStatus() {
+	rows, err := suite.db.Query("SHOW TABLE STATUS LIKE 'city'")
+	if suite.NoErrorf(err, "show table status error: %v", err) {
+		var (
+			name, engine, version, rowFormat, rowNum, avgRowLength, dataLength, maxDataLength, indexLength, dataFree,
+			autoIncrement, createTime, updateTime, checkTime, collation, checkSum, createOption, comment interface{}
+		)
+		for rows.Next() {
+			err := rows.Scan(&name, &engine, &version, &rowFormat, &rowNum, &avgRowLength, &dataLength, &maxDataLength,
+				&indexLength, &dataFree, &autoIncrement, &createTime, &updateTime, &checkTime, &collation, &checkSum,
+				&createOption, &comment)
+			suite.NoError(err)
+			suite.T().Log("table city:")
+			suite.T().Logf("%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s",
+				name, engine, version, rowFormat, rowNum, avgRowLength, dataLength, maxDataLength, indexLength, dataFree,
+				autoIncrement, createTime, updateTime, checkTime, collation, checkSum, createOption, comment)
+		}
+	}
+	rows, err = suite.db.Query("SHOW TABLE STATUS LIKE 'countrylanguage'")
+	if suite.NoErrorf(err, "show table status error: %v", err) {
+		var (
+			name, engine, version, rowFormat, rowNum, avgRowLength, dataLength, maxDataLength, indexLength, dataFree,
+			autoIncrement, createTime, updateTime, checkTime, collation, checkSum, createOption, comment interface{}
+		)
+		for rows.Next() {
+			err := rows.Scan(&name, &engine, &version, &rowFormat, &rowNum, &avgRowLength, &dataLength, &maxDataLength,
+				&indexLength, &dataFree, &autoIncrement, &createTime, &updateTime, &checkTime, &collation, &checkSum,
+				&createOption, &comment)
+			suite.NoError(err)
+			suite.T().Log("table countrylanguage:")
+			suite.T().Logf("%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s	%s",
+				name, engine, version, rowFormat, rowNum, avgRowLength, dataLength, maxDataLength, indexLength, dataFree,
+				autoIncrement, createTime, updateTime, checkTime, collation, checkSum, createOption, comment)
+		}
+	}
+}
+
 func (suite *_ShardingSuite) TestDeleteCity() {
 	result, err := suite.db.Exec(deleteCity, 10, 20)
 	suite.Assert().Nil(err)

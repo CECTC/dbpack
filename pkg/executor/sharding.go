@@ -174,6 +174,7 @@ func (executor *ShardingExecutor) ExecuteFieldList(ctx context.Context, table, w
 }
 
 func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql string) (result proto.Result, warn uint16, err error) {
+	proto.WithVariable(ctx, constant.TransactionTimeout, executor.config.TransactionTimeout)
 	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.SHDComQuery)
 	defer span.End()
 
@@ -213,7 +214,15 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 			InsertId:     0,
 		}, 0, nil
 	case *ast.ShowStmt:
-		return executor.executors[0].Query(spanCtx, sql)
+		switch stmt.Tp {
+		case ast.ShowEngines, ast.ShowDatabases, ast.ShowCreateDatabase:
+			return executor.executors[0].Query(spanCtx, sql)
+		}
+		plan, err = executor.optimizer.Optimize(spanCtx, queryStmt)
+		if err != nil {
+			return nil, 0, err
+		}
+		return plan.Execute(spanCtx)
 	case *ast.SelectStmt:
 		if stmt.Fields != nil && len(stmt.Fields.Fields) > 0 {
 			if _, ok := stmt.Fields.Fields[0].Expr.(*ast.VariableExpr); ok {
@@ -224,20 +233,19 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 		if err != nil {
 			return nil, 0, err
 		}
-		proto.WithVariable(spanCtx, constant.TransactionTimeout, executor.config.TransactionTimeout)
 		return plan.Execute(spanCtx)
 	default:
 		plan, err = executor.optimizer.Optimize(spanCtx, queryStmt)
 		if err != nil {
 			return nil, 0, err
 		}
-		proto.WithVariable(spanCtx, constant.TransactionTimeout, executor.config.TransactionTimeout)
 		return plan.Execute(spanCtx)
 	}
 }
 
 func (executor *ShardingExecutor) ExecutorComStmtExecute(
 	ctx context.Context, stmt *proto.Stmt) (result proto.Result, warns uint16, err error) {
+	proto.WithVariable(ctx, constant.TransactionTimeout, executor.config.TransactionTimeout)
 	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.SHDComStmtExecute)
 	defer span.End()
 
@@ -269,7 +277,6 @@ func (executor *ShardingExecutor) ExecutorComStmtExecute(
 	if err != nil {
 		return nil, 0, err
 	}
-	proto.WithVariable(spanCtx, constant.TransactionTimeout, executor.config.TransactionTimeout)
 	return plan.Execute(spanCtx)
 }
 

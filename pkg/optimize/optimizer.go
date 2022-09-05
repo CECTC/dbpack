@@ -65,6 +65,11 @@ func (o Optimizer) Optimize(ctx context.Context, stmt ast.StmtNode, args ...inte
 		return o.optimizeDelete(ctx, t, args)
 	case *ast.UpdateStmt:
 		return o.optimizeUpdate(ctx, t, args)
+	case *ast.ShowStmt:
+		switch t.Tp {
+		case ast.ShowTableStatus:
+			return o.optimizeShowTableStatus(ctx, t, args)
+		}
 	}
 	sqlText := proto.SqlText(ctx)
 	return nil, errors.Errorf("unsupported statement type, sql: %s", sqlText)
