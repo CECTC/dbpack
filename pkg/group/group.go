@@ -81,6 +81,11 @@ func (group *DBGroup) Begin(ctx context.Context) (proto.Tx, proto.Result, error)
 	return dbs[0].Begin(ctx)
 }
 
+func (group *DBGroup) XAStart(ctx context.Context, sql string) (proto.Tx, proto.Result, error) {
+	dbs := group.getAvailableMasters()
+	return dbs[0].XAStart(ctx, sql)
+}
+
 func (group *DBGroup) Query(ctx context.Context, query string) (proto.Result, uint16, error) {
 	db := group.pick(ctx)
 	return db.Query(ctx, query)

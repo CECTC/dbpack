@@ -17,11 +17,13 @@
 package sdb
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql" // register mysql
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -56,6 +58,13 @@ func (suite *_CRUDSuite) SetupSuite() {
 	}
 
 	result, err := suite.db.Exec(insertEmployee, 100000, "1992-01-07", "scott", "lewis", "M", "2014-09-01")
+	if suite.NoErrorf(err, "insert row error: %v", err) {
+		affected, err := result.RowsAffected()
+		if suite.NoErrorf(err, "insert row error: %v", err) {
+			suite.Equal(int64(1), affected)
+		}
+	}
+	result, err = suite.db.Exec(insertEmployee, 100005, "1992-05-03", "jane", "lewis", "M", "2014-09-01")
 	if suite.NoErrorf(err, "insert row error: %v", err) {
 		affected, err := result.RowsAffected()
 		if suite.NoErrorf(err, "insert row error: %v", err) {
@@ -155,6 +164,27 @@ func (suite *_CRUDSuite) TestUpdateEncryption() {
 			suite.T().Logf("id: %d, dept name: %s", id, deptName)
 		}
 	}
+}
+
+func (suite *_CRUDSuite) TestXATransaction() {
+	ctx := context.Background()
+	conn, err := suite.db.Conn(ctx)
+	assert.Nil(suite.T(), err)
+	_, err = conn.ExecContext(ctx, "XA START 'abc'")
+	assert.Nil(suite.T(), err)
+	result, err := conn.ExecContext(ctx, deleteEmployee, 100005)
+	if suite.NoErrorf(err, "delete row error: %v", err) {
+		affected, err := result.RowsAffected()
+		if suite.NoErrorf(err, "delete row error: %v", err) {
+			suite.Equal(int64(1), affected)
+		}
+	}
+	_, err = conn.ExecContext(ctx, "XA END 'abc'")
+	assert.Nil(suite.T(), err)
+	_, err = conn.ExecContext(ctx, "XA PREPARE 'abc'")
+	assert.Nil(suite.T(), err)
+	_, err = conn.ExecContext(ctx, "XA COMMIT 'abc'")
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_CRUDSuite) TearDownSuite() {

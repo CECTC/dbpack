@@ -230,6 +230,24 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
 			return nil, 0, err
 		}
 		return result, 0, err
+	case *ast.XAStartStmt:
+		tx, result, err = executor.dbGroup.XAStart(spanCtx, sqlText)
+		if err != nil {
+			return nil, 0, err
+		}
+		executor.localTransactionMap.Store(connectionID, tx)
+		return result, 0, nil
+	case *ast.XAPrepareStmt:
+		txi, ok := executor.localTransactionMap.Load(connectionID)
+		if !ok {
+			return nil, 0, errors.New("there is no transaction")
+		}
+		defer executor.localTransactionMap.Delete(connectionID)
+		tx = txi.(proto.Tx)
+		if result, err = tx.XAPrepare(ctx, sqlText); err != nil {
+			return nil, 0, err
+		}
+		return result, 0, err
 	case *ast.InsertStmt, *ast.DeleteStmt, *ast.UpdateStmt:
 		txi, ok := executor.localTransactionMap.Load(connectionID)
 		if ok {
