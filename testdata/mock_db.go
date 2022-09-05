@@ -25,8 +25,9 @@ import (
 	reflect "reflect"
 	time "time"
 
-	proto "github.com/cectc/dbpack/pkg/proto"
 	gomock "github.com/golang/mock/gomock"
+
+	proto "github.com/cectc/dbpack/pkg/proto"
 )
 
 // MockDB is a mock of DB interface.
@@ -537,4 +538,20 @@ func (m *MockDB) WriteWeight() int {
 func (mr *MockDBMockRecorder) WriteWeight() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteWeight", reflect.TypeOf((*MockDB)(nil).WriteWeight))
+}
+
+// XAStart mocks base method.
+func (m *MockDB) XAStart(arg0 context.Context, arg1 string) (proto.Tx, proto.Result, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "XAStart", arg0, arg1)
+	ret0, _ := ret[0].(proto.Tx)
+	ret1, _ := ret[1].(proto.Result)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// XAStart indicates an expected call of XAStart.
+func (mr *MockDBMockRecorder) XAStart(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "XAStart", reflect.TypeOf((*MockDB)(nil).XAStart), arg0, arg1)
 }

@@ -285,6 +285,7 @@ import (
 	yearMonth         "YEAR_MONTH"
 	zerofill          "ZEROFILL"
 	natural           "NATURAL"
+	xa                "XA"
 
 	/* The following tokens belong to UnReservedKeyword. Notice: make sure these tokens are contained in UnReservedKeyword. */
 	account               "ACCOUNT"
@@ -928,6 +929,11 @@ import (
 	BindableStmt               "Statement that can be created binding on"
 	UpdateStmtNoWith           "Update statement without CTE clause"
 	HelpStmt                   "HELP statement"
+	XAStartStmt                "XA START statement"
+	XAEndStmt                  "XA END statement"
+	XAPrepareStmt              "XA PREPARE statement"
+	XACommitStmt               "XA COMMIT statement"
+	XARollbackStmt             "XA ROLLBACK statement"
 
 %type	<item>
 	AdminShowSlow                          "Admin Show Slow statement"
@@ -6103,6 +6109,7 @@ UnReservedKeyword:
 |	"CLUSTERED"
 |	"NONCLUSTERED"
 |	"PRESERVE"
+|   "XA"
 
 TiDBKeyword:
 	"ADMIN"
@@ -8100,6 +8107,62 @@ HelpStmt:
 	{
 		$$ = &ast.HelpStmt{Topic: $2}
 	}
+
+/**************************************XATransactionStmt***************************************
+ * See https://dev.mysql.com/doc/refman/5.7/en/xa-statements.html
+ * XA {START|BEGIN} xid [JOIN|RESUME]
+ *
+ * XA END xid [SUSPEND [FOR MIGRATE]]
+ *
+ * XA PREPARE xid
+ *
+ * XA COMMIT xid [ONE PHASE]
+ *
+ * XA ROLLBACK xid
+ *
+ * XA RECOVER [CONVERT XID]
+ *******************************************************************************************/
+XAStartStmt:
+    "XA" "START" StringLiteral
+    {
+        $$ = &ast.XAStartStmt{
+            XID: $3,
+        }
+    }
+|   "XA" "BEGIN" StringLiteral
+    {
+        $$ = &ast.XAStartStmt{
+            XID: $3,
+        }
+    }
+XAEndStmt:
+    "XA" "END" StringLiteral
+    {
+        $$ = &ast.XAEndStmt{
+            XID: $3,
+        }
+    }
+XAPrepareStmt:
+    "XA" "PREPARE" StringLiteral
+    {
+        $$ = &ast.XAPrepareStmt{
+            XID: $3,
+        }
+    }
+XACommitStmt:
+    "XA" "COMMIT" StringLiteral
+    {
+        $$ = &ast.XACommitStmt{
+            XID: $3,
+        }
+    }
+XARollbackStmt:
+    "XA" "ROLLBACK" StringLiteral
+    {
+        $$ = &ast.XARollbackStmt{
+            XID: $3,
+        }
+    }
 
 SelectStmtBasic:
 	"SELECT" SelectStmtOpts SelectStmtFieldList
@@ -11008,6 +11071,11 @@ Statement:
 |	ShutdownStmt
 |	RestartStmt
 |	HelpStmt
+|   XAStartStmt
+|   XAEndStmt
+|   XAPrepareStmt
+|   XACommitStmt
+|   XARollbackStmt
 
 TraceableStmt:
 	DeleteFromStmt

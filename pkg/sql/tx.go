@@ -139,7 +139,7 @@ func (tx *Tx) Commit(ctx context.Context) (result proto.Result, err error) {
 	defer span.End()
 
 	if tx.closed.Load() {
-		return nil, nil
+		return nil, err2.ErrTransactionClosed
 	}
 	if tx.db == nil || tx.db.IsClosed() {
 		return nil, err2.ErrInvalidConn
@@ -156,7 +156,7 @@ func (tx *Tx) Rollback(ctx context.Context, stmt *ast.RollbackStmt) (result prot
 	defer span.End()
 
 	if tx.closed.Load() {
-		return nil, nil
+		return nil, err2.ErrTransactionClosed
 	}
 	if tx.db == nil || tx.db.IsClosed() {
 		return nil, err2.ErrInvalidConn
@@ -168,6 +168,23 @@ func (tx *Tx) Rollback(ctx context.Context, stmt *ast.RollbackStmt) (result prot
 		tx.db.pool.Put(tx.conn)
 		tx.Close()
 	}
+	return
+}
+
+func (tx *Tx) XAPrepare(ctx context.Context, sql string) (result proto.Result, err error) {
+	_, span := tracing.GetTraceSpan(ctx, tracing.TxXAPrepare)
+	span.SetAttributes(attribute.KeyValue{Key: "db", Value: attribute.StringValue(tx.db.name)})
+	defer span.End()
+
+	if tx.closed.Load() {
+		return nil, nil
+	}
+	if tx.db == nil || tx.db.IsClosed() {
+		return nil, err2.ErrInvalidConn
+	}
+	result, err = tx.conn.Execute(ctx, sql, false)
+	tx.db.pool.Put(tx.conn)
+	tx.Close()
 	return
 }
 

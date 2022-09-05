@@ -38,6 +38,7 @@ type (
 	keyVariableMap  struct{}
 	keySqlText      struct{}
 	keyRemoteAddr   struct{}
+	keyComplexTx    struct{}
 )
 
 type cFlag uint8
@@ -196,6 +197,20 @@ func RemoteAddr(ctx context.Context) string {
 		return remoteAddr
 	}
 	return ""
+}
+
+// WithDBGroupTx .
+func WithDBGroupTx(ctx context.Context, tx DBGroupTx) context.Context {
+	return context.WithValue(ctx, keyComplexTx{}, tx)
+}
+
+// ExtractDBGroupTx .
+func ExtractDBGroupTx(ctx context.Context) DBGroupTx {
+	complexTx, ok := ctx.Value(keyComplexTx{}).(DBGroupTx)
+	if ok {
+		return complexTx
+	}
+	return nil
 }
 
 func hasFlag(ctx context.Context, flag cFlag) bool {

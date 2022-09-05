@@ -46,15 +46,25 @@ type DeletePlan struct {
 func (p *DeletePlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
 	var (
 		sb                     strings.Builder
+		inTransaction          bool
 		tx                     proto.Tx
 		result                 proto.Result
 		affectedRows, affected uint64
 		warnings, warns        uint16
 		err                    error
 	)
-	tx, _, err = p.Executor.Begin(ctx)
-	if err != nil {
-		return nil, 0, errors.WithStack(err)
+	if complexTx := proto.ExtractDBGroupTx(ctx); complexTx != nil {
+		inTransaction = true
+		tx, err = complexTx.Begin(ctx, p.Executor)
+		if err != nil {
+			return nil, 0, errors.WithStack(err)
+		}
+	}
+	if !inTransaction {
+		tx, _, err = p.Executor.Begin(ctx)
+		if err != nil {
+			return nil, 0, errors.WithStack(err)
+		}
 	}
 	for _, table := range p.Tables {
 		sb.Reset()
@@ -93,9 +103,11 @@ func (p *DeletePlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHi
 		affectedRows += affected
 		warnings += warns
 	}
-	_, err = tx.Commit(ctx)
-	if err != nil {
-		return nil, 0, err
+	if !inTransaction {
+		_, err = tx.Commit(ctx)
+		if err != nil {
+			return nil, 0, err
+		}
 	}
 	mysqlResult := result.(*mysql.Result)
 	mysqlResult.AffectedRows = affectedRows
@@ -159,36 +171,42 @@ type MultiDeletePlan struct {
 
 func (p *MultiDeletePlan) Execute(ctx context.Context, _ ...*ast.TableOptimizerHint) (result proto.Result, warns uint16, err error) {
 	var (
-		affectedRows uint64
-		warnings     uint16
-		affected     uint64
-		hints        []*ast.TableOptimizerHint
+		affectedRows  uint64
+		warnings      uint16
+		affected      uint64
+		inTransaction bool
+		hints         []*ast.TableOptimizerHint
 	)
-	if has, _ := misc.HasXIDHint(p.Stmt.TableHints); !has {
-		tableName := p.Stmt.TableRefs.TableRefs.Left.(*ast.TableSource).Source.(*ast.TableName).Name.String()
-		transactionManager := dt.GetTransactionManager(p.AppID)
-		timeoutVariable := proto.Variable(ctx, constant.TransactionTimeout)
-		timeout, ok := timeoutVariable.(int32)
-		if !ok {
-			return nil, 0, errors.New("transaction timeout must be of type int32")
-		}
-		var xid string
-		xid, err = transactionManager.Begin(ctx, fmt.Sprintf("DELETE_%s", tableName), timeout)
-		if err != nil {
-			return nil, 0, err
-		}
-		hints = append(hints, misc.NewXIDHint(xid))
-		defer func() {
-			if err != nil {
-				if _, rollbackErr := transactionManager.Rollback(ctx, xid); rollbackErr != nil {
-					log.Error(err)
-				}
-			} else {
-				if _, commitErr := transactionManager.Commit(ctx, xid); commitErr != nil {
-					log.Error(err)
-				}
+	if complexTx := proto.ExtractDBGroupTx(ctx); complexTx != nil {
+		inTransaction = true
+	}
+	if !inTransaction {
+		if has, _ := misc.HasXIDHint(p.Stmt.TableHints); !has {
+			tableName := p.Stmt.TableRefs.TableRefs.Left.(*ast.TableSource).Source.(*ast.TableName).Name.String()
+			transactionManager := dt.GetTransactionManager(p.AppID)
+			timeoutVariable := proto.Variable(ctx, constant.TransactionTimeout)
+			timeout, ok := timeoutVariable.(int32)
+			if !ok {
+				return nil, 0, errors.New("transaction timeout must be of type int32")
 			}
-		}()
+			var xid string
+			xid, err = transactionManager.Begin(ctx, fmt.Sprintf("DELETE_%s", tableName), timeout)
+			if err != nil {
+				return nil, 0, err
+			}
+			hints = append(hints, misc.NewXIDHint(xid))
+			defer func() {
+				if err != nil {
+					if _, rollbackErr := transactionManager.Rollback(ctx, xid); rollbackErr != nil {
+						log.Error(err)
+					}
+				} else {
+					if _, commitErr := transactionManager.Commit(ctx, xid); commitErr != nil {
+						log.Error(err)
+					}
+				}
+			}()
+		}
 	}
 
 	for _, pl := range p.Plans {

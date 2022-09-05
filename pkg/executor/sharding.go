@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
 
@@ -42,10 +43,11 @@ type ShardingExecutor struct {
 	PreFilters  []proto.DBPreFilter
 	PostFilters []proto.DBPostFilter
 
-	config              *config.ShardingConfig
-	executors           []proto.DBGroupExecutor
-	optimizer           proto.Optimizer
-	localTransactionMap map[uint32]proto.Tx
+	config    *config.ShardingConfig
+	executors []proto.DBGroupExecutor
+	optimizer proto.Optimizer
+	// map[uint32]proto.DBGroupTx
+	localTransactionMap *sync.Map
 }
 
 func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
@@ -94,7 +96,7 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 		executors:   executorSlice,
 		optimizer: optimize.NewOptimizer(conf.AppID,
 			globalTables, executorSlice, executorMap, algorithms, topologies),
-		localTransactionMap: make(map[uint32]proto.Tx, 0),
+		localTransactionMap: &sync.Map{},
 	}
 
 	for i := 0; i < len(conf.Filters); i++ {
@@ -153,7 +155,7 @@ func (executor *ShardingExecutor) ProcessDistributedTransaction() bool {
 
 func (executor *ShardingExecutor) InLocalTransaction(ctx context.Context) bool {
 	connectionID := proto.ConnectionID(ctx)
-	_, ok := executor.localTransactionMap[connectionID]
+	_, ok := executor.localTransactionMap.Load(connectionID)
 	return ok
 }
 
@@ -194,6 +196,7 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 	var plan proto.Plan
 
 	log.Debugf("query: %s", sql)
+	connectionID := proto.ConnectionID(spanCtx)
 	queryStmt := proto.QueryStmt(spanCtx)
 	if queryStmt == nil {
 		return nil, 0, errors.New("query stmt should not be nil")
@@ -201,14 +204,18 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 
 	switch stmt := queryStmt.(type) {
 	case *ast.SetStmt:
-		for _, db := range executor.executors {
-			go func(dbGroup proto.DBGroupExecutor) {
-				if _, _, err := dbGroup.QueryAll(spanCtx, sql); err != nil {
-					log.Error(err)
-				}
-			}(db)
+		if shouldStartTransaction(stmt) {
+			tx := group.NewComplexTx(executor.optimizer)
+			executor.localTransactionMap.Store(connectionID, tx)
+		} else {
+			for _, db := range executor.executors {
+				go func(dbGroup proto.DBGroupExecutor) {
+					if _, _, err := dbGroup.QueryAll(spanCtx, sql); err != nil {
+						log.Error(err)
+					}
+				}(db)
+			}
 		}
-
 		return &mysql.Result{
 			AffectedRows: 0,
 			InsertId:     0,
@@ -223,11 +230,47 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 			return nil, 0, err
 		}
 		return plan.Execute(spanCtx)
+	case *ast.BeginStmt:
+		tx := group.NewComplexTx(executor.optimizer)
+		executor.localTransactionMap.Store(connectionID, tx)
+		return &mysql.Result{
+			AffectedRows: 0,
+			InsertId:     0,
+		}, 0, nil
+	case *ast.CommitStmt:
+		txi, ok := executor.localTransactionMap.Load(connectionID)
+		if !ok {
+			return nil, 0, errors.New("there is no transaction")
+		}
+		defer executor.localTransactionMap.Delete(connectionID)
+		tx := txi.(proto.DBGroupTx)
+		// TODO add metrics
+		if result, err = tx.Commit(spanCtx); err != nil {
+			return nil, 0, err
+		}
+		return result, 0, err
+	case *ast.RollbackStmt:
+		txi, ok := executor.localTransactionMap.Load(connectionID)
+		if !ok {
+			return nil, 0, errors.New("there is no transaction")
+		}
+		defer executor.localTransactionMap.Delete(connectionID)
+		tx := txi.(proto.DBGroupTx)
+		// TODO add metrics
+		if result, err = tx.Rollback(spanCtx); err != nil {
+			return nil, 0, err
+		}
+		return result, 0, err
 	case *ast.SelectStmt:
 		if stmt.Fields != nil && len(stmt.Fields.Fields) > 0 {
 			if _, ok := stmt.Fields.Fields[0].Expr.(*ast.VariableExpr); ok {
 				return executor.executors[0].Query(spanCtx, sql)
 			}
+		}
+		txi, ok := executor.localTransactionMap.Load(connectionID)
+		if ok {
+			tx := txi.(proto.DBGroupTx)
+			return tx.Query(spanCtx, sql)
 		}
 		plan, err = executor.optimizer.Optimize(spanCtx, queryStmt)
 		if err != nil {
@@ -235,6 +278,11 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 		}
 		return plan.Execute(spanCtx)
 	default:
+		txi, ok := executor.localTransactionMap.Load(connectionID)
+		if ok {
+			tx := txi.(proto.DBGroupTx)
+			return tx.Query(spanCtx, sql)
+		}
 		plan, err = executor.optimizer.Optimize(spanCtx, queryStmt)
 		if err != nil {
 			return nil, 0, err
@@ -273,6 +321,13 @@ func (executor *ShardingExecutor) ExecutorComStmtExecute(
 		parameterID := fmt.Sprintf("v%d", i+1)
 		args = append(args, stmt.BindVars[parameterID])
 	}
+
+	txi, ok := executor.localTransactionMap.Load(connectionID)
+	if ok {
+		tx := txi.(proto.DBGroupTx)
+		return tx.Execute(spanCtx, stmt.StmtNode, args...)
+	}
+
 	plan, err = executor.optimizer.Optimize(spanCtx, stmt.StmtNode, args...)
 	if err != nil {
 		return nil, 0, err
@@ -282,14 +337,16 @@ func (executor *ShardingExecutor) ExecutorComStmtExecute(
 
 func (executor *ShardingExecutor) ConnectionClose(ctx context.Context) {
 	connectionID := proto.ConnectionID(ctx)
-	tx, ok := executor.localTransactionMap[connectionID]
+	txi, ok := executor.localTransactionMap.Load(connectionID)
 	if !ok {
 		return
 	}
 	// TODO add metrics
-	if _, err := tx.Rollback(ctx, nil); err != nil {
+	tx := txi.(proto.DBGroupTx)
+	if _, err := tx.Rollback(ctx); err != nil {
 		log.Error(err)
 	}
+	executor.localTransactionMap.Delete(connectionID)
 }
 
 func (executor *ShardingExecutor) doPreFilter(ctx context.Context) error {

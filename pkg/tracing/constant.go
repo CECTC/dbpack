@@ -65,15 +65,29 @@ const (
 	DBExecSQL               = "db_exec_sql"
 	DBExecStmt              = "db_exec_stmt"
 	DBExecFieldList         = "db_exec_field_list"
-	DBLocalTransactionBegin = "db_local_transaction_begin"
+	DBLocalTransactionBegin = "db_tx_begin"
+	DBXAStart               = "db_xa_start"
+
+	// group
+	GroupQuery            = "group_query"
+	GroupExecute          = "group_execute"
+	GroupTransactionBegin = "group_tx_begin"
 
 	// tx
 	TxQuery            = "tx_query"
 	TxExecSQL          = "tx_exec_sql"
 	TxExecStmt         = "tx_exec_stmt"
-	TxCommit           = "db_local_transaction_commit"
-	TxRollback         = "db_local_transaction_rollback"
-	TxReleaseSavePoint = "db_local_transaction_release_savepoint"
+	TxCommit           = "db_tx_commit"
+	TxRollback         = "db_tx_rollback"
+	TxReleaseSavePoint = "db_tx_release_savepoint"
+	TxXAPrepare        = "db_xa_prepare"
+
+	// group tx
+	GroupTxQuery    = "group_tx_query"
+	GroupTxExecSQL  = "group_tx_exec_sql"
+	GroupTxExecStmt = "group_tx_exec_stmt"
+	GroupTxCommit   = "group_tx_commit"
+	GroupTxRollback = "group_tx_rollback"
 
 	// conn
 	ConnQuery       = "conn_com_query"

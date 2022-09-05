@@ -23,8 +23,9 @@ package testdata
 import (
 	reflect "reflect"
 
-	proto "github.com/cectc/dbpack/pkg/proto"
 	gomock "github.com/golang/mock/gomock"
+
+	proto "github.com/cectc/dbpack/pkg/proto"
 )
 
 // MockDBManager is a mock of DBManager interface.

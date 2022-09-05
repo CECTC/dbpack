@@ -163,6 +163,7 @@ type (
 		ExecuteSql(ctx context.Context, sql string, args ...interface{}) (Result, uint16, error)
 		ExecuteSqlDirectly(sql string, args ...interface{}) (Result, uint16, error)
 		Begin(ctx context.Context) (Tx, Result, error)
+		XAStart(ctx context.Context, sql string) (Tx, Result, error)
 	}
 
 	Tx interface {
@@ -174,6 +175,7 @@ type (
 		Commit(ctx context.Context) (Result, error)
 		Rollback(ctx context.Context, stmt *ast.RollbackStmt) (Result, error)
 		ReleaseSavepoint(ctx context.Context, savepoint string) (result Result, err error)
+		XAPrepare(ctx context.Context, sql string) (Result, error)
 	}
 
 	DBManager interface {
@@ -190,6 +192,15 @@ type (
 		PrepareQuery(ctx context.Context, query string, args ...interface{}) (Result, uint16, error)
 		PrepareExecute(ctx context.Context, query string, args ...interface{}) (Result, uint16, error)
 		PrepareExecuteStmt(ctx context.Context, stmt *Stmt) (Result, uint16, error)
+		XAStart(ctx context.Context, sql string) (Tx, Result, error)
+	}
+
+	DBGroupTx interface {
+		Begin(ctx context.Context, executor DBGroupExecutor) (Tx, error)
+		Query(ctx context.Context, query string) (Result, uint16, error)
+		Execute(ctx context.Context, stmt ast.StmtNode, args ...interface{}) (Result, uint16, error)
+		Commit(ctx context.Context) (result Result, err error)
+		Rollback(ctx context.Context) (result Result, err error)
 	}
 
 	// Plan represents a plan for query/execute command.
