@@ -35,6 +35,9 @@ func RegisterRoutes() (http.Handler, error) {
 	// Add status router
 	registerStatusRouter(router)
 
+	// Add branch session router
+	registerBranchSessionsRouter(router)
+
 	return router, nil
 }
 

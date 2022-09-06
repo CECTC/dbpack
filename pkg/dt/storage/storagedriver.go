@@ -39,6 +39,8 @@ type Driver interface {
 	IsLockable(ctx context.Context, resourceID string, lockKey string) (bool, error)
 	IsLockableWithXID(ctx context.Context, resourceID string, lockKey string, xid string) (bool, error)
 	ReleaseLockKeys(ctx context.Context, resourceID string, lockKeys []string) (bool, error)
+	SetBranchSessionDead(ctx context.Context, branchSession *api.BranchSession) error
+	ListDeadBranchSession(ctx context.Context, applicationID string) ([]*api.BranchSession, error)
 	WatchGlobalSessions(ctx context.Context, applicationID string) Watcher
 	WatchBranchSessions(ctx context.Context, applicationID string) Watcher
 }

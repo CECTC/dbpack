@@ -42,6 +42,7 @@ type (
 		ReleaseLockKeys(ctx context.Context, resourceID string, lockKeys []string) (bool, error)
 		IsLockable(ctx context.Context, resourceID, lockKey string) (bool, error)
 		IsLockableWithXID(ctx context.Context, resourceID, lockKey, xid string) (bool, error)
+		ListDeadBranchSessions(ctx context.Context) ([]*api.BranchSession, error)
 		IsMaster() bool
 	}
 

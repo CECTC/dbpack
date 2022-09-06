@@ -173,6 +173,10 @@ func (manager *DistributedTransactionManager) IsLockableWithXID(ctx context.Cont
 	return manager.storageDriver.IsLockableWithXID(ctx, resourceID, lockKey, xid)
 }
 
+func (manager *DistributedTransactionManager) ListDeadBranchSessions(ctx context.Context) ([]*api.BranchSession, error) {
+	return manager.storageDriver.ListDeadBranchSession(ctx, manager.applicationID)
+}
+
 func (manager *DistributedTransactionManager) IsMaster() bool {
 	return manager.isMaster
 }
@@ -391,6 +395,9 @@ func (manager *DistributedTransactionManager) processBranchSessions() error {
 						return err
 					}
 				}
+				if err := manager.storageDriver.SetBranchSessionDead(context.Background(), bs); err != nil {
+					return err
+				}
 			} else {
 				manager.branchSessionQueue.Add(bs)
 			}
@@ -445,6 +452,9 @@ func (manager *DistributedTransactionManager) processNextBranchSession(ctx conte
 					log.Error(err)
 				}
 			}
+			if err := manager.storageDriver.SetBranchSessionDead(context.Background(), bs); err != nil {
+				log.Error(err)
+			}
 		} else {
 			status, err = manager.branchRollback(bs)
 			if err != nil {
@@ -463,7 +473,6 @@ func (manager *DistributedTransactionManager) processNextBranchSession(ctx conte
 		metrics.BranchTransactionCounter.WithLabelValues(manager.applicationID, bs.ResourceID, metrics.TransactionStatusActive).Desc()
 		metrics.BranchTransactionCounter.WithLabelValues(manager.applicationID, bs.ResourceID, transactionStatus).Inc()
 	}
-
 	return true
 }
 

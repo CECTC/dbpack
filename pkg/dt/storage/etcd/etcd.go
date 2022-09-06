@@ -44,6 +44,10 @@ const (
 	LockKeyFormat = "lk/%s/%s"
 	// BranchKeyFormat bs/${XID}/${BranchSessionID}
 	BranchKeyFormat = "bs/%s/%d"
+	// DeadBranchKeyFormat dead/${BranchID}
+	DeadBranchKeyFormat = "dead/%s"
+	// DeadBranchKeyPrefix dead/bs/${ApplicationID}
+	DeadBranchKeyPrefix = "dead/bs/%s"
 )
 
 type store struct {
@@ -522,6 +526,51 @@ func (s *store) ReleaseLockKeys(ctx context.Context, resourceID string, lockKeys
 		}
 	}
 	return true, nil
+}
+
+func (s *store) SetBranchSessionDead(ctx context.Context, branchSession *api.BranchSession) error {
+	data, err := branchSession.Marshal()
+	if err != nil {
+		return err
+	}
+	ops := make([]clientv3.Op, 0)
+	deadBranchKey := fmt.Sprintf(DeadBranchKeyFormat, branchSession.BranchID)
+	ops = append(ops, clientv3.OpPut(deadBranchKey, string(data)))
+	ops = append(ops, clientv3.OpDelete(branchSession.BranchID))
+
+	txn := s.client.Txn(ctx)
+	txn.Then(ops...)
+	txnResp, err := txn.Commit()
+	if err != nil {
+		return err
+	}
+	if !txnResp.Succeeded {
+		return errors.New("failed to set branch session dead")
+	}
+	return nil
+}
+
+func (s *store) ListDeadBranchSession(ctx context.Context, applicationID string) ([]*api.BranchSession, error) {
+	prefix := fmt.Sprintf(DeadBranchKeyPrefix, applicationID)
+	resp, err := s.client.Get(ctx, prefix, clientv3.WithSerializable(), clientv3.WithPrefix())
+	if err != nil {
+		return nil, err
+	}
+	s.initBranchSessionRevision = resp.Header.Revision
+	if len(resp.Kvs) == 0 {
+		return nil, nil
+	}
+	var result []*api.BranchSession
+	for i := len(resp.Kvs) - 1; i >= 0; i-- {
+		kv := resp.Kvs[i]
+		branchSession := &api.BranchSession{}
+		err = branchSession.Unmarshal(kv.Value)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, branchSession)
+	}
+	return result, nil
 }
 
 func notFound(key string) clientv3.Cmp {
