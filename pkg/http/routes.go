@@ -22,6 +22,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
+var applicationIDs = make([]string, 0)
+
 func RegisterRoutes() (http.Handler, error) {
 	router := mux.NewRouter().SkipClean(true).UseEncodedPath()
 	// Add healthcheck router
@@ -34,4 +36,8 @@ func RegisterRoutes() (http.Handler, error) {
 	registerStatusRouter(router)
 
 	return router, nil
+}
+
+func AppendApplicationID(applicationID string) {
+	applicationIDs = append(applicationIDs, applicationID)
 }

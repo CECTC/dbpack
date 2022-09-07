@@ -129,7 +129,6 @@ var (
 					}
 				}
 
-				dbpackHttp.Listeners = dbpackConf.Listeners
 				for _, listenerConf := range dbpackConf.Listeners {
 					switch listenerConf.ProtocolType {
 					case config.Mysql:
@@ -156,7 +155,6 @@ var (
 				}
 
 				if dbpackConf.DistributedTransaction != nil {
-					dbpackHttp.DistributedTransactionEnabled = true
 					dt.RegisterTransactionManager(dbpackConf.DistributedTransaction)
 				}
 			}
