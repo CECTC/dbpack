@@ -50,7 +50,7 @@ func (p *QueryDirectlyPlan) Execute(ctx context.Context, hints ...*ast.TableOpti
 		sql string
 		err error
 	)
-	restoreCtx := format.NewRestoreCtx(format.DefaultRestoreFlags|format.RestoreStringWithoutDefaultCharset, &sb)
+	restoreCtx := format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)
 	if err = p.Stmt.Restore(restoreCtx); err != nil {
 		return nil, 0, errors.WithStack(err)
 	}
