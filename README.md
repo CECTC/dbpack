@@ -48,7 +48,7 @@ using prometheus metrics, default metric server runs at :18888
 + ConnectionFilter: process the intercepted SQL on the connection.
 
 ## Stargazers
------------
+
 [![Stargazers repo roster for cectc/dbpack](https://reporoster.com/stars/cectc/dbpack)](https://github.com/cectc/dbpack)
 
 ## WeChat group
