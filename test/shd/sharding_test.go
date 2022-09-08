@@ -276,6 +276,37 @@ func (suite *_ShardingSuite) TestShowTableStatus() {
 	}
 }
 
+func (suite *_ShardingSuite) TestShowTableMeta() {
+	rows, err := suite.db.Query("SHOW COLUMNS FROM city")
+	if suite.NoErrorf(err, "show columns error: %v", err) {
+		var (
+			field, sqlType, null, key, defaultValue, extra interface{}
+		)
+		suite.T().Log("table city columns:")
+		for rows.Next() {
+			err := rows.Scan(&field, &sqlType, &null, &key, &defaultValue, &extra)
+			suite.NoError(err)
+			suite.T().Logf("%s	%s	%s	%s	%s	%s", field, sqlType, null, key, defaultValue, extra)
+		}
+	}
+	rows, err = suite.db.Query("SHOW INDEX FROM city")
+	if suite.NoErrorf(err, "show index error: %v", err) {
+		var (
+			table, non_unique, key_name, seq_in_index, column_name, collation, cardinality, sub_part, packed, null,
+			index_type, comment, index_comment, visible, expression interface{}
+		)
+		suite.T().Log("table city index:")
+		for rows.Next() {
+			err := rows.Scan(&table, &non_unique, &key_name, &seq_in_index, &column_name, &collation, &cardinality,
+				&sub_part, &packed, &null, &index_type, &comment, &index_comment, &visible, &expression)
+			suite.NoError(err)
+			suite.T().Logf("%s	%s	%s	%s	%s	%s %s	%s	%s	%s	%s	%s	%s	%s 	%s", table, non_unique,
+				key_name, seq_in_index, column_name, collation, cardinality, sub_part, packed, null, index_type,
+				comment, index_comment, visible, expression)
+		}
+	}
+}
+
 func (suite *_ShardingSuite) TestDeleteCity() {
 	result, err := suite.db.Exec(deleteCity, 10, 20)
 	suite.Assert().Nil(err)
