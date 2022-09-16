@@ -155,6 +155,7 @@ var (
 				}
 
 				if dbpackConf.DistributedTransaction != nil {
+					dbpackHttp.AppendApplicationID(dbpackConf.AppID)
 					dt.RegisterTransactionManager(dbpackConf.DistributedTransaction)
 				}
 			}
