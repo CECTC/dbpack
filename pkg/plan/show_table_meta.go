@@ -28,13 +28,13 @@ import (
 	"github.com/cectc/dbpack/third_party/parser/format"
 )
 
-type ShowTableStatusPlan struct {
+type ShowTableMetaPlan struct {
 	Stmt     *ast.ShowStmt
 	Args     []interface{}
 	Executor proto.DBGroupExecutor
 }
 
-func (p *ShowTableStatusPlan) Execute(ctx context.Context, _ ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
+func (p *ShowTableMetaPlan) Execute(ctx context.Context, _ ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
 	var (
 		sb  strings.Builder
 		sql string

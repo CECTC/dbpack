@@ -23,36 +23,27 @@ import (
 
 	"github.com/cectc/dbpack/pkg/plan"
 	"github.com/cectc/dbpack/pkg/proto"
-	"github.com/cectc/dbpack/pkg/topo"
 	"github.com/cectc/dbpack/third_party/parser/ast"
-	driver "github.com/cectc/dbpack/third_party/types/parser_driver"
 )
 
-func (o Optimizer) optimizeShowTableStatus(ctx context.Context, stmt *ast.ShowStmt, args []interface{}) (proto.Plan, error) {
-	var (
-		topology *topo.Topology
-		exists   bool
-	)
-
-	if stmt.Tp != ast.ShowTableStatus {
-		return nil, errors.New("statement must be show table status stmt")
+func (o Optimizer) optimizeShowTableMeta(ctx context.Context, stmt *ast.ShowStmt, args []interface{}) (proto.Plan, error) {
+	if stmt.Tp != ast.ShowColumns && stmt.Tp != ast.ShowIndex {
+		return nil, errors.New("statement must be show columns stmt or show index stmt")
 	}
 
-	pattern := stmt.Pattern.Pattern.(*driver.ValueExpr)
-	tableName := pattern.GetDatumString()
-	if topology, exists = o.topologies[tableName]; !exists {
+	executor := o.executors[0]
+	tableName := stmt.Table.Name.O
+	if topology, exists := o.topologies[tableName]; exists {
+		stmt.Table.Name.O = topology.DBs[executor.GroupName()][0]
 		return &plan.ShowTableMetaPlan{
 			Stmt:     stmt,
 			Args:     args,
-			Executor: o.executors[0],
-		}, nil
-	} else {
-		table := topology.DBs[o.executors[0].GroupName()][0]
-		pattern.SetValue(table)
-		return &plan.ShowTableMetaPlan{
-			Stmt:     stmt,
-			Args:     args,
-			Executor: o.executors[0],
+			Executor: executor,
 		}, nil
 	}
+	return &plan.ShowTableMetaPlan{
+		Stmt:     stmt,
+		Args:     args,
+		Executor: executor,
+	}, nil
 }
