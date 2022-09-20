@@ -35,13 +35,13 @@ func (o Optimizer) optimizeShowTableMeta(ctx context.Context, stmt *ast.ShowStmt
 	tableName := stmt.Table.Name.O
 	if topology, exists := o.topologies[tableName]; exists {
 		stmt.Table.Name.O = topology.DBs[executor.GroupName()][0]
-		return &plan.ShowTableMetaPlan{
+		return &plan.DirectlyQueryPlan{
 			Stmt:     stmt,
 			Args:     args,
 			Executor: executor,
 		}, nil
 	}
-	return &plan.ShowTableMetaPlan{
+	return &plan.DirectlyQueryPlan{
 		Stmt:     stmt,
 		Args:     args,
 		Executor: executor,

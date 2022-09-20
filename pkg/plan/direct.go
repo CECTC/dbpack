@@ -23,18 +23,19 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/cectc/dbpack/pkg/constant"
+	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 	"github.com/cectc/dbpack/third_party/parser/format"
 )
 
-type ShowTableMetaPlan struct {
-	Stmt     *ast.ShowStmt
+type DirectlyQueryPlan struct {
+	Stmt     ast.Node
 	Args     []interface{}
 	Executor proto.DBGroupExecutor
 }
 
-func (p *ShowTableMetaPlan) Execute(ctx context.Context, _ ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
+func (p *DirectlyQueryPlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
 	var (
 		sb  strings.Builder
 		sql string
@@ -45,6 +46,7 @@ func (p *ShowTableMetaPlan) Execute(ctx context.Context, _ ...*ast.TableOptimize
 		return nil, 0, errors.WithStack(err)
 	}
 	sql = sb.String()
+	log.Debugf("directly query, db name: %s, sql: %s", p.Executor.GroupName(), sql)
 	commandType := proto.CommandType(ctx)
 	switch commandType {
 	case constant.ComQuery:
@@ -54,4 +56,21 @@ func (p *ShowTableMetaPlan) Execute(ctx context.Context, _ ...*ast.TableOptimize
 	default:
 		return nil, 0, nil
 	}
+}
+
+type MultiDirectlyQueryPlan struct {
+	Stmt  ast.Node
+	Plans []*DirectlyQueryPlan
+}
+
+func (p *MultiDirectlyQueryPlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
+	var (
+		result proto.Result
+		warns  uint16
+		err    error
+	)
+	for _, plan := range p.Plans {
+		result, warns, err = plan.Execute(ctx, nil)
+	}
+	return result, warns, err
 }
