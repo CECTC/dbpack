@@ -32,7 +32,6 @@ import (
 	"github.com/cectc/dbpack/pkg/dt/metrics"
 	"github.com/cectc/dbpack/pkg/dt/storage"
 	"github.com/cectc/dbpack/pkg/dt/storage/etcd"
-	dbpackHttp "github.com/cectc/dbpack/pkg/http"
 	"github.com/cectc/dbpack/pkg/log"
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/misc/uuid"
@@ -73,7 +72,7 @@ func RegisterTransactionManager(conf *config.DistributedTransaction) {
 	}
 	go func() {
 		if driver.LeaderElection(manager.applicationID) {
-			dbpackHttp.IsMaster = true
+			manager.isMaster = true
 			if err := manager.processGlobalSessions(); err != nil {
 				log.Fatal(err)
 			}
@@ -93,6 +92,8 @@ func GetTransactionManager(appID string) proto.DistributedTransactionManager {
 }
 
 type DistributedTransactionManager struct {
+	isMaster bool
+
 	applicationID                    string
 	storageDriver                    storage.Driver
 	retryDeadThreshold               int64
@@ -170,6 +171,14 @@ func (manager *DistributedTransactionManager) IsLockable(ctx context.Context, re
 
 func (manager *DistributedTransactionManager) IsLockableWithXID(ctx context.Context, resourceID, lockKey, xid string) (bool, error) {
 	return manager.storageDriver.IsLockableWithXID(ctx, resourceID, lockKey, xid)
+}
+
+func (manager *DistributedTransactionManager) ListDeadBranchSessions(ctx context.Context) ([]*api.BranchSession, error) {
+	return manager.storageDriver.ListDeadBranchSession(ctx, manager.applicationID)
+}
+
+func (manager *DistributedTransactionManager) IsMaster() bool {
+	return manager.isMaster
 }
 
 func (manager *DistributedTransactionManager) branchCommit(bs *api.BranchSession) (api.BranchSession_BranchStatus, error) {
@@ -386,6 +395,9 @@ func (manager *DistributedTransactionManager) processBranchSessions() error {
 						return err
 					}
 				}
+				if err := manager.storageDriver.SetBranchSessionDead(context.Background(), bs); err != nil {
+					return err
+				}
 			} else {
 				manager.branchSessionQueue.Add(bs)
 			}
@@ -440,6 +452,9 @@ func (manager *DistributedTransactionManager) processNextBranchSession(ctx conte
 					log.Error(err)
 				}
 			}
+			if err := manager.storageDriver.SetBranchSessionDead(context.Background(), bs); err != nil {
+				log.Error(err)
+			}
 		} else {
 			status, err = manager.branchRollback(bs)
 			if err != nil {
@@ -458,7 +473,6 @@ func (manager *DistributedTransactionManager) processNextBranchSession(ctx conte
 		metrics.BranchTransactionCounter.WithLabelValues(manager.applicationID, bs.ResourceID, metrics.TransactionStatusActive).Desc()
 		metrics.BranchTransactionCounter.WithLabelValues(manager.applicationID, bs.ResourceID, transactionStatus).Inc()
 	}
-
 	return true
 }
 

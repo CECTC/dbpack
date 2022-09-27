@@ -26,16 +26,11 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/cectc/dbpack/pkg/config"
+	"github.com/cectc/dbpack/pkg/dt"
 )
 
 const (
 	statusPath = "/status"
-)
-
-var (
-	Listeners                     []*config.Listener
-	DistributedTransactionEnabled bool
-	IsMaster                      bool
 )
 
 type ListenerStatus struct {
@@ -44,10 +39,10 @@ type ListenerStatus struct {
 	Active        bool                 `json:"active"`
 }
 
-type Result struct {
-	ListenersStatus []ListenerStatus `json:"listeners"`
-	DTEnabled       bool             `json:"distributed_transaction_enabled"`
-	IsMaster        bool             `json:"is_master"`
+type ApplicationStatus struct {
+	ListenersStatuses []ListenerStatus `json:"listeners"`
+	DTEnabled         bool             `json:"distributed_transaction_enabled"`
+	IsMaster          bool             `json:"is_master"`
 }
 
 func registerStatusRouter(router *mux.Router) {
@@ -55,36 +50,45 @@ func registerStatusRouter(router *mux.Router) {
 }
 
 func statusHandler(w http.ResponseWriter, r *http.Request) {
-	listenersStatus := make([]ListenerStatus, len(Listeners))
+	result := make(map[string]*ApplicationStatus)
+	for _, applicationID := range applicationIDs {
+		listenersStatuses := make([]ListenerStatus, 0)
+		applicationConf := config.GetDBPackConfig(applicationID)
+		for _, listener := range applicationConf.Listeners {
+			active := false
+			lisAddr := fmt.Sprintf("%s:%d", listener.SocketAddress.Address, listener.SocketAddress.Port)
+			conn, err := net.DialTimeout("tcp", lisAddr, 5*time.Second)
+			if err == nil && conn != nil {
+				active = true
+				conn.Close()
+			}
 
-	for i, listener := range Listeners {
-		active := false
-		lisAddr := fmt.Sprintf("%s:%d", listener.SocketAddress.Address, listener.SocketAddress.Port)
-		conn, err := net.DialTimeout("tcp", lisAddr, 5*time.Second)
-		if err == nil && conn != nil {
-			active = true
-			conn.Close()
-		}
+			protocolType := "http"
+			if listener.ProtocolType == config.Mysql {
+				protocolType = "mysql"
+			}
 
-		protocolType := "http"
-		if listener.ProtocolType == config.Mysql {
-			protocolType = "mysql"
+			status := ListenerStatus{
+				ProtocolType:  protocolType,
+				SocketAddress: listener.SocketAddress,
+				Active:        active,
+			}
+			listenersStatuses = append(listenersStatuses, status)
 		}
-
-		status := ListenerStatus{
-			ProtocolType:  protocolType,
-			SocketAddress: listener.SocketAddress,
-			Active:        active,
+		applicationStatus := &ApplicationStatus{
+			ListenersStatuses: listenersStatuses,
+			DTEnabled:         false,
+			IsMaster:          false,
 		}
-		listenersStatus[i] = status
+		if applicationConf.DistributedTransaction != nil {
+			applicationStatus.DTEnabled = true
+			distributedTransactionManager := dt.GetTransactionManager(applicationID)
+			if distributedTransactionManager != nil {
+				applicationStatus.IsMaster = distributedTransactionManager.IsMaster()
+			}
+		}
+		result[applicationID] = applicationStatus
 	}
-
-	result := Result{ListenersStatus: listenersStatus}
-	if DistributedTransactionEnabled {
-		result.DTEnabled = true
-		result.IsMaster = IsMaster
-	}
-
 	b, err := json.Marshal(result)
 	if err != nil {
 		w.Write([]byte(err.Error()))

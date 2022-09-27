@@ -71,6 +71,8 @@ func (o Optimizer) Optimize(ctx context.Context, stmt ast.StmtNode, args ...inte
 			return o.optimizeShowTableStatus(ctx, t, args)
 		case ast.ShowTables:
 			return o.optimizeShowTables(ctx, t, args)
+		case ast.ShowColumns, ast.ShowIndex:
+			return o.optimizeShowTableMeta(ctx, t, args)
 		}
 	}
 	sqlText := proto.SqlText(ctx)
