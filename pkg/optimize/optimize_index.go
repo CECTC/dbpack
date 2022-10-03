@@ -44,7 +44,7 @@ func (o Optimizer) optimizeCreateIndex(ctx context.Context, stmt *ast.CreateInde
 	}
 
 	if topology, exists = o.topologies[tableName]; !exists {
-		return nil, errors.New("topology should not be nil")
+		return nil, errors.New(fmt.Sprintf("topology of %s should not be nil", tableName))
 	}
 
 	plans := &plan.MultiDirectlyQueryPlan{
