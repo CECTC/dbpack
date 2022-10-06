@@ -31,6 +31,10 @@ const (
 	topologyRegex = `^(\d+)-(\d+)$`
 )
 
+var (
+	topologyRegexp = regexp.MustCompile(topologyRegex)
+)
+
 type Topology struct {
 	DBName    string
 	TableName string
@@ -47,7 +51,6 @@ type Topology struct {
 func ParseTopology(dbName, tableName string, topology map[int]string) (*Topology, error) {
 	var (
 		dbLen           = len(topology)
-		topologyRegexp  = regexp.MustCompile(topologyRegex)
 		dbs             = make(map[string][]string, 0)
 		tables          = make(map[string]string, 0)
 		tableIndexMap   = make(map[int]string, 0)
