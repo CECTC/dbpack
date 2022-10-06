@@ -286,8 +286,8 @@ func (suite *_ShardingSuite) TestShowTables() {
 			err := rows.Scan(&table)
 			suite.NoError(err)
 			suite.T().Logf("%s", table)
-    }
-  }  
+		}
+	}
 }
 
 func (suite *_ShardingSuite) TestShowTableMeta() {
