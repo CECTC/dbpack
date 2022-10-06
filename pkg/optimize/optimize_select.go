@@ -18,6 +18,7 @@ package optimize
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strings"
 
@@ -54,7 +55,7 @@ func (o Optimizer) optimizeSelect(ctx context.Context, stmt *ast.SelectStmt, arg
 		return nil, errors.New("sharding algorithm should not be nil")
 	}
 	if topology, exists = o.topologies[tableName]; !exists {
-		return nil, errors.New("topology should not be nil")
+		return nil, errors.New(fmt.Sprintf("topology of %s should not be nil", tableName))
 	}
 
 	for db, tables := range topology.DBs {
