@@ -29,13 +29,13 @@ import (
 	"github.com/cectc/dbpack/third_party/parser/format"
 )
 
-type DirectlyQueryPlan struct {
+type DirectQueryPlan struct {
 	Stmt     ast.Node
 	Args     []interface{}
 	Executor proto.DBGroupExecutor
 }
 
-func (p *DirectlyQueryPlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
+func (p *DirectQueryPlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
 	var (
 		sb  strings.Builder
 		sql string
@@ -60,7 +60,7 @@ func (p *DirectlyQueryPlan) Execute(ctx context.Context, hints ...*ast.TableOpti
 
 type MultiDirectlyQueryPlan struct {
 	Stmt  ast.Node
-	Plans []*DirectlyQueryPlan
+	Plans []*DirectQueryPlan
 }
 
 func (p *MultiDirectlyQueryPlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {

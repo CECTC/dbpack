@@ -45,7 +45,7 @@ func (o Optimizer) optimizeSelect(ctx context.Context, stmt *ast.SelectStmt, arg
 	tableName := stmt.From.TableRefs.Left.(*ast.TableSource).Source.(*ast.TableName).Name.String()
 
 	if o.globalTables[strings.ToLower(tableName)] {
-		return &plan.DirectlyQueryPlan{
+		return &plan.DirectQueryPlan{
 			Stmt:     stmt,
 			Args:     args,
 			Executor: o.executors[0],

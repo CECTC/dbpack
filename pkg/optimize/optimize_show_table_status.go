@@ -41,14 +41,14 @@ func (o Optimizer) optimizeShowTableStatus(ctx context.Context, stmt *ast.ShowSt
 	pattern := stmt.Pattern.Pattern.(*driver.ValueExpr)
 	tableName := pattern.GetDatumString()
 	if topology, exists = o.topologies[tableName]; !exists {
-		return &plan.DirectlyQueryPlan{
+		return &plan.DirectQueryPlan{
 			Stmt:     stmt,
 			Executor: o.executors[0],
 		}, nil
 	} else {
 		table := topology.DBs[o.executors[0].GroupName()][0]
 		pattern.SetValue(table)
-		return &plan.DirectlyQueryPlan{
+		return &plan.DirectQueryPlan{
 			Stmt:     stmt,
 			Executor: o.executors[0],
 		}, nil

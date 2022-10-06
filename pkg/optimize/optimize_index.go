@@ -37,7 +37,7 @@ func (o Optimizer) optimizeCreateIndex(ctx context.Context, stmt *ast.CreateInde
 	tableName := stmt.Table.Name.String()
 
 	if o.globalTables[strings.ToLower(tableName)] {
-		return &plan.DirectlyQueryPlan{
+		return &plan.DirectQueryPlan{
 			Stmt:     stmt,
 			Args:     args,
 			Executor: o.executors[0],
@@ -50,14 +50,14 @@ func (o Optimizer) optimizeCreateIndex(ctx context.Context, stmt *ast.CreateInde
 
 	plans := &plan.MultiDirectlyQueryPlan{
 		Stmt:  stmt,
-		Plans: make([]*plan.DirectlyQueryPlan, 0),
+		Plans: make([]*plan.DirectQueryPlan, 0),
 	}
 	for db, tables := range topology.DBs {
 		for _, table := range tables {
 			cp := *stmt
 			newStmt := &cp
 			newStmt.Table.Name.O = table
-			directlyQueryPlan := &plan.DirectlyQueryPlan{
+			directlyQueryPlan := &plan.DirectQueryPlan{
 				Stmt:     newStmt,
 				Args:     args,
 				Executor: o.dbGroupExecutors[db],
@@ -76,7 +76,7 @@ func (o Optimizer) optimizeDropIndex(ctx context.Context, stmt *ast.DropIndexStm
 	tableName := stmt.Table.Name.String()
 
 	if o.globalTables[strings.ToLower(tableName)] {
-		return &plan.DirectlyQueryPlan{
+		return &plan.DirectQueryPlan{
 			Stmt:     stmt,
 			Args:     args,
 			Executor: o.executors[0],
@@ -89,14 +89,14 @@ func (o Optimizer) optimizeDropIndex(ctx context.Context, stmt *ast.DropIndexStm
 
 	plans := &plan.MultiDirectlyQueryPlan{
 		Stmt:  stmt,
-		Plans: make([]*plan.DirectlyQueryPlan, 0),
+		Plans: make([]*plan.DirectQueryPlan, 0),
 	}
 	for db, tables := range topology.DBs {
 		for _, table := range tables {
 			cp := *stmt
 			newStmt := &cp
 			newStmt.Table.Name.O = table
-			directlyQueryPlan := &plan.DirectlyQueryPlan{
+			directlyQueryPlan := &plan.DirectQueryPlan{
 				Stmt:     newStmt,
 				Args:     args,
 				Executor: o.dbGroupExecutors[db],
