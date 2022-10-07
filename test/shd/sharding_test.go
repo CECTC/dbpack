@@ -277,6 +277,20 @@ func (suite *_ShardingSuite) TestShowTableStatus() {
 	}
 }
 
+func (suite *_ShardingSuite) TestShowTables() {
+	rows, err := suite.db.Query("SHOW TABLES")
+	if suite.NoErrorf(err, "show tables error: %v", err) {
+		var (
+			table string
+		)
+		for rows.Next() {
+			err := rows.Scan(&table)
+			suite.NoError(err)
+			suite.T().Logf("%s", table)
+		}
+	}
+}
+
 func (suite *_ShardingSuite) TestShowTableMeta() {
 	rows, err := suite.db.Query("SHOW COLUMNS FROM city")
 	if suite.NoErrorf(err, "show columns error: %v", err) {
