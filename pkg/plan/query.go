@@ -38,34 +38,6 @@ import (
 
 const FuncColumns = "FuncColumns"
 
-type QueryDirectlyPlan struct {
-	Stmt     *ast.SelectStmt
-	Args     []interface{}
-	Executor proto.DBGroupExecutor
-}
-
-func (p *QueryDirectlyPlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHint) (proto.Result, uint16, error) {
-	var (
-		sb  strings.Builder
-		sql string
-		err error
-	)
-	restoreCtx := format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)
-	if err = p.Stmt.Restore(restoreCtx); err != nil {
-		return nil, 0, errors.WithStack(err)
-	}
-	sql = sb.String()
-	commandType := proto.CommandType(ctx)
-	switch commandType {
-	case constant.ComQuery:
-		return p.Executor.Query(ctx, sql)
-	case constant.ComStmtExecute:
-		return p.Executor.PrepareQuery(ctx, sql, p.Args...)
-	default:
-		return nil, 0, nil
-	}
-}
-
 type QueryOnSingleDBPlan struct {
 	Database string
 	Tables   []string

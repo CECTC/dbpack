@@ -22,6 +22,7 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql" // register mysql
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -305,6 +306,13 @@ func (suite *_ShardingSuite) TestShowTableMeta() {
 				comment, index_comment, visible, expression)
 		}
 	}
+}
+
+func (suite *_ShardingSuite) TestCreateIndexAndDropIndex() {
+	_, err := suite.db.Query("CREATE INDEX idx_countrycode ON city(country_code)")
+	assert.Nil(suite.T(), err)
+	_, err = suite.db.Query("DROP INDEX idx_countrycode ON city")
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestDeleteCity() {

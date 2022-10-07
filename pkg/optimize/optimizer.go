@@ -72,6 +72,10 @@ func (o Optimizer) Optimize(ctx context.Context, stmt ast.StmtNode, args ...inte
 		case ast.ShowColumns, ast.ShowIndex:
 			return o.optimizeShowTableMeta(ctx, t, args)
 		}
+	case *ast.CreateIndexStmt:
+		return o.optimizeCreateIndex(ctx, t, args)
+	case *ast.DropIndexStmt:
+		return o.optimizeDropIndex(ctx, t, args)
 	}
 	sqlText := proto.SqlText(ctx)
 	return nil, errors.Errorf("unsupported statement type, sql: %s", sqlText)
