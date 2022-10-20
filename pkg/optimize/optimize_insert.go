@@ -67,19 +67,26 @@ func (o Optimizer) optimizeInsert(ctx context.Context, stmt *ast.InsertStmt, arg
 			break
 		}
 	}
+
 	pk := tableMeta.GetPKName()
 	index := findPkIndex(stmt, pk)
-	// todo if index == -1, automatically generate a primary key
+	var pkValue interface{}
+
 	if index == -1 {
-		return nil, errors.New("the inserted columns should contain the primary key")
+		pkValue, err = alg.NextID()
+		if err != nil {
+			return nil, fmt.Errorf("failed to automatically generate a primary key: %w", err)
+		}
+	} else {
+		pkValue = getPkValue(ctx, stmt, index, args)
 	}
-	pkValue := getPkValue(ctx, stmt, index, args)
 
 	cd := &cond.KeyCondition{
 		Key:   pk,
 		Op:    opcode.EQ,
 		Value: pkValue,
 	}
+
 	shards, err := cd.Shard(alg)
 	if err != nil {
 		return nil, errors.Wrap(err, "compute shards failed")

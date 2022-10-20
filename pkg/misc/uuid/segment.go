@@ -18,11 +18,14 @@ package uuid
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/cectc/dbpack/pkg/log"
 )
+
+const createTable = "CREATE TABLE IF NOT EXISTS `segment` (`max_id` int NOT NULL DEFAULT '0',`step` int NOT NULL DEFAULT '1000',`business_id` varchar(50) NOT NULL DEFAULT '',PRIMARY KEY (`business_id`));"
 
 type SegmentWorker struct {
 	db     *sql.DB
@@ -30,14 +33,28 @@ type SegmentWorker struct {
 	min    int64
 	max    int64
 	bizID  string
+	step   int64
 }
 
-func NewSegmentWorker(db *sql.DB, len int, biz string) (*SegmentWorker, error) {
-	return &SegmentWorker{
+// TODO: we should close the connection
+func NewSegmentWorker(dsn string, len int64, biz string) (*SegmentWorker, error) {
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := db.Exec(createTable); err != nil {
+		log.Errorf("failed to create segment table: %w", err)
+		return nil, err
+	}
+	worker := &SegmentWorker{
 		db:     db,
 		buffer: make(chan int64, len),
 		bizID:  biz,
-	}, nil
+		step:   len,
+	}
+	go worker.ProduceID()
+
+	return worker, nil
 }
 
 func (w *SegmentWorker) NextID() (int64, error) {
@@ -74,10 +91,7 @@ func (w *SegmentWorker) reload() error {
 }
 
 func (w *SegmentWorker) fetchSegmentFromDB() error {
-	var (
-		maxID int64
-		step  int64
-	)
+	var maxID int64
 
 	tx, err := w.db.Begin()
 	if err != nil {
@@ -85,13 +99,14 @@ func (w *SegmentWorker) fetchSegmentFromDB() error {
 	}
 	defer tx.Rollback()
 
-	row := tx.QueryRow("SELECT max_id,step FROM uid WHERE business_id = ? FOR UPDATE", w.bizID)
-	err = row.Scan(&maxID, &step)
-	if err != nil {
+	row := tx.QueryRow("SELECT max_id FROM segment WHERE business_id = ? FOR UPDATE", w.bizID)
+	err = row.Scan(&maxID)
+	// it will be no rows when query first time
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
 
-	_, err = tx.Exec("UPDATE uid SET max_id = ? WHERE business_id = ?", maxID+step, w.bizID)
+	_, err = tx.Exec("UPDATE segment SET max_id = ? WHERE business_id = ?", maxID+w.step, w.bizID)
 	if err != nil {
 		return err
 	}
@@ -101,6 +116,6 @@ func (w *SegmentWorker) fetchSegmentFromDB() error {
 	}
 
 	w.min = maxID
-	w.max = maxID + step
+	w.max = maxID + w.step
 	return nil
 }

@@ -19,6 +19,7 @@ package cond
 import (
 	"github.com/pkg/errors"
 
+	"github.com/cectc/dbpack/pkg/misc/uuid"
 	"github.com/cectc/dbpack/pkg/topo"
 )
 
@@ -28,15 +29,16 @@ type ShardingAlgorithm interface {
 	ShardRange(cond1, cond2 *KeyCondition) (Condition, error)
 	AllShards() Condition
 	AllowFullScan() bool
+	uuid.Generator
 }
 
 func NewShardingAlgorithm(algorithm, shardingKey string,
-	allowFullScan bool, topology *topo.Topology, config map[string]interface{}) (ShardingAlgorithm, error) {
+	allowFullScan bool, topology *topo.Topology, config map[string]interface{}, generator uuid.Generator) (ShardingAlgorithm, error) {
 	switch algorithm {
 	case "NumberMod":
-		return NewNumberMod(shardingKey, allowFullScan, topology), nil
+		return NewNumberMod(shardingKey, allowFullScan, topology, generator), nil
 	case "NumberRange":
-		return NewNumberRange(shardingKey, allowFullScan, topology, config)
+		return NewNumberRange(shardingKey, allowFullScan, topology, config, generator)
 	}
 	return nil, errors.Errorf("unsupported sharding algorithm: %s", algorithm)
 }

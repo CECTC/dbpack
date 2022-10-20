@@ -27,6 +27,7 @@ import (
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/dt/schema"
 	"github.com/cectc/dbpack/pkg/meta"
+	"github.com/cectc/dbpack/pkg/misc/uuid"
 	"github.com/cectc/dbpack/pkg/plan"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
@@ -412,11 +413,12 @@ func TestOptimizeInsert(t *testing.T) {
 
 func mockOptimizer() *Optimizer {
 	tp := mockTopology()
+	generator, _ := uuid.NewWorker(123)
 	topologies := map[string]*topo.Topology{
 		"student": tp,
 	}
 	algorithms := map[string]cond.ShardingAlgorithm{
-		"student": cond.NewNumberMod("id", false, tp),
+		"student": cond.NewNumberMod("id", false, tp, generator),
 	}
 
 	o := &Optimizer{

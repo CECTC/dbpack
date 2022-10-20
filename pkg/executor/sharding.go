@@ -31,6 +31,7 @@ import (
 	"github.com/cectc/dbpack/pkg/filter"
 	"github.com/cectc/dbpack/pkg/group"
 	"github.com/cectc/dbpack/pkg/log"
+	"github.com/cectc/dbpack/pkg/misc/uuid"
 	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/optimize"
 	"github.com/cectc/dbpack/pkg/proto"
@@ -122,8 +123,9 @@ func convertShardingAlgorithmsAndTopologies(logicTables []*config.LogicTable) (
 	map[string]*topo.Topology,
 	error) {
 	var (
-		algs  = make(map[string]cond.ShardingAlgorithm, 0)
-		topos = make(map[string]*topo.Topology, 0)
+		algs      = make(map[string]cond.ShardingAlgorithm, 0)
+		topos     = make(map[string]*topo.Topology, 0)
+		generator uuid.Generator
 	)
 	for _, table := range logicTables {
 		topology, err := topo.ParseTopology(table.DBName, table.TableName, table.Topology)
@@ -131,8 +133,22 @@ func convertShardingAlgorithmsAndTopologies(logicTables []*config.LogicTable) (
 			return nil, nil, err
 		}
 		topos[table.TableName] = topology
+
+		if table.ShardingKeyGenerator.Type == "segment" {
+			generator, err = uuid.NewSegmentWorker(table.ShardingKeyGenerator.DSN, 1000, table.TableName)
+			if err != nil {
+				log.Errorf("segment dsn %s, table name %s, err %s", table.ShardingKeyGenerator.DSN, table.TableName, err)
+				return nil, nil, err
+			}
+		} else {
+			generator, err = uuid.NewWorker(table.ShardingKeyGenerator.Worker)
+			if err != nil {
+				log.Errorf("init snowflake id generator, err %s", err)
+				return nil, nil, err
+			}
+		}
 		alg, err := cond.NewShardingAlgorithm(table.ShardingRule.ShardingAlgorithm,
-			table.ShardingRule.Column, table.AllowFullScan, topology, table.ShardingRule.Config)
+			table.ShardingRule.Column, table.AllowFullScan, topology, table.ShardingRule.Config, generator)
 		if err != nil {
 			return nil, nil, err
 		}
