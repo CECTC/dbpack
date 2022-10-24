@@ -37,9 +37,10 @@ const (
 	selectCityOrderByIDDescLimit2 = "select id, name, country_code, district, population from city where id between ? and ? order by id desc limit ?"
 	selectCount                   = "select count(1) from city where country_code = ?"
 
-	deleteCity = "delete from city where id between ? and ?"
-	insertCity = "INSERT INTO city (`id`, `name`, `country_code`, `district`, `population`) VALUES (20, '´s-Hertogenbosch', 'NLD', 'Noord-Brabant', 129170);"
-	updateCity = "update city set population = population + 5 where id between ? and ?"
+	deleteCity          = "delete from city where id between ? and ?"
+	insertCityWithoutID = "INSERT INTO city (`name`, `country_code`, `district`, `population`) VALUES ('´s-Hertogenbosch', 'NLD', 'Noord-Brabant', 129170);"
+	insertCity          = "INSERT INTO city (`id`, `name`, `country_code`, `district`, `population`) VALUES (20, '´s-Hertogenbosch', 'NLD', 'Noord-Brabant', 129170);"
+	updateCity          = "update city set population = population + 5 where id between ? and ?"
 )
 
 type _ShardingSuite struct {
@@ -344,6 +345,16 @@ func (suite *_ShardingSuite) TestInsertCity() {
 	affectedRows, err := result.RowsAffected()
 	suite.Assert().Nil(err)
 	suite.Assert().Equal(int64(1), affectedRows)
+}
+
+func (suite *_ShardingSuite) TestInsertCityWithoutID() {
+	for i := 0; i < 3; i++ {
+		result, err := suite.db.Exec(insertCityWithoutID)
+		suite.Assert().Nil(err)
+		affectedRows, err := result.RowsAffected()
+		suite.Assert().Nil(err)
+		suite.Assert().Equal(int64(1), affectedRows)
+	}
 }
 
 func (suite *_ShardingSuite) TestUpdateCity() {

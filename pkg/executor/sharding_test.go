@@ -59,6 +59,9 @@ var conf = `
               sharding_rule:
                 column: id
                 sharding_algorithm: NumberMod
+              sharding_key_generator:
+                type: snowflake
+                worker: 123
               topology:
                 "0": 0-4
                 "1": 5-9`

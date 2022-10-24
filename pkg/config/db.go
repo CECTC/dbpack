@@ -77,12 +77,19 @@ type (
 		Config            Parameters `yaml:"config,omitempty" json:"config,omitempty"`
 	}
 
+	ShardingKeyGenerator struct {
+		Type   string `yaml:"type" json:"type"`
+		Worker int    `yaml:"worker" json:"worker"`
+		DSN    string `yaml:"dsn" json:"dsn"`
+	}
+
 	LogicTable struct {
-		DBName        string         `yaml:"db_name" json:"db_name"`
-		TableName     string         `yaml:"table_name" json:"table_name"`
-		AllowFullScan bool           `yaml:"allow_full_scan" json:"allow_full_scan"`
-		ShardingRule  *ShardingRule  `yaml:"sharding_rule" json:"sharding_rule"`
-		Topology      map[int]string `yaml:"topology" json:"topology"`
+		DBName               string                `yaml:"db_name" json:"db_name"`
+		TableName            string                `yaml:"table_name" json:"table_name"`
+		AllowFullScan        bool                  `yaml:"allow_full_scan" json:"allow_full_scan"`
+		ShardingRule         *ShardingRule         `yaml:"sharding_rule" json:"sharding_rule"`
+		ShardingKeyGenerator *ShardingKeyGenerator `yaml:"sharding_key_generator" json:"sharding_key_generator"`
+		Topology             map[int]string        `yaml:"topology" json:"topology"`
 	}
 
 	ShardingConfig struct {

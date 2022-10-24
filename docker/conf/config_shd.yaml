@@ -47,6 +47,11 @@ app_config:
               sharding_rule:
                 column: id
                 sharding_algorithm: NumberMod
+              sharding_key_generator:
+                type: snowflake
+                worker: 123
+                # type: segment
+                # dsn: root:123456@tcp(dbpack-mysql1:3306)/world?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8
               topology:
                 "0": 0-4
                 "1": 5-9
