@@ -216,6 +216,10 @@ type (
 		// Optimize optimizes the sql with arguments then returns a Plan.
 		Optimize(ctx context.Context, stmt ast.StmtNode, args ...interface{}) (Plan, error)
 	}
+
+	SequenceGenerator interface {
+		NextID() (int64, error)
+	}
 )
 
 const (

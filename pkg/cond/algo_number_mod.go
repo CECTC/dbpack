@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/cectc/dbpack/pkg/misc/uuid"
+	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/topo"
 	"github.com/cectc/dbpack/third_party/parser/opcode"
 )
@@ -30,15 +30,15 @@ type NumberMod struct {
 	shardingKey   string
 	allowFullScan bool
 	topology      *topo.Topology
-	idGnerator    uuid.Generator
+	idGenerator   proto.SequenceGenerator
 }
 
-func NewNumberMod(shardingKey string, allowFullScan bool, topology *topo.Topology, generator uuid.Generator) *NumberMod {
+func NewNumberMod(shardingKey string, allowFullScan bool, topology *topo.Topology, generator proto.SequenceGenerator) *NumberMod {
 	return &NumberMod{
 		shardingKey:   shardingKey,
 		allowFullScan: allowFullScan,
 		topology:      topology,
-		idGnerator:    generator,
+		idGenerator:   generator,
 	}
 }
 
@@ -217,5 +217,5 @@ func (shard *NumberMod) AllowFullScan() bool {
 }
 
 func (shard *NumberMod) NextID() (int64, error) {
-	return shard.idGnerator.NextID()
+	return shard.idGenerator.NextID()
 }

@@ -42,6 +42,8 @@ type (
 
 	LoadBalanceAlgorithm int32
 
+	SequenceType byte
+
 	// DataSource ...
 	DataSource struct {
 		Name                     string        `yaml:"name" json:"name"`
@@ -77,19 +79,18 @@ type (
 		Config            Parameters `yaml:"config,omitempty" json:"config,omitempty"`
 	}
 
-	ShardingKeyGenerator struct {
-		Type   string `yaml:"type" json:"type"`
-		Worker int    `yaml:"worker" json:"worker"`
-		DSN    string `yaml:"dsn" json:"dsn"`
+	SequenceGenerator struct {
+		Type   SequenceType `yaml:"type" json:"type"`
+		Config Parameters   `yaml:"config,omitempty" json:"config,omitempty"`
 	}
 
 	LogicTable struct {
-		DBName               string                `yaml:"db_name" json:"db_name"`
-		TableName            string                `yaml:"table_name" json:"table_name"`
-		AllowFullScan        bool                  `yaml:"allow_full_scan" json:"allow_full_scan"`
-		ShardingRule         *ShardingRule         `yaml:"sharding_rule" json:"sharding_rule"`
-		ShardingKeyGenerator *ShardingKeyGenerator `yaml:"sharding_key_generator" json:"sharding_key_generator"`
-		Topology             map[int]string        `yaml:"topology" json:"topology"`
+		DBName            string             `yaml:"db_name" json:"db_name"`
+		TableName         string             `yaml:"table_name" json:"table_name"`
+		AllowFullScan     bool               `yaml:"allow_full_scan" json:"allow_full_scan"`
+		ShardingRule      *ShardingRule      `yaml:"sharding_rule" json:"sharding_rule"`
+		SequenceGenerator *SequenceGenerator `yaml:"sequence_generator" json:"sequence_generator"`
+		Topology          map[int]string     `yaml:"topology" json:"topology"`
 	}
 
 	ShardingConfig struct {
@@ -121,6 +122,11 @@ const (
 	Random LoadBalanceAlgorithm = iota
 	RoundRobin
 	RandomWeight
+)
+
+const (
+	Segment SequenceType = iota
+	Snowflake
 )
 
 func (r *DataSourceRole) UnmarshalText(text []byte) error {
@@ -248,4 +254,26 @@ func (dataSource *DataSourceRef) ParseWeight() (readWeight int, writeWeight int,
 		return 0, 0, errors.Errorf("cast write weight for datasource reference '%s' failed, write weight: %s", dataSource.Name, params[2])
 	}
 	return rw, ww, nil
+}
+
+func (t *SequenceType) UnmarshalText(text []byte) error {
+	if t == nil {
+		return errors.New("can't unmarshal a nil *SequenceType")
+	}
+	if !t.unmarshalText(bytes.ToLower(text)) {
+		return fmt.Errorf("unrecognized sequence type: %q", text)
+	}
+	return nil
+}
+
+func (t *SequenceType) unmarshalText(text []byte) bool {
+	switch string(text) {
+	case "segment":
+		*t = Segment
+	case "snowflake":
+		*t = Snowflake
+	default:
+		return false
+	}
+	return true
 }

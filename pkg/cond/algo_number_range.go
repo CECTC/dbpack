@@ -24,7 +24,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/cectc/dbpack/pkg/misc/uuid"
+	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/topo"
 	"github.com/cectc/dbpack/third_party/parser/opcode"
 )
@@ -47,14 +47,14 @@ type NumberRange struct {
 	allowFullScan bool
 	topology      *topo.Topology
 	ranges        map[int]*Range
-	idGnerator    uuid.Generator
+	idGenerator   proto.SequenceGenerator
 }
 
 func NewNumberRange(shardingKey string,
 	allowFullScan bool,
 	topology *topo.Topology,
 	config map[string]interface{},
-	generator uuid.Generator) (*NumberRange, error) {
+	generator proto.SequenceGenerator) (*NumberRange, error) {
 	ranges, err := parseNumberRangeConfig(config)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func NewNumberRange(shardingKey string,
 		allowFullScan: allowFullScan,
 		topology:      topology,
 		ranges:        ranges,
-		idGnerator:    generator,
+		idGenerator:   generator,
 	}, nil
 }
 
@@ -183,7 +183,7 @@ func (shard *NumberRange) AllowFullScan() bool {
 	return shard.allowFullScan
 }
 func (shard *NumberRange) NextID() (int64, error) {
-	return shard.idGnerator.NextID()
+	return shard.idGenerator.NextID()
 }
 
 func (shard *NumberRange) calculateRange(begin, end int64) Condition {

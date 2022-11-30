@@ -72,7 +72,7 @@ type _ShardingExecutorTestSuite struct {
 	executor    proto.Executor
 }
 
-func TestMergeResult(t *testing.T) {
+func TestShardingExecutor(t *testing.T) {
 	suite.Run(t, new(_ShardingExecutorTestSuite))
 }
 

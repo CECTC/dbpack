@@ -141,3 +141,38 @@ func (environment *ShardingTestEnvironment) RegisterDBResource(t *testing.T) {
 		return collector.NewBackendConnection
 	})
 }
+
+func NewSegmentEnvironment(t *testing.T, name string) (testcontainers.Container, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	scripts := path.Dir(fmt.Sprintf("%s/../../docker/scripts/", cwd))
+	source := path.Join(scripts, "segment.sql")
+	req := testcontainers.ContainerRequest{
+		Image: "mysql:8.0",
+		Env: map[string]string{
+			"MYSQL_ROOT_PASSWORD": rootPassword,
+		},
+		ExposedPorts: []string{"3306/tcp"},
+		Mounts: testcontainers.ContainerMounts{
+			{
+				Source:   testcontainers.GenericBindMountSource{HostPath: source},
+				Target:   "/docker-entrypoint-initdb.d/init.sql",
+				ReadOnly: false,
+			},
+		},
+		WaitingFor: wait.ForListeningPort("3306/tcp"),
+	}
+	ctx := context.Background()
+	t.Logf("Starting %s", name)
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	t.Logf("Started %s", name)
+	return container, err
+}

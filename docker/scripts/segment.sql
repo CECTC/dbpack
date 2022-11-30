@@ -1,0 +1,10 @@
+DROP DATABASE IF EXISTS segment;
+CREATE DATABASE IF NOT EXISTS segment;
+USE segment;
+
+CREATE TABLE IF NOT EXISTS `segment` (
+    `biz_id` VARCHAR ( 128 ) NOT NULL DEFAULT '',
+    `step` INT NOT NULL DEFAULT '1000',
+    `max_id` INT NOT NULL DEFAULT '0',
+    PRIMARY KEY ( `biz_id` )
+);
