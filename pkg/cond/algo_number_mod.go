@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/topo"
 	"github.com/cectc/dbpack/third_party/parser/opcode"
@@ -217,5 +219,8 @@ func (shard *NumberMod) AllowFullScan() bool {
 }
 
 func (shard *NumberMod) NextID() (int64, error) {
-	return shard.idGenerator.NextID()
+	if shard.idGenerator != nil {
+		return shard.idGenerator.NextID()
+	}
+	return 0, errors.New("there is no sequence generator")
 }

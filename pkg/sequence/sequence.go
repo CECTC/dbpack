@@ -22,7 +22,7 @@ func NewSequence(generator *config.SequenceGenerator, tableName string) (proto.S
 			return nil, errors.Wrapf(err, "table %s marshal segment config failed.", tableName)
 		}
 		if err = json.Unmarshal(content, &segmentConfig); err != nil {
-			log.Errorf("table %s unmarshal segment filter failed, %v", tableName, err)
+			log.Errorf("table %s unmarshal segment config failed, %v", tableName, err)
 			return nil, err
 		}
 		if segmentConfig.Step == 0 {
@@ -30,14 +30,19 @@ func NewSequence(generator *config.SequenceGenerator, tableName string) (proto.S
 		}
 		return NewSegmentWorker(segmentConfig.DSN, segmentConfig.Step, tableName)
 	case config.Snowflake:
-		workerID := generator.Config["worker_id"]
-		if workerID == nil {
-			return nil, errors.Errorf("table %s worker id is missing in snowflake config.", tableName)
+		var (
+			err             error
+			content         []byte
+			snowflakeConfig *SnowflakeConfig
+		)
+		if content, err = json.Marshal(generator.Config); err != nil {
+			return nil, errors.Wrapf(err, "table %s marshal snowflake config failed.", tableName)
 		}
-		if _, ok := workerID.(int64); !ok {
-			return nil, errors.Errorf("table %s worker id must be int64.", tableName)
+		if err = json.Unmarshal(content, &snowflakeConfig); err != nil {
+			log.Errorf("table %s unmarshal snowflake config failed, %v", tableName, err)
+			return nil, err
 		}
-		return NewWorker(workerID.(int64))
+		return NewWorker(snowflakeConfig.WorkerID)
 	}
 	return nil, errors.Errorf("table %s unsupported sequence %v", tableName, generator)
 }
@@ -45,4 +50,8 @@ func NewSequence(generator *config.SequenceGenerator, tableName string) (proto.S
 type SegmentConfig struct {
 	DSN  string `yaml:"dsn" json:"dsn"`
 	Step int64  `default:"1000" yaml:"step" json:"step"`
+}
+
+type SnowflakeConfig struct {
+	WorkerID int64 `json:"worker_id"`
 }

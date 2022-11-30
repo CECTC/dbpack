@@ -183,7 +183,10 @@ func (shard *NumberRange) AllowFullScan() bool {
 	return shard.allowFullScan
 }
 func (shard *NumberRange) NextID() (int64, error) {
-	return shard.idGenerator.NextID()
+	if shard.idGenerator != nil {
+		return shard.idGenerator.NextID()
+	}
+	return 0, errors.New("there is no sequence generator")
 }
 
 func (shard *NumberRange) calculateRange(begin, end int64) Condition {

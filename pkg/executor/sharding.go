@@ -134,9 +134,11 @@ func convertShardingAlgorithmsAndTopologies(logicTables []*config.LogicTable) (
 		}
 		topos[table.TableName] = topology
 
-		generator, err = sequence.NewSequence(table.SequenceGenerator, table.TableName)
-		if err != nil {
-			return nil, nil, err
+		if table.SequenceGenerator != nil {
+			generator, err = sequence.NewSequence(table.SequenceGenerator, table.TableName)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 
 		alg, err := cond.NewShardingAlgorithm(table.ShardingRule.ShardingAlgorithm,
