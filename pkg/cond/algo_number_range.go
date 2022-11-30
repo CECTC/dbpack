@@ -182,6 +182,7 @@ func (shard *NumberRange) AllShards() Condition {
 func (shard *NumberRange) AllowFullScan() bool {
 	return shard.allowFullScan
 }
+
 func (shard *NumberRange) NextID() (int64, error) {
 	if shard.idGenerator != nil {
 		return shard.idGenerator.NextID()
