@@ -28,6 +28,7 @@ const (
 	GlobalLockHint  = "GlobalLock"
 	UseDBHint       = "UseDB"
 	TraceParentHint = "TraceParent"
+	ShadowHint      = "Shadow"
 )
 
 func HasXIDHint(hints []*ast.TableOptimizerHint) (bool, string) {
@@ -70,6 +71,15 @@ func HasTraceParentHint(hints []*ast.TableOptimizerHint) (bool, string) {
 		}
 	}
 	return false, ""
+}
+
+func HasShadowHint(hints []*ast.TableOptimizerHint) bool {
+	for _, hint := range hints {
+		if strings.EqualFold(hint.HintName.String(), ShadowHint) {
+			return true
+		}
+	}
+	return false
 }
 
 func NewXIDHint(xid string) *ast.TableOptimizerHint {

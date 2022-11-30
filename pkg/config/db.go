@@ -79,6 +79,13 @@ type (
 		Config            Parameters `yaml:"config,omitempty" json:"config,omitempty"`
 	}
 
+	ShadowRule struct {
+		TableName         string `yaml:"table_name" json:"table_name"`
+		Column            string `yaml:"column" json:"column"`
+		Expr              string `yaml:"expr" json:"expr"`
+		ShadowTablePrefix string `yaml:"shadow_table_prefix" json:"shadow_table_prefix"`
+	}
+
 	SequenceGenerator struct {
 		Type   SequenceType `yaml:"type" json:"type"`
 		Config Parameters   `yaml:"config,omitempty" json:"config,omitempty"`
@@ -97,6 +104,7 @@ type (
 		DBGroups           []*DataSourceRefGroup `yaml:"db_groups" json:"db_groups"`
 		GlobalTables       []string              `yaml:"global_tables" json:"global_tables"`
 		LogicTables        []*LogicTable         `yaml:"logic_tables" json:"logic_tables"`
+		ShadowRules        []*ShadowRule         `yaml:"shadow_rules" json:"shadow_rules"`
 		TransactionTimeout int32                 `yaml:"transaction_timeout" json:"transaction_timeout"`
 	}
 )

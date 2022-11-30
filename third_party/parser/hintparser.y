@@ -99,6 +99,7 @@ import (
 	hintGlobalLock  "GLOBALLOCK"
 	hintUseDB       "USEDB"
 	hintTraceParent "TRACEPARENT"
+	hintShadow      "SHADOW"
 
 	/* Other keywords */
 	hintPartition       "PARTITION"
@@ -256,6 +257,12 @@ TableOptimizerHintOpt:
     	$$ = &ast.TableOptimizerHint{
             HintName: model.NewCIStr($1),
             HintData: model.NewCIStr($3),
+        }
+    }
+|   "SHADOW" '('')'
+    {
+    	$$ = &ast.TableOptimizerHint{
+            HintName: model.NewCIStr($1),
         }
     }
 |	NullaryHintName '(' QueryBlockOpt ')'
@@ -481,6 +488,7 @@ Identifier:
 |   "GLOBALLOCK"
 |   "USEDB"
 |   "TRACEPARENT"
+|   "SHADOW"
 /* other keywords */
 |	"DUPSWEEDOUT"
 |	"FIRSTMATCH"

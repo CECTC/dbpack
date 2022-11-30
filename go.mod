@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.7.0
+	github.com/antonmedv/expr v1.9.0
 	github.com/cespare/xxhash/v2 v2.1.2
 	github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548
 	github.com/cznic/parser v0.0.0-20181122101858-d773202d5b1f
@@ -18,6 +19,7 @@ require (
 	github.com/golang-module/carbon v1.6.6
 	github.com/golang/mock v1.6.0
 	github.com/google/go-cmp v0.5.8
+	github.com/huandu/go-clone v1.4.1
 	github.com/natefinch/lumberjack v2.0.0+incompatible
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pingcap/check v0.0.0-20211026125417-57bd13f7b5f0

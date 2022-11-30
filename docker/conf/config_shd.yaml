@@ -40,6 +40,7 @@ app_config:
           global_tables:
             - country
             - countrylanguage
+            - pt_city_0
           logic_tables:
             - db_name: world
               table_name: city
@@ -56,6 +57,11 @@ app_config:
               topology:
                 "0": 0-4
                 "1": 5-9
+          shadow_rules:
+            - table_name: city
+              column: country_code
+              expr: "%s == \"US\""
+              shadow_table_prefix: pt_
 
     data_source_cluster:
       - name: world_0

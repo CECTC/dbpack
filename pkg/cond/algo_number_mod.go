@@ -219,12 +219,8 @@ func (shard *NumberMod) AllowFullScan() bool {
 }
 
 func (shard *NumberMod) NextID() (int64, error) {
-<<<<<<< HEAD
 	if shard.idGenerator != nil {
 		return shard.idGenerator.NextID()
 	}
 	return 0, errors.New("there is no sequence generator")
-=======
-	return shard.idGenerator.NextID()
->>>>>>> 9b284b3 (refactor: optimize sequence generator)
 }

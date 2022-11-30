@@ -95,8 +95,8 @@ func NewShardingExecutor(conf *config.Executor) (proto.Executor, error) {
 		PostFilters: make([]proto.DBPostFilter, 0),
 		config:      shardingConfig,
 		executors:   executorSlice,
-		optimizer: optimize.NewOptimizer(conf.AppID,
-			globalTables, executorSlice, executorMap, algorithms, topologies),
+		optimizer: optimize.NewOptimizer(conf.AppID, globalTables, shardingConfig.ShadowRules,
+			executorSlice, executorMap, algorithms, topologies),
 		localTransactionMap: &sync.Map{},
 	}
 
