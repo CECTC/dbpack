@@ -59,9 +59,10 @@ var conf = `
               sharding_rule:
                 column: id
                 sharding_algorithm: NumberMod
-              sharding_key_generator:
+              sequence_generator:
                 type: snowflake
-                worker: 123
+                config:
+                  worker_id: 123
               topology:
                 "0": 0-4
                 "1": 5-9`
@@ -72,7 +73,7 @@ type _ShardingExecutorTestSuite struct {
 	executor    proto.Executor
 }
 
-func TestMergeResult(t *testing.T) {
+func TestShardingExecutor(t *testing.T) {
 	suite.Run(t, new(_ShardingExecutorTestSuite))
 }
 

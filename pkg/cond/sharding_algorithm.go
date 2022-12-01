@@ -19,7 +19,7 @@ package cond
 import (
 	"github.com/pkg/errors"
 
-	"github.com/cectc/dbpack/pkg/misc/uuid"
+	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/topo"
 )
 
@@ -29,11 +29,11 @@ type ShardingAlgorithm interface {
 	ShardRange(cond1, cond2 *KeyCondition) (Condition, error)
 	AllShards() Condition
 	AllowFullScan() bool
-	uuid.Generator
+	proto.SequenceGenerator
 }
 
 func NewShardingAlgorithm(algorithm, shardingKey string,
-	allowFullScan bool, topology *topo.Topology, config map[string]interface{}, generator uuid.Generator) (ShardingAlgorithm, error) {
+	allowFullScan bool, topology *topo.Topology, config map[string]interface{}, generator proto.SequenceGenerator) (ShardingAlgorithm, error) {
 	switch algorithm {
 	case "NumberMod":
 		return NewNumberMod(shardingKey, allowFullScan, topology, generator), nil

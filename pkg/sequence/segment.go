@@ -14,18 +14,29 @@
  * limitations under the License.
  */
 
-package uuid
+package sequence
 
 import (
+	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/cectc/dbpack/pkg/log"
 )
 
-const createTable = "CREATE TABLE IF NOT EXISTS `segment` (`max_id` int NOT NULL DEFAULT '0',`step` int NOT NULL DEFAULT '1000',`business_id` varchar(50) NOT NULL DEFAULT '',PRIMARY KEY (`business_id`));"
+const (
+	createSegment = "CREATE TABLE IF NOT EXISTS `segment` (" +
+		"    `biz_id` VARCHAR ( 128 ) NOT NULL DEFAULT ''," +
+		"    `step` INT NOT NULL DEFAULT '1000'," +
+		"    `max_id` INT NOT NULL DEFAULT '0'," +
+		"    PRIMARY KEY ( `business_id` )" +
+		");"
+	segmentExits  = "SELECT EXISTS (SELECT 1 FROM `segment` WHERE `biz_id` = ?)"
+	insertSegment = "INSERT INTO `segment`(`biz_id`, `step`, `max_id`) VALUES (?, ?, 1)"
+	selectSegment = "SELECT max_id FROM segment WHERE biz_id = ? FOR UPDATE"
+	updateSegment = "UPDATE segment SET max_id = ? WHERE biz_id = ? AND max_id = ?"
+)
 
 type SegmentWorker struct {
 	db     *sql.DB
@@ -36,15 +47,29 @@ type SegmentWorker struct {
 	step   int64
 }
 
-// TODO: we should close the connection
 func NewSegmentWorker(dsn string, len int64, biz string) (*SegmentWorker, error) {
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
 	}
-	if _, err := db.Exec(createTable); err != nil {
+	if _, err := db.Exec(createSegment); err != nil {
 		log.Errorf("failed to create segment table: %w", err)
 		return nil, err
+	}
+
+	var exists = false
+	row := db.QueryRowContext(context.Background(), segmentExits, biz)
+	if row.Err() == nil {
+		if err := row.Scan(&exists); err != nil {
+			log.Error(err)
+			return nil, err
+		}
+	}
+	if !exists {
+		if _, err := db.ExecContext(context.Background(), insertSegment, biz, len); err != nil {
+			log.Error(err)
+			return nil, err
+		}
 	}
 	worker := &SegmentWorker{
 		db:     db,
@@ -67,14 +92,19 @@ func (w *SegmentWorker) NextID() (int64, error) {
 }
 
 func (w *SegmentWorker) ProduceID() {
-	w.reload()
+	if err := w.reload(); err != nil {
+		log.Error(err)
+	}
 	for {
 		if w.min >= w.max {
-			w.reload()
+			if err := w.reload(); err != nil {
+				log.Error(err)
+				continue
+			}
 		}
 
-		w.min++
 		w.buffer <- w.min
+		w.min++
 	}
 }
 
@@ -90,28 +120,34 @@ func (w *SegmentWorker) reload() error {
 	}
 }
 
-func (w *SegmentWorker) fetchSegmentFromDB() error {
-	var maxID int64
+func (w *SegmentWorker) fetchSegmentFromDB() (err error) {
+	var (
+		maxID int64
+		tx    *sql.Tx
+	)
 
-	tx, err := w.db.Begin()
+	tx, err = w.db.Begin()
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err != nil {
+			if rollbackErr := tx.Rollback(); rollbackErr != nil {
+				log.Error(rollbackErr)
+			}
+		} else {
+			if commitErr := tx.Commit(); commitErr != nil {
+				log.Error(commitErr)
+			}
+		}
+	}()
 
-	row := tx.QueryRow("SELECT max_id FROM segment WHERE business_id = ? FOR UPDATE", w.bizID)
-	err = row.Scan(&maxID)
-	// it will be no rows when query first time
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	row := tx.QueryRow(selectSegment, w.bizID)
+	if err = row.Scan(&maxID); err != nil {
 		return err
 	}
 
-	_, err = tx.Exec("UPDATE segment SET max_id = ? WHERE business_id = ?", maxID+w.step, w.bizID)
-	if err != nil {
-		return err
-	}
-	err = tx.Commit()
-	if err != nil {
+	if _, err = tx.Exec(updateSegment, maxID+w.step, w.bizID, maxID); err != nil {
 		return err
 	}
 

@@ -27,10 +27,10 @@ import (
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/dt/schema"
 	"github.com/cectc/dbpack/pkg/meta"
-	"github.com/cectc/dbpack/pkg/misc/uuid"
 	"github.com/cectc/dbpack/pkg/plan"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/resource"
+	"github.com/cectc/dbpack/pkg/sequence"
 	"github.com/cectc/dbpack/pkg/topo"
 	"github.com/cectc/dbpack/pkg/visitor"
 	"github.com/cectc/dbpack/third_party/parser"
@@ -413,7 +413,7 @@ func TestOptimizeInsert(t *testing.T) {
 
 func mockOptimizer() *Optimizer {
 	tp := mockTopology()
-	generator, _ := uuid.NewWorker(123)
+	generator, _ := sequence.NewWorker(123)
 	topologies := map[string]*topo.Topology{
 		"student": tp,
 	}
