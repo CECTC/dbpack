@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/cectc/dbpack/pkg/cond"
+	"github.com/cectc/dbpack/pkg/config"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/topo"
 	"github.com/cectc/dbpack/third_party/parser/ast"
@@ -30,6 +31,7 @@ import (
 type Optimizer struct {
 	appid        string
 	globalTables map[string]bool
+	shadowRules  map[string]*config.ShadowRule
 	executors    []proto.DBGroupExecutor
 	// dbName -> DBGroupExecutor
 	dbGroupExecutors map[string]proto.DBGroupExecutor
@@ -41,13 +43,19 @@ type Optimizer struct {
 
 func NewOptimizer(appid string,
 	globalTables map[string]bool,
+	shadowRules []*config.ShadowRule,
 	executors []proto.DBGroupExecutor,
 	dbGroupExecutors map[string]proto.DBGroupExecutor,
 	algorithms map[string]cond.ShardingAlgorithm,
 	topologies map[string]*topo.Topology) proto.Optimizer {
+	shadowRuleMap := make(map[string]*config.ShadowRule)
+	for _, rule := range shadowRules {
+		shadowRuleMap[rule.TableName] = rule
+	}
 	return &Optimizer{
 		appid:            appid,
 		globalTables:     globalTables,
+		shadowRules:      shadowRuleMap,
 		executors:        executors,
 		dbGroupExecutors: dbGroupExecutors,
 		algorithms:       algorithms,

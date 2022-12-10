@@ -28,7 +28,17 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 DROP TABLE IF EXISTS `city_0`;
 CREATE TABLE `city_0` (
-                          `id` int NOT NULL DEFAULT '0',
+                          `id` bigint NOT NULL DEFAULT '0',
+                          `name` char(35) NOT NULL DEFAULT '',
+                          `country_code` char(3) NOT NULL DEFAULT '',
+                          `district` char(20) NOT NULL DEFAULT '',
+                          `population` int NOT NULL DEFAULT '0',
+                          PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+DROP TABLE IF EXISTS `pt_city_0`;
+CREATE TABLE `pt_city_0` (
+                          `id` bigint NOT NULL DEFAULT '0',
                           `name` char(35) NOT NULL DEFAULT '',
                           `country_code` char(3) NOT NULL DEFAULT '',
                           `district` char(20) NOT NULL DEFAULT '',
@@ -454,7 +464,7 @@ COMMIT;
 -- ----------------------------
 DROP TABLE IF EXISTS `city_1`;
 CREATE TABLE `city_1` (
-                          `id` int NOT NULL DEFAULT '0',
+                          `id` bigint NOT NULL DEFAULT '0',
                           `name` char(35) NOT NULL DEFAULT '',
                           `country_code` char(3) NOT NULL DEFAULT '',
                           `district` char(20) NOT NULL DEFAULT '',
@@ -881,7 +891,7 @@ COMMIT;
 -- ----------------------------
 DROP TABLE IF EXISTS `city_2`;
 CREATE TABLE `city_2` (
-                          `id` int NOT NULL DEFAULT '0',
+                          `id` bigint NOT NULL DEFAULT '0',
                           `name` char(35) NOT NULL DEFAULT '',
                           `country_code` char(3) NOT NULL DEFAULT '',
                           `district` char(20) NOT NULL DEFAULT '',
@@ -1308,7 +1318,7 @@ COMMIT;
 -- ----------------------------
 DROP TABLE IF EXISTS `city_3`;
 CREATE TABLE `city_3` (
-                          `id` int NOT NULL DEFAULT '0',
+                          `id` bigint NOT NULL DEFAULT '0',
                           `name` char(35) NOT NULL DEFAULT '',
                           `country_code` char(3) NOT NULL DEFAULT '',
                           `district` char(20) NOT NULL DEFAULT '',
@@ -1735,7 +1745,7 @@ COMMIT;
 -- ----------------------------
 DROP TABLE IF EXISTS `city_4`;
 CREATE TABLE `city_4` (
-                          `id` int NOT NULL DEFAULT '0',
+                          `id` bigint NOT NULL DEFAULT '0',
                           `name` char(35) NOT NULL DEFAULT '',
                           `country_code` char(3) NOT NULL DEFAULT '',
                           `district` char(20) NOT NULL DEFAULT '',

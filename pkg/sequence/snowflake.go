@@ -60,7 +60,7 @@ func NewWorker(id int64) (*SnowflakeWorker, error) {
 	timestamp := getNewestTimestamp()
 	timestampWithSequence := timestamp << sequenceBits
 	return &SnowflakeWorker{
-		workerID:             id,
+		workerID:             id << (timestampBits + sequenceBits),
 		timestampAndSequence: timestampWithSequence,
 	}, nil
 }

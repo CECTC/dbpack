@@ -903,6 +903,7 @@ var hintTokenMap = map[string]int{
 	"GLOBALLOCK":  hintGlobalLock,
 	"USEDB":       hintUseDB,
 	"TRACEPARENT": hintTraceParent,
+	"SHADOW":      hintShadow,
 
 	// TiDB hint aliases
 	"TIDB_HJ": hintHashJoin,

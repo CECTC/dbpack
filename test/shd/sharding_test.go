@@ -18,6 +18,7 @@ package rws
 
 import (
 	"database/sql"
+	"fmt"
 	"testing"
 	"time"
 
@@ -37,10 +38,13 @@ const (
 	selectCityOrderByIDDescLimit2 = "select id, name, country_code, district, population from city where id between ? and ? order by id desc limit ?"
 	selectCount                   = "select count(1) from city where country_code = ?"
 
-	deleteCity          = "delete from city where id between ? and ?"
-	insertCityWithoutID = "INSERT INTO city (`name`, `country_code`, `district`, `population`) VALUES ('´s-Hertogenbosch', 'NLD', 'Noord-Brabant', 129170);"
-	insertCity          = "INSERT INTO city (`id`, `name`, `country_code`, `district`, `population`) VALUES (20, '´s-Hertogenbosch', 'NLD', 'Noord-Brabant', 129170);"
-	updateCity          = "update city set population = population + 5 where id between ? and ?"
+	deleteCity           = "delete from city where id between ? and ?"
+	insertCityWithoutID  = "INSERT INTO city (`name`, `country_code`, `district`, `population`) VALUES ('´s-Hertogenbosch', 'NLD', 'Noord-Brabant', 129170);"
+	insertCity           = "INSERT INTO city (`id`, `name`, `country_code`, `district`, `population`) VALUES (20, '´s-Hertogenbosch', 'NLD', 'Noord-Brabant', 129170);"
+	updateCity           = "update city set population = population + 5 where id between ? and ?"
+	insertCityShadow     = "INSERT INTO city (`id`, `name`, `country_code`, `district`, `population`) VALUES  (?,?,?,?,?)"
+	insertCityHintShadow = "INSERT /*+ Shadow() */ INTO city (`id`, `name`, `country_code`, `district`, `population`) VALUES  (?,?,?,?,?)"
+	selectCityShadow     = "select id, name, country_code, district, population from pt_city_0"
 )
 
 type _ShardingSuite struct {
@@ -405,6 +409,52 @@ func (suite *_ShardingSuite) TestLocalTransaction_1_Rollback() {
 	err = tx.Rollback()
 	suite.Assert().Nil(err)
 	suite.TestSelectOrderBy()
+}
+
+func (suite *_ShardingSuite) TestExprShadow() {
+	for i := 0; i < 20; i++ {
+		_, err := suite.db.Exec(insertCityShadow, i*10, fmt.Sprintf("city%d", i), "US", fmt.Sprintf("district%d", i), 100000)
+		suite.Assert().Nil(err)
+	}
+	rows, err := suite.db.Query(selectCityShadow)
+	if suite.NoErrorf(err, "select row error: %v", err) {
+		var (
+			id          int64
+			name        string
+			countryCode string
+			district    string
+			population  int
+		)
+		for rows.Next() {
+			err := rows.Scan(&id, &name, &countryCode, &district, &population)
+			suite.NoError(err)
+			suite.T().Logf("id: %d, name: %s, country code: %s, district: %s, population: %d",
+				id, name, countryCode, district, population)
+		}
+	}
+}
+
+func (suite *_ShardingSuite) TestHintShadow() {
+	for i := 0; i < 20; i++ {
+		_, err := suite.db.Exec(insertCityHintShadow, 1000+i*10, fmt.Sprintf("city%d", i), "US", fmt.Sprintf("district%d", i), 100000)
+		suite.Assert().Nil(err)
+	}
+	rows, err := suite.db.Query(selectCityShadow)
+	if suite.NoErrorf(err, "select row error: %v", err) {
+		var (
+			id          int64
+			name        string
+			countryCode string
+			district    string
+			population  int
+		)
+		for rows.Next() {
+			err := rows.Scan(&id, &name, &countryCode, &district, &population)
+			suite.NoError(err)
+			suite.T().Logf("id: %d, name: %s, country code: %s, district: %s, population: %d",
+				id, name, countryCode, district, population)
+		}
+	}
 }
 
 func (suite *_ShardingSuite) TearDownSuite() {

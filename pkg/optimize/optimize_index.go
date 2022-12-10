@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/huandu/go-clone"
 	"github.com/pkg/errors"
 
 	"github.com/cectc/dbpack/pkg/plan"
@@ -54,8 +55,8 @@ func (o Optimizer) optimizeCreateIndex(ctx context.Context, stmt *ast.CreateInde
 	}
 	for db, tables := range topology.DBs {
 		for _, table := range tables {
-			cp := *stmt
-			newStmt := &cp
+			statement := clone.Clone(stmt)
+			newStmt := statement.(*ast.CreateIndexStmt)
 			newStmt.Table.Name.O = table
 			directlyQueryPlan := &plan.DirectQueryPlan{
 				Stmt:     newStmt,
@@ -93,8 +94,8 @@ func (o Optimizer) optimizeDropIndex(ctx context.Context, stmt *ast.DropIndexStm
 	}
 	for db, tables := range topology.DBs {
 		for _, table := range tables {
-			cp := *stmt
-			newStmt := &cp
+			statement := clone.Clone(stmt)
+			newStmt := statement.(*ast.DropIndexStmt)
 			newStmt.Table.Name.O = table
 			directlyQueryPlan := &plan.DirectQueryPlan{
 				Stmt:     newStmt,

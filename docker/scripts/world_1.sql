@@ -28,7 +28,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 DROP TABLE IF EXISTS `city_5`;
 CREATE TABLE `city_5` (
-                          `id` int NOT NULL DEFAULT '0',
+                          `id` bigint NOT NULL DEFAULT '0',
                           `name` char(35) NOT NULL DEFAULT '',
                           `country_code` char(3) NOT NULL DEFAULT '',
                           `district` char(20) NOT NULL DEFAULT '',
@@ -455,7 +455,7 @@ COMMIT;
 -- ----------------------------
 DROP TABLE IF EXISTS `city_6`;
 CREATE TABLE `city_6` (
-                          `id` int NOT NULL DEFAULT '0',
+                          `id` bigint NOT NULL DEFAULT '0',
                           `name` char(35) NOT NULL DEFAULT '',
                           `country_code` char(3) NOT NULL DEFAULT '',
                           `district` char(20) NOT NULL DEFAULT '',
@@ -882,7 +882,7 @@ COMMIT;
 -- ----------------------------
 DROP TABLE IF EXISTS `city_7`;
 CREATE TABLE `city_7` (
-                          `id` int NOT NULL DEFAULT '0',
+                          `id` bigint NOT NULL DEFAULT '0',
                           `name` char(35) NOT NULL DEFAULT '',
                           `country_code` char(3) NOT NULL DEFAULT '',
                           `district` char(20) NOT NULL DEFAULT '',
@@ -1309,7 +1309,7 @@ COMMIT;
 -- ----------------------------
 DROP TABLE IF EXISTS `city_8`;
 CREATE TABLE `city_8` (
-                          `id` int NOT NULL DEFAULT '0',
+                          `id` bigint NOT NULL DEFAULT '0',
                           `name` char(35) NOT NULL DEFAULT '',
                           `country_code` char(3) NOT NULL DEFAULT '',
                           `district` char(20) NOT NULL DEFAULT '',
@@ -1736,7 +1736,7 @@ COMMIT;
 -- ----------------------------
 DROP TABLE IF EXISTS `city_9`;
 CREATE TABLE `city_9` (
-                          `id` int NOT NULL DEFAULT '0',
+                          `id` bigint NOT NULL DEFAULT '0',
                           `name` char(35) NOT NULL DEFAULT '',
                           `country_code` char(3) NOT NULL DEFAULT '',
                           `district` char(20) NOT NULL DEFAULT '',
