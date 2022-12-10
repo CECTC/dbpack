@@ -1,0 +1,63 @@
+version: "2.3"
+services:
+  etcd:
+    image: docker.io/bitnami/etcd:3
+    container_name: etcd
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+      - ETCD_NAME=etcd
+      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd:2380
+      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+      - ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster
+      - ETCD_INITIAL_CLUSTER=etcd=http://etcd:2380
+      - ETCD_INITIAL_CLUSTER_STATE=new
+    networks:
+      - local
+    ports:
+      - "2379:2379"
+  mysql1:
+    image: mysql:8.0
+    container_name: dbpack-mysql1
+    networks:
+      - local
+    ports:
+    - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+    volumes:
+    - ./scripts/range_world_0.sql:/docker-entrypoint-initdb.d/world_0.sql:rw
+    command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
+  mysql2:
+    image: mysql:8.0
+    container_name: dbpack-mysql2
+    networks:
+      - local
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+    volumes:
+      - ./scripts/range_world_1.sql:/docker-entrypoint-initdb.d/world_1.sql:rw
+    command: [ 'mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci' ]
+  dbpack:
+    build:
+      context: ${PWD}
+      dockerfile: ./docker/Dockerfile
+    container_name: dbpack
+    networks:
+      - local
+    ports:
+      - "13306:13306"
+    volumes:
+      - ./conf/config_shd_range.yaml:/config.yaml
+      - ./scripts/wait-for-mysql.sh:/wait-for-mysql.sh
+    depends_on:
+      - etcd
+      - mysql1
+      - mysql2
+    command: ["./wait-for-mysql.sh","--","/dbpack", "start", "-c", "config.yaml"]
+networks:
+  local:
+    name: dbpack

@@ -27,7 +27,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "123456"
     volumes:
-    - ./scripts/world_0.sql:/docker-entrypoint-initdb.d/world_0.sql:rw
+    - ./scripts/mod_world_0.sql:/docker-entrypoint-initdb.d/world_0.sql:rw
     command: ['mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
   mysql2:
     image: mysql:8.0
@@ -39,7 +39,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "123456"
     volumes:
-      - ./scripts/world_1.sql:/docker-entrypoint-initdb.d/world_1.sql:rw
+      - ./scripts/mod_world_1.sql:/docker-entrypoint-initdb.d/world_1.sql:rw
     command: [ 'mysqld', '--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci' ]
   dbpack:
     build:
@@ -51,7 +51,7 @@ services:
     ports:
       - "13306:13306"
     volumes:
-      - ./conf/config_shd.yaml:/config.yaml
+      - ./conf/config_shd_mod.yaml:/config.yaml
       - ./scripts/wait-for-mysql.sh:/wait-for-mysql.sh
     depends_on:
       - etcd

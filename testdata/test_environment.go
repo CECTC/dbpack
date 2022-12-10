@@ -44,11 +44,11 @@ type ShardingTestEnvironment struct {
 }
 
 func NewShardingTestEnvironment(t *testing.T) *ShardingTestEnvironment {
-	container1, err := newMySql(t, "world_0.sql", "world-0")
+	container1, err := newMySql(t, "mod_world_0.sql", "world-0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	container2, err := newMySql(t, "world_1.sql", "world-1")
+	container2, err := newMySql(t, "mod_world_1.sql", "world-1")
 	if err != nil {
 		t.Fatal(err)
 	}
