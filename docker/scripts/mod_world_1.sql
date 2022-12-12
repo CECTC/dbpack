@@ -34,7 +34,7 @@ CREATE TABLE `city_5` (
                           `district` char(20) NOT NULL DEFAULT '',
                           `population` int NOT NULL DEFAULT '0',
                           PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------
 -- Records of city_5
@@ -461,7 +461,7 @@ CREATE TABLE `city_6` (
                           `district` char(20) NOT NULL DEFAULT '',
                           `population` int NOT NULL DEFAULT '0',
                           PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------
 -- Records of city_6
@@ -888,7 +888,7 @@ CREATE TABLE `city_7` (
                           `district` char(20) NOT NULL DEFAULT '',
                           `population` int NOT NULL DEFAULT '0',
                           PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------
 -- Records of city_7
@@ -1315,7 +1315,7 @@ CREATE TABLE `city_8` (
                           `district` char(20) NOT NULL DEFAULT '',
                           `population` int NOT NULL DEFAULT '0',
                           PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------
 -- Records of city_8
@@ -1742,7 +1742,7 @@ CREATE TABLE `city_9` (
                           `district` char(20) NOT NULL DEFAULT '',
                           `population` int NOT NULL DEFAULT '0',
                           PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------
 -- Records of city_9
@@ -2179,7 +2179,7 @@ CREATE TABLE `country` (
                            `capital` int DEFAULT NULL,
                            `code2` char(2) NOT NULL DEFAULT '',
                            PRIMARY KEY (`code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------
 -- Records of country
@@ -2438,7 +2438,7 @@ CREATE TABLE `countrylanguage` (
                                    PRIMARY KEY (`country_code`,`language`),
                                    KEY `country_code` (`country_code`),
                                    CONSTRAINT `countrylanguage_ibfk_1` FOREIGN KEY (`country_code`) REFERENCES `country` (`code`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------
 -- Records of countrylanguage
