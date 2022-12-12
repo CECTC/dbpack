@@ -248,6 +248,9 @@ func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(
 			return nil, 0, err
 		}
 		return result, 0, err
+	case *ast.XACommitStmt, *ast.XARollbackStmt:
+		withSlaveCtx := proto.WithMaster(spanCtx)
+		return executor.dbGroup.Query(withSlaveCtx, newSql)
 	case *ast.InsertStmt, *ast.DeleteStmt, *ast.UpdateStmt:
 		txi, ok := executor.localTransactionMap.Load(connectionID)
 		if ok {
