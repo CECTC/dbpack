@@ -35,7 +35,7 @@ func (suite *_SegmentTestSuite) SetupSuite() {
 		suite.T().Fatal(err)
 	}
 	dsn := fmt.Sprintf("root:123456@tcp(localhost:%d)/segment", port.Int())
-	segment, err := NewSegmentWorker(dsn, 1000, "student")
+	segment, err := NewSegmentWorker(dsn, 0, 1000, "student")
 	if err != nil {
 		suite.T().Fatal(err)
 	}

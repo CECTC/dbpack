@@ -5,6 +5,14 @@ import (
 	"testing"
 )
 
+func TestNextID(t *testing.T) {
+	worker, err := NewWorker(10)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(worker.NextID())
+}
+
 func BenchmarkSnowFlakeNextID(b *testing.B) {
 	worker, err := NewWorker(10)
 	if err != nil {
