@@ -33,7 +33,7 @@ const (
 		"    PRIMARY KEY ( `business_id` )" +
 		");"
 	segmentExits  = "SELECT EXISTS (SELECT 1 FROM `segment` WHERE `biz_id` = ?)"
-	insertSegment = "INSERT INTO `segment`(`biz_id`, `step`, `max_id`) VALUES (?, ?, 1)"
+	insertSegment = "INSERT INTO `segment`(`biz_id`, `step`, `max_id`) VALUES (?, ?, ?)"
 	selectSegment = "SELECT max_id FROM segment WHERE biz_id = ? FOR UPDATE"
 	updateSegment = "UPDATE segment SET max_id = ? WHERE biz_id = ? AND max_id = ?"
 )
@@ -47,7 +47,7 @@ type SegmentWorker struct {
 	step   int64
 }
 
-func NewSegmentWorker(dsn string, len int64, biz string) (*SegmentWorker, error) {
+func NewSegmentWorker(dsn string, from, len int64, biz string) (*SegmentWorker, error) {
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func NewSegmentWorker(dsn string, len int64, biz string) (*SegmentWorker, error)
 		}
 	}
 	if !exists {
-		if _, err := db.ExecContext(context.Background(), insertSegment, biz, len); err != nil {
+		if _, err := db.ExecContext(context.Background(), insertSegment, biz, len, from); err != nil {
 			log.Error(err)
 			return nil, err
 		}
@@ -103,8 +103,8 @@ func (w *SegmentWorker) ProduceID() {
 			}
 		}
 
-		w.buffer <- w.min
 		w.min++
+		w.buffer <- w.min
 	}
 }
 

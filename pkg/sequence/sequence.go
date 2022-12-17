@@ -28,7 +28,7 @@ func NewSequence(generator *config.SequenceGenerator, tableName string) (proto.S
 		if segmentConfig.Step == 0 {
 			segmentConfig.Step = 1000
 		}
-		return NewSegmentWorker(segmentConfig.DSN, segmentConfig.Step, tableName)
+		return NewSegmentWorker(segmentConfig.DSN, segmentConfig.From, segmentConfig.Step, tableName)
 	case config.Snowflake:
 		var (
 			err             error
@@ -49,6 +49,7 @@ func NewSequence(generator *config.SequenceGenerator, tableName string) (proto.S
 
 type SegmentConfig struct {
 	DSN  string `yaml:"dsn" json:"dsn"`
+	From int64  `yaml:"from" json:"from"`
 	Step int64  `default:"1000" yaml:"step" json:"step"`
 }
 
