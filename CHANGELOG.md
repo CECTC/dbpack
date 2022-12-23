@@ -144,3 +144,44 @@
 * refactor: refactor config to support deploy as gateway ([231](https://github.com/CECTC/dbpack/pull/231)) ([f5f49bd](https://github.com/CECTC/dbpack/commit/f5f49bd810403aec6102337174e5f5bbb615ae20))
 * refactor: isolate filter with appid ([233](https://github.com/CECTC/dbpack/pull/233)) ([12c94c4](https://github.com/CECTC/dbpack/commit/12c94c41919cabd4ad7168ee6917bf6d03fdf8f4))
 * refactor: refactor db group ([242](https://github.com/CECTC/dbpack/pull/239)) ([a7ddbfc](https://github.com/CECTC/dbpack/commit/a7ddbfce74cb4071b98b6b63894468492454ccf3))
+
+## v0.5.0
+
+### Features
+
+* feat: support delete on sharded table ([44](https://github.com/CECTC/dbpack/issues/44)) ([a0a5bda](https://github.com/CECTC/dbpack/commit/a0a5bda8b677efe571b861b2045f0f78c2d44a6d))
+* feat: support update on sharded table ([45](https://github.com/CECTC/dbpack/issues/45)) ([8dd789e](https://github.com/CECTC/dbpack/commit/8dd789e89598f69c6999abcd8cc3baa5b254c3f9))
+* feat: support multiple columns order by ([133](https://github.com/CECTC/dbpack/issues/133)) ([7a213c2](https://github.com/CECTC/dbpack/commit/7a213c2008c8df428dc7d6858a9c0163a578bcf4))
+* feat: support limit without orderby ([168](https://github.com/CECTC/dbpack/issues/168)) ([dbff926](https://github.com/CECTC/dbpack/commit/dbff926ece6fd8ef6cd6a71b475f6b5be3b4253b))
+* feat: support cross-database delete transactions ([180](https://github.com/CECTC/dbpack/issues/180)) ([90f9d42](https://github.com/CECTC/dbpack/commit/90f9d429a4ad7bb38ade4dba68ab2c6731bf253a))
+* feat: support count aggregate func on sharded table ([78](https://github.com/CECTC/dbpack/issues/78)) ([8290190](https://github.com/CECTC/dbpack/commit/82901907ae1d4a7664aa6681385827b47c56b506))
+* feature: support cross-database update transactions ([193](https://github.com/CECTC/dbpack/pull/193)) ([b184688](https://github.com/CECTC/dbpack/commit/b184688d24c7b28434f3c05e6933365dccb1ab41))
+* feat: support show stmt ([209](https://github.com/CECTC/dbpack/pull/209)) ([1b4e902](https://github.com/CECTC/dbpack/commit/1b4e902e14f65fe784680562e6c9a6c44ad95fe0))
+* feat: support query on global table ([134](https://github.com/CECTC/dbpack/issues/134)) ([1d2d32d](https://github.com/CECTC/dbpack/commit/1d2d32da06777760ea2914087df0c99f4562f81c))
+* feat: support check conn liveness ([260](https://github.com/CECTC/dbpack/pull/260)) ([59b9ff1](https://github.com/CECTC/dbpack/commit/59b9ff1b5eaa8c5733a798a4f2e0842f4885d20e))
+* in sharding mode, support local transaction ([236](https://github.com/CECTC/dbpack/issues/236)) ([97c5e18](https://github.com/CECTC/dbpack/commit/97c5e18f73d76a05c66afa0f7180dca46c5f3b84))
+* feat: support xa protocol ([261](https://github.com/CECTC/dbpack/pull/261)) ([6611c17](https://github.com/CECTC/dbpack/commit/6611c17af707f8a95f67e0cad74bd197e77c084a))
+* feature: support show table status ([189](https://github.com/CECTC/dbpack/issues/189)) ([f896fc3](https://github.com/CECTC/dbpack/commit/f896fc37609f41a4bcf44a864b1b73a81169f8c9))
+* feat: support show columns and show index in sharding mode ([269](https://github.com/CECTC/dbpack/pull/269)) ([2c20554](https://github.com/CECTC/dbpack/commit/2c205547ed6f3824dcdc4eed28729d1e9040c9c9))
+* feat: export dead branch session api ([264](https://github.com/CECTC/dbpack/issues/264)) ([fd87df8](https://github.com/CECTC/dbpack/commit/fd87df805d74b10dc4c64e391ca5cf54c9a6e496))
+* feat: support number range sharding algorithm ([235](https://github.com/CECTC/dbpack/issues/235)) ([5177880](https://github.com/CECTC/dbpack/commit/51778805b12e0b5d97c811a5a8bdbdd14171b128))
+* feat: support create index and drop index in sharding mode ([175](https://github.com/CECTC/dbpack/issues/175)) ([dc372d9](https://github.com/CECTC/dbpack/commit/dc372d94344a71f553d20768ed5ddfbd3c0203f1))
+* feat: support show tables in sharding mode ([190](https://github.com/CECTC/dbpack/issues/190)) ([1c353ea](https://github.com/CECTC/dbpack/commit/1c353eabdb93af9019d1f1aac355eb4d1d44111e))
+* fix: finished distributed pk feature ([42](https://github.com/CECTC/dbpack/issues/42)) ([8bb0903](https://github.com/CECTC/dbpack/commit/8bb0903267e464128a4161b8fe78abcf40c95000))
+* feature: support route insert sql to shadow table ([258](https://github.com/CECTC/dbpack/issues/258)) ([5a461ec](https://github.com/CECTC/dbpack/commit/5a461ec74d55c445eab8e6f90e6cb72d484a2826))
+* feat: segment sequence support define initial value ([281](https://github.com/CECTC/dbpack/pull/281)) ([6655483](https://github.com/CECTC/dbpack/commit/6655483c4c9b2cf6385d8d4ce94ebf8e90e9d2a1))
+
+### Bug Fixes
+
+* fix: in sharding mode, merge result miss some rows ([214](https://github.com/CECTC/dbpack/pull/214)) ([1aebf5c](https://github.com/CECTC/dbpack/commit/1aebf5c765308b36e40a18910ea654e4a30eaebb))
+* fix: support release savepoint ([251](https://github.com/CECTC/dbpack/pull/251)) ([63b19cb](https://github.com/CECTC/dbpack/commit/63b19cbd241822c1b944d5d2928b9b9ec9fcaa2a))
+* fix: release savepoint should not return connection ([252](https://github.com/CECTC/dbpack/pull/252)) ([47f1059](https://github.com/CECTC/dbpack/commit/47f10594935a5b30b12ba0867d0805766560fb98))
+* fix: match url should support prefix and regex match type ([254](https://github.com/CECTC/dbpack/pull/254)) ([5caeb6c](https://github.com/CECTC/dbpack/commit/5caeb6c0d388c441b4111bb55d529a3f3bed57fe))
+* fix: xa commit/rollback should executed by master conn in rws mode ([280](https://github.com/CECTC/dbpack/pull/280)) ([9962372](https://github.com/CECTC/dbpack/commit/9962372a7be1be62699027c1444f009a155aa5f6))
+
+### Changes
+ 
+* refactor: refact topology to support sharding db ([234](https://github.com/CECTC/dbpack/pull/234)) ([a8fe90d](https://github.com/CECTC/dbpack/commit/a8fe90d9671b8b6ec32a81784fe75cfeb153b7dc))
+* refactor: default restore string without default charset ([253](https://github.com/CECTC/dbpack/pull/253)) ([4d6da29](https://github.com/CECTC/dbpack/commit/4d6da291c0160d94a36773a53606150570b21351))
+* refactor status api ([265](https://github.com/CECTC/dbpack/issues/265)) ([dca3b50](https://github.com/CECTC/dbpack/commit/dca3b507cede4d8f339a047e39478417ed7ec95f))
+* refactor: optimize sequence generator ([42](https://github.com/CECTC/dbpack/issues/42)) ([67d9506](https://github.com/CECTC/dbpack/commit/67d9506c59a4fddd3a4342ff75235d1963cd09df))
