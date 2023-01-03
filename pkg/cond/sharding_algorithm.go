@@ -29,6 +29,8 @@ type ShardingAlgorithm interface {
 	ShardRange(cond1, cond2 *KeyCondition) (Condition, error)
 	AllShards() Condition
 	AllowFullScan() bool
+	Topology() *topo.Topology
+	Equal(algorithm ShardingAlgorithm) bool
 	proto.SequenceGenerator
 }
 

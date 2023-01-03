@@ -36,6 +36,7 @@ var (
 )
 
 type Topology struct {
+	Config    map[int]string
 	DBName    string
 	TableName string
 	// dbName -> table slice
@@ -109,6 +110,7 @@ func ParseTopology(dbName, tableName string, topology map[int]string) (*Topology
 		return nil, errors.Errorf("table index must from 0 to %d", len(tableIndexSlice)-1)
 	}
 	return &Topology{
+		Config:        topology,
 		DBName:        dbName,
 		TableName:     tableName,
 		DBs:           dbs,
@@ -117,4 +119,15 @@ func ParseTopology(dbName, tableName string, topology map[int]string) (*Topology
 		TableSlice:    tableIndexSlice,
 		TableSliceLen: len(tableIndexSlice),
 	}, nil
+}
+
+func (topology *Topology) Equal(tp *Topology) bool {
+	for k, v := range tp.Config {
+		if value, ok := topology.Config[k]; ok {
+			if v != value {
+				return false
+			}
+		}
+	}
+	return true
 }

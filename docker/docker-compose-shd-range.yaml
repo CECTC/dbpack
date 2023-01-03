@@ -51,13 +51,13 @@ services:
     ports:
       - "13306:13306"
     volumes:
-      - ./conf/config_shd_range.yaml:/config.yaml
+      - ./conf/config_shd_range.yaml:/range_config.yaml
       - ./scripts/wait-for-mysql.sh:/wait-for-mysql.sh
     depends_on:
       - etcd
       - mysql1
       - mysql2
-    command: ["./wait-for-mysql.sh","--","/dbpack", "start", "-c", "config.yaml"]
+    command: ["./wait-for-mysql.sh","--","/dbpack", "start", "-c", "range_config.yaml"]
 networks:
   local:
     name: dbpack

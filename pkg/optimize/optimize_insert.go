@@ -60,9 +60,7 @@ func (o Optimizer) optimizeInsert(ctx context.Context, stmt *ast.InsertStmt, arg
 	if alg, exists = o.algorithms[tableName]; !exists {
 		return nil, errors.New("sharding algorithm should not be nil")
 	}
-	if topology, exists = o.topologies[tableName]; !exists {
-		return nil, errors.New(fmt.Sprintf("topology of %s should not be nil", tableName))
-	}
+	topology = alg.Topology()
 
 	if shadowRule, exists = o.shadowRules[tableName]; exists {
 		if misc.HasShadowHint(stmt.TableHints) {
