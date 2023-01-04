@@ -24,15 +24,17 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/mohae/deepcopy"
 	"github.com/pkg/errors"
 
+	"github.com/cectc/dbpack/pkg/cond"
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/log"
-	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/visitor"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 	"github.com/cectc/dbpack/third_party/parser/format"
+	"github.com/cectc/dbpack/third_party/parser/model"
 	driver "github.com/cectc/dbpack/third_party/types/parser_driver"
 )
 
@@ -45,7 +47,10 @@ type QueryOnSingleDBPlan struct {
 	Stmt     *ast.SelectStmt
 	Limit    *Limit
 	Args     []interface{}
-	Executor proto.DBGroupExecutor
+	// tableName -> ShardingAlgorithm
+	Algorithms   map[string]cond.ShardingAlgorithm
+	GlobalTables map[string]bool
+	Executor     proto.DBGroupExecutor
 }
 
 type Limit struct {
@@ -96,38 +101,46 @@ func (p *QueryOnSingleDBPlan) Execute(ctx context.Context, hints ...*ast.TableOp
 }
 
 func (p *QueryOnSingleDBPlan) generate(ctx context.Context, sb *strings.Builder, args *[]interface{}) (err error) {
+	stmtVal := deepcopy.Copy(p.Stmt)
+	stmt := stmtVal.(*ast.SelectStmt)
 	switch len(p.Tables) {
 	case 0:
-		err = generateSelect("", p.Stmt, sb, p.Limit)
+		err = p.generateSelect("", stmt, sb, p.Limit)
 		p.appendArgs(args)
 	case 1:
 		// single shard table
-		err = generateSelect(p.Tables[0], p.Stmt, sb, p.Limit)
+		err = p.generateSelect(p.Tables[0], stmt, sb, p.Limit)
 		p.appendArgs(args)
 	default:
 		sb.WriteString("SELECT * FROM (")
 
 		sb.WriteByte('(')
-		if err = generateSelect(p.Tables[0], p.Stmt, sb, p.Limit); err != nil {
+		if err = p.generateSelect(p.Tables[0], stmt, sb, p.Limit); err != nil {
 			return
 		}
 		sb.WriteByte(')')
 		p.appendArgs(args)
 
 		for i := 1; i < len(p.Tables); i++ {
-			sb.WriteString(" UNION ALL ")
+			stmtVal := deepcopy.Copy(p.Stmt)
+			stmt := stmtVal.(*ast.SelectStmt)
 
+			sb.WriteString(" UNION ALL ")
 			sb.WriteByte('(')
-			if err = generateSelect(p.Tables[i], p.Stmt, sb, p.Limit); err != nil {
+			if err = p.generateSelect(p.Tables[i], stmt, sb, p.Limit); err != nil {
 				return
 			}
 			sb.WriteByte(')')
 			p.appendArgs(args)
 		}
 		sb.WriteString(") t ")
-		if p.Stmt.OrderBy != nil {
+		if stmt.OrderBy != nil {
+			orderByRewriteVisitor := &ColumnRewriteVisitor{
+				rewriteTable: "t",
+			}
+			stmt.OrderBy.Accept(orderByRewriteVisitor)
 			restoreCtx := format.NewRestoreCtx(constant.DBPackRestoreFormat, sb)
-			if err := p.Stmt.OrderBy.Restore(restoreCtx); err != nil {
+			if err := stmt.OrderBy.Restore(restoreCtx); err != nil {
 				return errors.WithStack(err)
 			}
 		} else {
@@ -137,7 +150,7 @@ func (p *QueryOnSingleDBPlan) generate(ctx context.Context, sb *strings.Builder,
 				funcColumnList = funcColumns.([]*visitor.FuncColumn)
 			}
 			if len(funcColumnList) == 0 {
-				sb.WriteString(fmt.Sprintf("ORDER BY `%s` ASC", p.PK))
+				sb.WriteString(fmt.Sprintf("ORDER BY `t`.`%s` ASC", p.PK))
 			}
 		}
 	}
@@ -229,7 +242,17 @@ func (p *QueryOnMultiDBPlan) Execute(ctx context.Context, _ ...*ast.TableOptimiz
 	return result, warn, nil
 }
 
-func generateSelect(table string, stmt *ast.SelectStmt, sb *strings.Builder, limit *Limit) error {
+func (p *QueryOnSingleDBPlan) generateSelect(table string, stmt *ast.SelectStmt, sb *strings.Builder, limit *Limit) error {
+	vi := &JoinVisitor{
+		fieldList:    stmt.Fields,
+		where:        stmt.Where,
+		orderBy:      stmt.OrderBy,
+		table:        table,
+		algorithms:   p.Algorithms,
+		globalTables: p.GlobalTables,
+	}
+	stmt.Accept(vi)
+
 	ctx := format.NewRestoreCtx(constant.DBPackRestoreFormat, sb)
 	ctx.WriteKeyWord(stmt.Kind.String())
 	ctx.WritePlain(" ")
@@ -253,7 +276,9 @@ func generateSelect(table string, stmt *ast.SelectStmt, sb *strings.Builder, lim
 
 	if len(table) > 0 {
 		ctx.WriteKeyWord(" FROM ")
-		handleFrom(sb, table, stmt.From)
+		if err := p.handleFrom(sb, stmt.From); err != nil {
+			return err
+		}
 	} else {
 		if err := stmt.From.Restore(ctx); err != nil {
 			return errors.WithStack(err)
@@ -297,16 +322,138 @@ func generateSelect(table string, stmt *ast.SelectStmt, sb *strings.Builder, lim
 	return nil
 }
 
-func handleFrom(sb *strings.Builder, table string, from *ast.TableRefsClause) {
-	if from.TableRefs.Right != nil {
-		log.Fatal("unsupported table join")
+func (p *QueryOnSingleDBPlan) handleFrom(sb *strings.Builder, from *ast.TableRefsClause) error {
+	ctx := format.NewRestoreCtx(constant.DBPackRestoreFormat, sb)
+	if _, ok := from.TableRefs.Left.(*ast.Join); ok {
+		return errors.New("only support two tables join")
+	}
+
+	if err := from.Restore(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+type JoinVisitor struct {
+	fieldList *ast.FieldList
+	where     ast.ExprNode
+	orderBy   *ast.OrderByClause
+
+	table        string
+	algorithms   map[string]cond.ShardingAlgorithm
+	globalTables map[string]bool
+}
+
+func (s *JoinVisitor) Enter(n ast.Node) (node ast.Node, skipChildren bool) {
+	return n, false
+}
+
+// Leave implement ast.Visitor
+func (s *JoinVisitor) Leave(n ast.Node) (node ast.Node, ok bool) {
+	from, ok := n.(*ast.TableRefsClause)
+	if !ok {
+		return n, true
 	}
 	first := from.TableRefs.Left.(*ast.TableSource)
+	firstTable := first.Source.(*ast.TableName)
+	if from.TableRefs.Right != nil {
+		second := from.TableRefs.Right.(*ast.TableSource)
+		secondTable := second.Source.(*ast.TableName)
+		_, exists := s.globalTables[strings.ToLower(secondTable.Name.O)]
+		if exists {
+			if from.TableRefs.On != nil {
+				vi := &ColumnNameVisitor{
+					originTable:  firstTable.Name,
+					rewriteTable: s.table,
+				}
+				from.TableRefs.On.Accept(vi)
+				if s.fieldList != nil {
+					s.fieldList.Accept(vi)
+				}
+				if s.where != nil {
+					s.where.Accept(vi)
+				}
+				if s.orderBy != nil {
+					s.orderBy.Accept(vi)
+				}
+			}
+		}
 
-	misc.Wrap(sb, '`', table)
+		if secondAlgo, found := s.algorithms[strings.ToLower(secondTable.Name.O)]; found {
+			if firstAlgo, exists := s.algorithms[strings.ToLower(firstTable.Name.O)]; exists {
+				if firstAlgo.Equal(secondAlgo) {
+					index := strings.LastIndex(s.table, "_")
+					joinTable := fmt.Sprintf("%s_%s", secondAlgo.Topology().TableName, s.table[index+1:])
 
-	if first.AsName.String() != "" {
-		sb.WriteString(" AS ")
-		misc.Wrap(sb, '`', first.AsName.String())
+					if from.TableRefs.On != nil {
+						visitor1 := &ColumnNameVisitor{
+							originTable:  firstTable.Name,
+							rewriteTable: s.table,
+						}
+
+						visitor2 := &ColumnNameVisitor{
+							originTable:  secondTable.Name,
+							rewriteTable: joinTable,
+						}
+						from.TableRefs.On.Accept(visitor1)
+						from.TableRefs.On.Accept(visitor2)
+						if s.fieldList != nil {
+							s.fieldList.Accept(visitor1)
+							s.fieldList.Accept(visitor2)
+						}
+						if s.where != nil {
+							s.where.Accept(visitor1)
+							s.where.Accept(visitor2)
+						}
+						if s.orderBy != nil {
+							s.orderBy.Accept(visitor1)
+							s.orderBy.Accept(visitor2)
+						}
+					}
+					secondTable.Name = model.NewCIStr(joinTable)
+				}
+			}
+		}
 	}
+	firstTable.Name = model.NewCIStr(s.table)
+	return n, true
+}
+
+type ColumnRewriteVisitor struct {
+	rewriteTable string
+}
+
+func (s *ColumnRewriteVisitor) Enter(n ast.Node) (node ast.Node, skipChildren bool) {
+	return n, false
+}
+
+// Leave implement ast.Visitor
+func (s *ColumnRewriteVisitor) Leave(n ast.Node) (node ast.Node, ok bool) {
+	field, ok := n.(*ast.ColumnNameExpr)
+	if !ok {
+		return n, true
+	}
+	field.Name.Table = model.NewCIStr(s.rewriteTable)
+	return n, true
+}
+
+type ColumnNameVisitor struct {
+	originTable  model.CIStr
+	rewriteTable string
+}
+
+func (s *ColumnNameVisitor) Enter(n ast.Node) (node ast.Node, skipChildren bool) {
+	return n, false
+}
+
+// Leave implement ast.Visitor
+func (s *ColumnNameVisitor) Leave(n ast.Node) (node ast.Node, ok bool) {
+	field, ok := n.(*ast.ColumnNameExpr)
+	if !ok {
+		return n, true
+	}
+	if field.Name.Table.O == s.originTable.O {
+		field.Name.Table = model.NewCIStr(s.rewriteTable)
+	}
+	return n, true
 }

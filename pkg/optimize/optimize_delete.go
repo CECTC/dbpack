@@ -18,7 +18,6 @@ package optimize
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -39,9 +38,7 @@ func (o Optimizer) optimizeDelete(ctx context.Context, stmt *ast.DeleteStmt, arg
 	if alg, exists = o.algorithms[tableName]; !exists {
 		return nil, errors.New("sharding algorithm should not be nil")
 	}
-	if topology, exists = o.topologies[tableName]; !exists {
-		return nil, errors.New(fmt.Sprintf("topology of %s should not be nil", tableName))
-	}
+	topology = alg.Topology()
 
 	condition, err := cond.ParseCondition(stmt.Where, args...)
 	if err != nil {

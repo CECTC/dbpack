@@ -36,7 +36,13 @@ const (
 	selectCityOrderBy2            = "select id, name, country_code, district, population from city where id between ? and ? order by district desc, id asc"
 	selectCityOrderByIDDescLimit  = "select id, name, country_code, district, population from city where id between ? and ? order by id desc limit ?, ?"
 	selectCityOrderByIDDescLimit2 = "select id, name, country_code, district, population from city where id between ? and ? order by id desc limit ?"
-	selectCount                   = "select count(1) from city where country_code = ?"
+	selectJoin1                   = "select city.id, city.name, city.country_code, city.district, city.population, " +
+		"country.name as countryName from city left join country on country.code = city.country_code " +
+		"where city.id between ? and ? order by city.id desc limit ?"
+	selectJoin2 = "select ct.id, ct.name, ct.country_code, ct.district, ct.population, " +
+		"c.name as countryName from city ct left join country c on c.code = ct.country_code " +
+		"where ct.id between ? and ? order by ct.id desc limit ?"
+	selectCount = "select count(1) from city where country_code = ?"
 
 	deleteCity           = "delete from city where id between ? and ?"
 	insertCityWithoutID  = "INSERT INTO city (`name`, `country_code`, `district`, `population`) VALUES ('´s-Hertogenbosch', 'NLD', 'Noord-Brabant', 129170);"
@@ -173,6 +179,46 @@ func (suite *_ShardingSuite) TestSelectOrderByAndLimit2() {
 			suite.NoError(err)
 			suite.T().Logf("id: %d, name: %s, country code: %s, district: %s, population: %d",
 				id, name, countryCode, district, population)
+		}
+	}
+}
+
+func (suite *_ShardingSuite) TestSelectJoin1() {
+	rows, err := suite.db.Query(selectJoin1, 200, 300, 10)
+	if suite.NoErrorf(err, "select row error: %v", err) {
+		var (
+			id          int64
+			name        string
+			countryCode string
+			district    string
+			population  int
+			countryName string
+		)
+		for rows.Next() {
+			err := rows.Scan(&id, &name, &countryCode, &district, &population, &countryName)
+			suite.NoError(err)
+			suite.T().Logf("id: %d, name: %s, country code: %s, district: %s, population: %d, country name: %s",
+				id, name, countryCode, district, population, countryName)
+		}
+	}
+}
+
+func (suite *_ShardingSuite) TestSelectJoin2() {
+	rows, err := suite.db.Query(selectJoin2, 200, 300, 10)
+	if suite.NoErrorf(err, "select row error: %v", err) {
+		var (
+			id          int64
+			name        string
+			countryCode string
+			district    string
+			population  int
+			countryName string
+		)
+		for rows.Next() {
+			err := rows.Scan(&id, &name, &countryCode, &district, &population, &countryName)
+			suite.NoError(err)
+			suite.T().Logf("id: %d, name: %s, country code: %s, district: %s, population: %d, country name: %s",
+				id, name, countryCode, district, population, countryName)
 		}
 	}
 }

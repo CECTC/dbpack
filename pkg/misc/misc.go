@@ -68,3 +68,11 @@ func ParseTable(tableName, cutSet string) (string, string) {
 		return "", strings.Trim(tableName, cutSet)
 	}
 }
+
+func ParseColumn(columnName string) string {
+	if strings.Contains(columnName, ".") {
+		idx := strings.LastIndex(columnName, ".")
+		return columnName[idx+1:]
+	}
+	return columnName
+}

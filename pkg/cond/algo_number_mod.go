@@ -23,6 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/topo"
 	"github.com/cectc/dbpack/third_party/parser/opcode"
@@ -45,11 +46,13 @@ func NewNumberMod(shardingKey string, allowFullScan bool, topology *topo.Topolog
 }
 
 func (shard *NumberMod) HasShardingKey(key string) bool {
-	return strings.EqualFold(shard.shardingKey, key)
+	conditionKey := misc.ParseColumn(key)
+	return strings.EqualFold(shard.shardingKey, conditionKey)
 }
 
 func (shard *NumberMod) Shard(condition *KeyCondition) (Condition, error) {
-	if !strings.EqualFold(shard.shardingKey, condition.Key) {
+	conditionKey := misc.ParseColumn(condition.Key)
+	if !strings.EqualFold(shard.shardingKey, conditionKey) {
 		return TrueCondition{}, nil
 	}
 	val, err := strconv.ParseInt(fmt.Sprintf("%v", condition.Value), 10, 64)
@@ -99,7 +102,8 @@ func (shard *NumberMod) Shard(condition *KeyCondition) (Condition, error) {
 }
 
 func (shard *NumberMod) ShardRange(cond1, cond2 *KeyCondition) (Condition, error) {
-	if !strings.EqualFold(shard.shardingKey, cond1.Key) {
+	conditionKey := misc.ParseColumn(cond1.Key)
+	if !strings.EqualFold(shard.shardingKey, conditionKey) {
 		return TrueCondition{}, nil
 	}
 	val1, err := strconv.ParseInt(fmt.Sprintf("%v", cond1.Value), 10, 64)
@@ -216,6 +220,19 @@ func (shard *NumberMod) AllShards() Condition {
 
 func (shard *NumberMod) AllowFullScan() bool {
 	return shard.allowFullScan
+}
+
+func (shard *NumberMod) Topology() *topo.Topology {
+	return shard.topology
+}
+
+func (shard *NumberMod) Equal(algorithm ShardingAlgorithm) bool {
+	if algo, ok := algorithm.(*NumberMod); ok {
+		if algo.topology.Equal(algo.topology) {
+			return true
+		}
+	}
+	return false
 }
 
 func (shard *NumberMod) NextID() (int64, error) {

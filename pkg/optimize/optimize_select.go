@@ -18,7 +18,6 @@ package optimize
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strings"
 
@@ -54,9 +53,7 @@ func (o Optimizer) optimizeSelect(ctx context.Context, stmt *ast.SelectStmt, arg
 	if alg, exists = o.algorithms[tableName]; !exists {
 		return nil, errors.New("sharding algorithm should not be nil")
 	}
-	if topology, exists = o.topologies[tableName]; !exists {
-		return nil, errors.New(fmt.Sprintf("topology of %s should not be nil", tableName))
-	}
+	topology = alg.Topology()
 
 	for db, tables := range topology.DBs {
 		sqlDB := resource.GetDBManager(o.appid).GetDB(db)
@@ -92,12 +89,14 @@ func (o Optimizer) optimizeSelect(ctx context.Context, stmt *ast.SelectStmt, arg
 			}
 
 			return &plan.QueryOnSingleDBPlan{
-				Database: k,
-				Tables:   v,
-				PK:       pk,
-				Stmt:     stmt,
-				Args:     args,
-				Executor: executor,
+				Database:     k,
+				Tables:       v,
+				PK:           pk,
+				Stmt:         stmt,
+				Args:         args,
+				Algorithms:   o.algorithms,
+				GlobalTables: o.globalTables,
+				Executor:     executor,
 			}, nil
 		}
 	}
@@ -116,12 +115,14 @@ func (o Optimizer) optimizeSelect(ctx context.Context, stmt *ast.SelectStmt, arg
 		}
 
 		plans = append(plans, &plan.QueryOnSingleDBPlan{
-			Database: k,
-			Tables:   shardMap[k],
-			PK:       pk,
-			Stmt:     stmt,
-			Args:     args,
-			Executor: executor,
+			Database:     k,
+			Tables:       shardMap[k],
+			PK:           pk,
+			Stmt:         stmt,
+			Args:         args,
+			Algorithms:   o.algorithms,
+			GlobalTables: o.globalTables,
+			Executor:     executor,
 		})
 	}
 
