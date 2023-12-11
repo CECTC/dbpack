@@ -51,10 +51,5 @@ using prometheus metrics, default metric server runs at :18888
 
 [![Stargazers repo roster for cectc/dbpack](https://reporoster.com/stars/cectc/dbpack)](https://github.com/cectc/dbpack)
 
-## WeChat group
-To enter the WeChat discussion group, please scan the QR code below and reply with the code "join the group".
-
-<img src="https://cectc.github.io/dbpack-doc/images/image-20220427091848831.png" alt="image-20220427091848831" width="200px"/>
-
 ## License
 DBPack is licensed under the [Apache License, Version 2.0](LICENSE).
