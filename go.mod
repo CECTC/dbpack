@@ -1,6 +1,6 @@
 module github.com/cectc/dbpack
 
-go 1.18
+go 1.23
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.7.0
