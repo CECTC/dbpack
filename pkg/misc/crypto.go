@@ -21,10 +21,111 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"io"
-
+	"fmt"
 	"github.com/pkg/errors"
+	"github.com/tjfoc/gmsm/sm4"
+	"io"
 )
+
+type CryptoType int
+
+const (
+	CryptoAESGCM CryptoType = iota
+	CryptoAESCBC
+	CryptoAESECB
+	CryptoAESCFB
+	CryptoSM4GCM
+	CryptoSM4ECB
+	CryptoSM4CBC
+	CryptoSM4CFB
+	CryptoSM4OFB
+)
+
+func (c *CryptoType) UnmarshalText(text []byte) error {
+	if c == nil {
+		return errors.New("can't unmarshal a nil *CryptoType")
+	}
+	if !c.unmarshalText(bytes.ToLower(text)) {
+		return fmt.Errorf("unrecognized protocol type: %q", text)
+	}
+	return nil
+}
+
+func (c *CryptoType) unmarshalText(text []byte) bool {
+	switch string(text) {
+	case "aesgcm":
+		*c = CryptoAESGCM
+	case "aescbc":
+		*c = CryptoAESCBC
+	case "aesecb":
+		*c = CryptoAESECB
+	case "aescfb":
+		*c = CryptoAESCFB
+	case "sm4gcm":
+		*c = CryptoSM4GCM
+	case "sm4ecb":
+		*c = CryptoSM4ECB
+	case "sm4cbc":
+		*c = CryptoSM4CBC
+	case "sm4cfb":
+		*c = CryptoSM4CFB
+	case "sm4ofb":
+		*c = CryptoSM4OFB
+	default:
+		return false
+	}
+	return true
+}
+
+func CryptoEncrypt(data []byte, key []byte, iv []byte, cryptoType CryptoType) ([]byte, error) {
+	switch cryptoType {
+	case CryptoAESGCM:
+		return AesEncryptGCM(data, key, iv)
+	case CryptoAESCBC:
+		return AesEncryptCBC(data, key, iv)
+	case CryptoAESECB:
+		return AesEncryptECB(data, key)
+	case CryptoAESCFB:
+		return AesEncryptCFB(data, key)
+	case CryptoSM4GCM:
+		return Sm4EncryptGCM(data, key, iv)
+	case CryptoSM4ECB:
+		return Sm4EncryptECB(data, key)
+	case CryptoSM4CBC:
+		return Sm4EncryptCBC(data, key, iv)
+	case CryptoSM4CFB:
+		return Sm4EncryptCFB(data, key, iv)
+	case CryptoSM4OFB:
+		return Sm4EncryptOFB(data, key, iv)
+	default:
+		return AesEncryptGCM(data, key, iv)
+	}
+}
+
+func CryptoDecrypt(encrypted []byte, key []byte, iv []byte, cryptoType CryptoType) ([]byte, error) {
+	switch cryptoType {
+	case CryptoAESGCM:
+		return AesDecryptGCM(encrypted, key, iv)
+	case CryptoAESCBC:
+		return AesDecryptCBC(encrypted, key, iv)
+	case CryptoAESECB:
+		return AesDecryptECB(encrypted, key)
+	case CryptoAESCFB:
+		return AesDecryptCFB(encrypted, key)
+	case CryptoSM4GCM:
+		return Sm4DecryptGCM(encrypted, key, iv)
+	case CryptoSM4ECB:
+		return Sm4DecryptECB(encrypted, key)
+	case CryptoSM4CBC:
+		return Sm4DecryptCBC(encrypted, key, iv)
+	case CryptoSM4CFB:
+		return Sm4DecryptCFB(encrypted, key, iv)
+	case CryptoSM4OFB:
+		return Sm4DecryptOFB(encrypted, key, iv)
+	default:
+		return AesDecryptGCM(encrypted, key, iv)
+	}
+}
 
 func AesEncryptGCM(origData []byte, key []byte, iv []byte) (encrypted []byte, err error) {
 	var block cipher.Block
@@ -177,4 +278,89 @@ func AesDecryptCFB(encrypted []byte, key []byte) (decrypted []byte, err error) {
 	stream := cipher.NewCFBDecrypter(block, iv)
 	stream.XORKeyStream(encrypted, encrypted)
 	return encrypted, err
+}
+
+func Sm4EncryptGCM(origData, key []byte, iv []byte) (encrypted []byte, err error) {
+	// Sm4GCM /**
+	// key: 对称加密密钥
+	// IV: IV向量
+	// in:
+	// A: 附加的可鉴别数据(ADD)
+	// mode: true - 加密; false - 解密验证
+	//
+	// return: 密文C, 鉴别标签T, 错误
+	encrypted, _, err = sm4.Sm4GCM(key, iv, origData, []byte{}, true)
+	if err != nil {
+		return nil, err
+	}
+	return encrypted, nil
+}
+
+func Sm4DecryptGCM(encrypted, key []byte, iv []byte) (decrypted []byte, err error) {
+	decrypted, _, err = sm4.Sm4GCM(key, iv, encrypted, []byte{}, true)
+	if err != nil {
+		return nil, err
+	}
+	return decrypted, nil
+}
+
+func Sm4EncryptECB(origData, key []byte) (encrypted []byte, err error) {
+	return sm4.Sm4Ecb(key, origData, true)
+}
+
+func Sm4DecryptECB(encrypted, key []byte) (decrypted []byte, err error) {
+	return sm4.Sm4Ecb(key, encrypted, false)
+}
+
+func Sm4EncryptCBC(origData, key, iv []byte) (encrypted []byte, err error) {
+	if err = sm4.SetIV(EnsureByteArrayLength16(iv)); err != nil {
+		return nil, err
+	}
+	return sm4.Sm4Cbc(key, origData, true)
+}
+
+func Sm4DecryptCBC(encrypted, key, iv []byte) (decrypted []byte, err error) {
+	if err = sm4.SetIV(EnsureByteArrayLength16(iv)); err != nil {
+		return nil, err
+	}
+	return sm4.Sm4Cbc(key, encrypted, false)
+}
+
+func Sm4EncryptCFB(origData, key, iv []byte) (encrypted []byte, err error) {
+	if err = sm4.SetIV(EnsureByteArrayLength16(iv)); err != nil {
+		return nil, err
+	}
+	return sm4.Sm4CFB(key, origData, true)
+}
+
+func Sm4DecryptCFB(encrypted, key, iv []byte) (decrypted []byte, err error) {
+	if err = sm4.SetIV(EnsureByteArrayLength16(iv)); err != nil {
+		return nil, err
+	}
+	return sm4.Sm4CFB(key, encrypted, false)
+}
+
+func Sm4EncryptOFB(origData, key, iv []byte) (encrypted []byte, err error) {
+	if err = sm4.SetIV(EnsureByteArrayLength16(iv)); err != nil {
+		return nil, err
+	}
+	return sm4.Sm4OFB(key, origData, true)
+}
+
+func Sm4DecryptOFB(encrypted, key, iv []byte) (decrypted []byte, err error) {
+	if err = sm4.SetIV(EnsureByteArrayLength16(iv)); err != nil {
+		return nil, err
+	}
+	return sm4.Sm4OFB(key, encrypted, false)
+}
+
+func EnsureByteArrayLength16(input []byte) []byte {
+	if len(input) == 16 {
+		return input
+	}
+	repeated := append(input, input...)
+	for len(repeated) < 16 {
+		repeated = append(repeated, input...)
+	}
+	return repeated[:16]
 }

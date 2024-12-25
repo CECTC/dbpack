@@ -71,3 +71,4 @@ app_config:
             - table: departments
               columns: [ "dept_name" ]
               aeskey: 123456789abcdefg
+              cryptoType: aesgcm
