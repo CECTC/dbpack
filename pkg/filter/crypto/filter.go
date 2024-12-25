@@ -67,9 +67,10 @@ type _filter struct {
 }
 
 type ColumnCrypto struct {
-	Table   string
-	Columns []string
-	AesKey  string
+	Table      string
+	Columns    []string
+	AesKey     string
+	CryptoType int
 }
 
 type columnIndex struct {
@@ -304,7 +305,7 @@ func encryptInsertValues(columns []*columnIndex, config *ColumnCrypto, valueList
 			if param, ok := arg.(*driver.ValueExpr); ok {
 				value := param.GetBytes()
 				if len(value) != 0 {
-					encoded, err := misc.AesEncryptGCM(value, []byte(config.AesKey), []byte(aesIV))
+					encoded, err := misc.CryptoEncrypt(value, []byte(config.AesKey), []byte(aesIV), config.CryptoType)
 					if err != nil {
 						return errors.Wrapf(err, "Encryption of %s failed", column.Column)
 					}
@@ -326,7 +327,7 @@ func encryptUpdateValues(updateStmt *ast.UpdateStmt, config *ColumnCrypto) error
 			if param, ok := arg.(*driver.ValueExpr); ok {
 				value := param.GetBytes()
 				if len(value) != 0 {
-					encoded, err := misc.AesEncryptGCM(value, []byte(config.AesKey), []byte(aesIV))
+					encoded, err := misc.CryptoEncrypt(value, []byte(config.AesKey), []byte(aesIV), config.CryptoType)
 					if err != nil {
 						return errors.Wrapf(err, "Encryption of %s failed", column.Column)
 					}
@@ -345,14 +346,14 @@ func encryptBindVars(columns []*columnIndex, config *ColumnCrypto, args *map[str
 		parameterID := fmt.Sprintf("v%d", column.Index+1)
 		param := (*args)[parameterID]
 		if arg, ok := param.(string); ok {
-			encoded, err := misc.AesEncryptGCM([]byte(arg), []byte(config.AesKey), []byte(aesIV))
+			encoded, err := misc.CryptoEncrypt([]byte(arg), []byte(config.AesKey), []byte(aesIV), config.CryptoType)
 			if err != nil {
 				return errors.Errorf("Encryption of %s failed: %v", column.Column, err)
 			}
 			val := hex.EncodeToString(encoded)
 			(*args)[parameterID] = val
 		} else if arg, ok := param.([]byte); ok {
-			encoded, err := misc.AesEncryptGCM(arg, []byte(config.AesKey), []byte(aesIV))
+			encoded, err := misc.CryptoEncrypt(arg, []byte(config.AesKey), []byte(aesIV), config.CryptoType)
 			if err != nil {
 				return errors.Errorf("Encryption of %s failed: %v", column.Column, err)
 			}
@@ -372,7 +373,7 @@ func decryptDecodedResult(decodedResult *mysql.Result, config *ColumnCrypto, col
 				if protoValue != nil {
 					if originalVal, ok := protoValue.Val.([]byte); ok {
 						if n, err := hex.Decode(originalVal, originalVal); err == nil {
-							if decodedVal, err := misc.AesDecryptGCM(originalVal[:n], []byte(config.AesKey), []byte(aesIV)); err == nil {
+							if decodedVal, err := misc.CryptoDecrypt(originalVal[:n], []byte(config.AesKey), []byte(aesIV), config.CryptoType); err == nil {
 								r.Values[column.Index].Val = decodedVal
 							}
 						}
@@ -385,7 +386,7 @@ func decryptDecodedResult(decodedResult *mysql.Result, config *ColumnCrypto, col
 				if protoValue != nil {
 					if originalVal, ok := protoValue.Val.([]byte); ok {
 						if n, err := hex.Decode(originalVal, originalVal); err == nil {
-							if decodedVal, err := misc.AesDecryptGCM(originalVal[:n], []byte(config.AesKey), []byte(aesIV)); err == nil {
+							if decodedVal, err := misc.CryptoDecrypt(originalVal[:n], []byte(config.AesKey), []byte(aesIV), config.CryptoType); err == nil {
 								r.Values[column.Index].Val = decodedVal
 							}
 						}

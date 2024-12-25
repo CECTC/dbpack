@@ -32,6 +32,7 @@ require (
 	github.com/spf13/cobra v1.1.1
 	github.com/stretchr/testify v1.7.1
 	github.com/testcontainers/testcontainers-go v0.13.0
+	github.com/tjfoc/gmsm v1.4.1
 	github.com/uber-go/atomic v1.4.0
 	github.com/valyala/fasthttp v1.34.0
 	go.etcd.io/etcd/api/v3 v3.5.0-alpha.0
