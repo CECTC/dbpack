@@ -33,7 +33,6 @@ import (
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/visitor"
 	"github.com/cectc/dbpack/third_party/parser/ast"
-	"github.com/cectc/dbpack/third_party/parser/format"
 	driver "github.com/cectc/dbpack/third_party/types/parser_driver"
 )
 

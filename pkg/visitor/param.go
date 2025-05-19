@@ -17,7 +17,9 @@
 package visitor
 
 import (
+	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/third_party/parser/ast"
+	"github.com/cectc/dbpack/third_party/parser/model"
 	driver "github.com/cectc/dbpack/third_party/types/parser_driver"
 )
 
@@ -76,5 +78,22 @@ func (v *TableNameVisitor) Enter(in ast.Node) (out ast.Node, skipChildren bool) 
 }
 
 func (v *TableNameVisitor) Leave(in ast.Node) (out ast.Node, ok bool) {
+	return in, true
+}
+
+type SchemaRewriter struct {
+	Schema string
+}
+
+func (v *SchemaRewriter) Enter(in ast.Node) (out ast.Node, skipChildren bool) {
+	if tn, ok := in.(*ast.TableName); ok {
+		if misc.IsBlank(tn.Schema.O) {
+			tn.Schema = model.NewCIStr(v.Schema)
+		}
+	}
+	return in, false
+}
+
+func (v *SchemaRewriter) Leave(in ast.Node) (out ast.Node, ok bool) {
 	return in, true
 }

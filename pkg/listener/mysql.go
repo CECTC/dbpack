@@ -43,6 +43,7 @@ import (
 	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/pkg/visitor"
 	"github.com/cectc/dbpack/third_party/parser"
+	"github.com/cectc/dbpack/third_party/parser/ast"
 )
 
 const initClientConnStatus = constant.ServerStatusAutocommit
@@ -81,13 +82,6 @@ type MysqlListener struct {
 	// It is set during the initial handshake.
 	// See the values in constants.go.
 	characterSet uint8
-
-	// schemaName is the default database name to use. It is set
-	// during handshake, and by ComInitDb packets. Both client and
-	// servers maintain it. This member is private because it's
-	// non-authoritative: the client can change the schema name
-	// through the 'USE' statement, which will bypass this variable.
-	schemaName string
 
 	// statementID is the prepared statement ID.
 	statementID *atomic.Uint32
@@ -198,9 +192,10 @@ func (l *MysqlListener) handle(conn net.Conn, connectionID uint32) {
 		ctx = proto.WithConnectionID(ctx, connectionID)
 		ctx = proto.WithUserName(ctx, c.UserName())
 		ctx = proto.WithRemoteAddr(ctx, c.RemoteAddr().String())
-		ctx = proto.WithSchema(ctx, l.schemaName)
+		ctx = proto.WithSchema(ctx, c.Database())
 		err = l.ExecuteCommand(ctx, c, content)
 		if err != nil {
+			log.Errorf("execute command error: %v", err)
 			return
 		}
 	}
@@ -233,7 +228,7 @@ func (l *MysqlListener) handshake(c *mysql.Conn) error {
 
 	c.RecycleReadPacket()
 
-	user, _, authResponse, err := l.parseClientHandshakePacket(true, response)
+	user, _, authResponse, err := l.parseClientHandshakePacket(c, true, response)
 	if err != nil {
 		log.Errorf("Cannot parse client handshake response from %s: %v", c, err)
 		return err
@@ -348,7 +343,7 @@ func (l *MysqlListener) writeHandshakeV10(c *mysql.Conn, enableTLS bool, salt []
 // parseClientHandshakePacket parses the handshake sent by the client.
 // Returns the username, auth method, auth Content, error.
 // The original Content is not pointed at, and can be freed.
-func (l *MysqlListener) parseClientHandshakePacket(firstTime bool, data []byte) (string, string, []byte, error) {
+func (l *MysqlListener) parseClientHandshakePacket(c *mysql.Conn, firstTime bool, data []byte) (string, string, []byte, error) {
 	pos := 0
 
 	// Client flags, 4 bytes.
@@ -445,7 +440,7 @@ func (l *MysqlListener) parseClientHandshakePacket(firstTime bool, data []byte) 
 		if !ok {
 			return "", "", nil, errors.Errorf("parseClientHandshakePacket: can't read dbname")
 		}
-		l.schemaName = dbname
+		c.SetDatabase(dbname)
 	}
 
 	// authMethod (with default)
@@ -527,11 +522,9 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 	case constant.ComInitDB:
 		db := string(data[1:])
 		c.RecycleReadPacket()
-		l.schemaName = db
-		err := l.executor.ExecuteUseDB(ctx, db)
-		if err != nil {
-			return err
-		}
+		c.SetDatabase(db)
+		connectionID := proto.ConnectionID(ctx)
+		log.Debugf("connectionID: %d, query: use %s", connectionID, db)
 		if err := c.WriteOKPacket(0, 0, c.StatusFlags(), 0); err != nil {
 			log.Errorf("Error writing ComInitDB result to %s: %v", c, err)
 			return err
@@ -554,6 +547,17 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 					return writeErr
 				}
 				return nil
+			}
+
+			if showStmt, ok := stmt.(*ast.ShowStmt); ok && showStmt.Tp == ast.ShowTables {
+				showStmt.DBName = c.Database()
+			}
+
+			if !misc.IsBlank(c.Database()) {
+				srw := &visitor.SchemaRewriter{
+					Schema: c.Database(),
+				}
+				stmt.Accept(srw)
 			}
 
 			traceCtx := tracing.BuildContextFromSQLHint(ctx, stmt)
@@ -591,6 +595,17 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 					tracing.RecordErrorSpan(span, err)
 					return err
 				}
+
+				if selectStmt, ok := stmt.(*ast.SelectStmt); ok && len(selectStmt.Fields.Fields) == 1 {
+					if funcCall, yes := selectStmt.Fields.Fields[0].Expr.(*ast.FuncCallExpr); yes && strings.EqualFold(funcCall.FnName.O, "database") {
+						if !misc.IsBlank(c.Database()) {
+							if tr, ok := rlt.Rows[0].(*mysql.TextRow); ok {
+								tr.Values[0].Len = len(c.Database())
+								tr.Values[0].Val = []byte(c.Database())
+							}
+						}
+					}
+				}
 				err = c.WriteRows(rlt)
 				if err != nil {
 					tracing.RecordErrorSpan(span, err)
@@ -616,27 +631,30 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 			return err
 		}
 	case constant.ComFieldList:
-		index := bytes.IndexByte(data, 0x00)
-		table := string(data[0:index])
-		wildcard := string(data[index+1:])
+		// index := bytes.IndexByte(data, 0x00)
+		// table := string(data[1:index])
+		// wildcard := string(data[index+1:])
 		c.RecycleReadPacket()
-		fields, err := l.executor.ExecuteFieldList(ctx, table, wildcard)
-		if err != nil {
-			log.Errorf("Conn %v: Error write field list: %v", c, err)
-			if writeErr := c.WriteErrorPacketFromError(err); writeErr != nil {
-				// If we can't even write the error, we're done.
-				log.Errorf("Conn %v: Error write field list error: %v", c, writeErr)
-				return writeErr
-			}
-		}
-		result := &mysql.Result{Fields: make([]*mysql.Field, 0, len(fields))}
-		for i, field := range fields {
-			fld := field.(*mysql.Field)
-			result.Fields[i] = fld
-		}
-		err = c.WriteFields(l.capabilities, result.Fields)
-		if err != nil {
-			return err
+		// fields, err := l.executor.ExecuteFieldList(ctx, table, wildcard)
+		// if err != nil {
+		// 	log.Errorf("Conn %v: Error write field list: %v", c, err)
+		// 	if writeErr := c.WriteErrorPacketFromError(err); writeErr != nil {
+		// 		// If we can't even write the error, we're done.
+		// 		log.Errorf("Conn %v: Error write field list error: %v", c, writeErr)
+		// 		return writeErr
+		// 	}
+		// }
+		// result := &mysql.Result{Fields: make([]*mysql.Field, len(fields))}
+		// for i, field := range fields {
+		// 	fld := field.(*mysql.Field)
+		// 	result.Fields[i] = fld
+		// }
+		// err = c.WriteFields(l.capabilities, result.Fields)
+		// if err != nil {
+		// 	return err
+		// }
+		if err := c.WriteErrorPacket(constant.ERUnknownComError, constant.SSUnknownComError, "command handling not implemented yet: %v", data[0]); err != nil {
+			log.Errorf("Error writing error to %s: %v", c, err)
 		}
 	case constant.ComPrepare:
 		query := string(data[1:])
@@ -658,6 +676,13 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 				log.Errorf("Conn %v: Error writing prepared statement error: %v", c, writeErr)
 				return writeErr
 			}
+		}
+
+		if !misc.IsBlank(c.Database()) {
+			srw := &visitor.SchemaRewriter{
+				Schema: c.Database(),
+			}
+			act.Accept(srw)
 		}
 		act.Accept(&visitor.ParamVisitor{})
 

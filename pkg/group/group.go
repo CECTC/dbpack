@@ -76,6 +76,11 @@ func (group *DBGroup) GroupName() string {
 	return group.groupName
 }
 
+func (group *DBGroup) ExecuteFieldList(ctx context.Context, table, wildcard string) ([]proto.Field, error) {
+	db := group.pick(ctx)
+	return db.ExecuteFieldList(ctx, table, wildcard)
+}
+
 func (group *DBGroup) Begin(ctx context.Context) (proto.Tx, proto.Result, error) {
 	dbs := group.getAvailableMasters()
 	return dbs[0].Begin(ctx)

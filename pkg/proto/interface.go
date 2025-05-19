@@ -187,6 +187,7 @@ type (
 	// DBGroupExecutor prepare a query, execute the statement, and then close the statement.
 	DBGroupExecutor interface {
 		GroupName() string
+		ExecuteFieldList(ctx context.Context, table, wildcard string) ([]Field, error)
 		Begin(ctx context.Context) (Tx, Result, error)
 		Query(ctx context.Context, query string) (Result, uint16, error)
 		QueryAll(ctx context.Context, query string) (Result, uint16, error)

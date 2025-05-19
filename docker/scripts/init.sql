@@ -93,18 +93,6 @@ CREATE TABLE salaries (
     PRIMARY KEY (`id`)
 );
 
-CREATE TABLE `undo_log` (
-  `id` bigint NOT NULL AUTO_INCREMENT,
-  `branch_id` bigint NOT NULL,
-  `xid` varchar(100) NOT NULL,
-  `context` varchar(128) NOT NULL,
-  `rollback_info` longblob NOT NULL,
-  `log_status` int NOT NULL,
-  `log_created` datetime NOT NULL,
-  `log_modified` datetime NOT NULL,
-  `ext` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`id`)
-);
 
 CREATE OR REPLACE VIEW dept_emp_latest_date AS
     SELECT emp_no, MAX(from_date) AS from_date, MAX(to_date) AS to_date
@@ -117,3 +105,20 @@ CREATE OR REPLACE VIEW current_dept_emp AS
     FROM dept_emp d
         INNER JOIN dept_emp_latest_date l
         ON d.emp_no=l.emp_no AND d.from_date=l.from_date AND l.to_date = d.to_date;
+
+DROP DATABASE IF EXISTS meta;
+CREATE DATABASE IF NOT EXISTS meta;
+USE meta;
+
+CREATE TABLE `undo_log` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `branch_id` bigint NOT NULL,
+  `xid` varchar(100) NOT NULL,
+  `context` varchar(128) NOT NULL,
+  `rollback_info` longblob NOT NULL,
+  `log_status` int NOT NULL,
+  `log_created` datetime NOT NULL,
+  `log_modified` datetime NOT NULL,
+  `ext` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+);

@@ -90,6 +90,8 @@ type Conn struct {
 
 	userName string
 
+	database string
+
 	// closed is set to true when Close() is called on the connection.
 	closed sync2.AtomicBool
 
@@ -1017,6 +1019,10 @@ func (c *Conn) SetUserName(userName string) {
 	c.userName = userName
 }
 
+func (c *Conn) SetDatabase(database string) {
+	c.database = database
+}
+
 func (c *Conn) SetReadTimeout(readTimeout time.Duration) {
 	c.ReadTimeout = readTimeout
 }
@@ -1037,6 +1043,10 @@ func (c *Conn) ID() uint32 {
 
 func (c *Conn) UserName() string {
 	return c.userName
+}
+
+func (c *Conn) Database() string {
+	return c.database
 }
 
 func (c *Conn) StatusFlags() uint16 {

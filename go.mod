@@ -1,6 +1,8 @@
 module github.com/cectc/dbpack
 
-go 1.23
+go 1.23.0
+
+toolchain go1.23.2
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.7.0
@@ -42,6 +44,7 @@ require (
 	go.uber.org/goleak v1.1.12
 	go.uber.org/ratelimit v0.2.1-0.20220713224938-b62b799bc9a5
 	go.uber.org/zap v1.21.0
+	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6
 	golang.org/x/net v0.25.0
 	golang.org/x/text v0.21.0
 	google.golang.org/grpc v1.56.3
@@ -144,7 +147,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.9.0
 	go.opentelemetry.io/otel/trace v1.9.0
 	go.uber.org/multierr v1.7.0 // indirect
-	golang.org/x/sync v0.10.0
+	golang.org/x/sync v0.14.0
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
