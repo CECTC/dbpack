@@ -86,3 +86,84 @@ func TestAesDecryptCFB(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, []byte("exampleplaintext"), decrypted)
 }
+
+func TestSm4EncryptGCM(t *testing.T) {
+	key, _ := hex.DecodeString("31323334353637383961626364656667")
+	plaintext := []byte("sunset4")
+	encrypted, err := Sm4EncryptGCM(plaintext, key, []byte("greatdbpack!"))
+	assert.Nil(t, err)
+	t.Logf("%x", encrypted)
+}
+
+func TestSm4DecryptGCM(t *testing.T) {
+	key, _ := hex.DecodeString("31323334353637383961626364656667")
+	encrypted, _ := hex.DecodeString("4b3dd6cb3e0145")
+	decrypted, err := Sm4DecryptGCM(encrypted, key, []byte("greatdbpack!"))
+	assert.Nil(t, err)
+	t.Logf("%s", decrypted)
+	assert.Equal(t, []byte("sunset4"), decrypted)
+}
+
+func TestSm4EncryptECB(t *testing.T) {
+	key, _ := hex.DecodeString("6368616e676520746869732070617373")
+	plaintext := []byte("exampleplaintext")
+	encrypted, err := Sm4EncryptECB(plaintext, key)
+	assert.Nil(t, err)
+	t.Logf("%x", encrypted)
+}
+
+func TestSm4DecryptECB(t *testing.T) {
+	key, _ := hex.DecodeString("6368616e676520746869732070617373")
+	encrypted, _ := hex.DecodeString("1cadd74166afbe5f4bdaf6ebb49d4c46ce96714d2c0839338f995f4854c61b58")
+	decrypted, err := Sm4DecryptECB(encrypted, key)
+	assert.Nil(t, err)
+	assert.Equal(t, []byte("exampleplaintext"), decrypted)
+}
+
+func TestSm4EncryptCBC(t *testing.T) {
+	key, _ := hex.DecodeString("6368616e676520746869732070617373")
+	plaintext := []byte("exampleplaintext")
+	encrypted, err := Sm4EncryptCBC(plaintext, key, []byte("impressivedbpack"))
+	assert.Nil(t, err)
+	t.Logf("%x", encrypted)
+}
+
+func TestSm4DecryptCBC(t *testing.T) {
+	key, _ := hex.DecodeString("6368616e676520746869732070617373")
+	encrypted, _ := hex.DecodeString("2e88063cb32a13ce8fbfb60512c23d78d257734049682849d7c82a19f00e131a")
+	decrypted, err := Sm4DecryptCBC(encrypted, key, []byte("impressivedbpack"))
+	assert.Nil(t, err)
+	assert.Equal(t, []byte("exampleplaintext"), decrypted)
+}
+
+func TestSm4EncryptCFB(t *testing.T) {
+	key, _ := hex.DecodeString("6368616e676520746869732070617373")
+	plaintext := []byte("exampleplaintext")
+	encrypted, err := Sm4EncryptCFB(plaintext, key, []byte("impressivedbpack"))
+	assert.Nil(t, err)
+	t.Logf("%x", encrypted)
+}
+
+func TestSm4DecryptCFB(t *testing.T) {
+	key, _ := hex.DecodeString("6368616e676520746869732070617373")
+	encrypted, _ := hex.DecodeString("5ce63f4fac3744073aa91ac44bdc4ab44a19895a9fcb106947eae2cecfd99e62")
+	decrypted, err := Sm4DecryptCFB(encrypted, key, []byte("impressivedbpack"))
+	assert.Nil(t, err)
+	assert.Equal(t, []byte("exampleplaintext"), decrypted)
+}
+
+func TestSm4EncryptOFB(t *testing.T) {
+	key, _ := hex.DecodeString("6368616e676520746869732070617373")
+	plaintext := []byte("exampleplaintext")
+	encrypted, err := Sm4EncryptOFB(plaintext, key, []byte("impressivedbpack"))
+	assert.Nil(t, err)
+	t.Logf("%x", encrypted)
+}
+
+func TestSm4DecryptOFB(t *testing.T) {
+	key, _ := hex.DecodeString("6368616e676520746869732070617373")
+	encrypted, _ := hex.DecodeString("5ce63f4fac3744073aa91ac44bdc4ab4f83abab6ff8e4fd91da0740e339f9b2d")
+	decrypted, err := Sm4DecryptOFB(encrypted, key, []byte("impressivedbpack"))
+	assert.Nil(t, err)
+	assert.Equal(t, []byte("exampleplaintext"), decrypted)
+}
