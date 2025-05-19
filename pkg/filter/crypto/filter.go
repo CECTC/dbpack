@@ -31,6 +31,7 @@ import (
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/mysql"
 	"github.com/cectc/dbpack/pkg/proto"
+	"github.com/cectc/dbpack/pkg/visitor"
 	"github.com/cectc/dbpack/third_party/parser/ast"
 	"github.com/cectc/dbpack/third_party/parser/format"
 	driver "github.com/cectc/dbpack/third_party/types/parser_driver"
@@ -210,12 +211,9 @@ func (f *_filter) PostHandle(ctx context.Context, result proto.Result, err error
 }
 
 func (f _filter) checkInsertTable(insertStmt *ast.InsertStmt) (*ColumnCrypto, error) {
-	var sb strings.Builder
-	if err := insertStmt.Table.TableRefs.Left.Restore(
-		format.NewRestoreCtx(format.RestoreStringSingleQuotes|format.RestoreKeyWordUppercase, &sb)); err != nil {
-		return nil, err
-	}
-	tableName := sb.String()
+	tn := &visitor.TableNameVisitor{}
+	insertStmt.Accept(tn)
+	tableName := tn.TableName
 	for _, config := range f.ColumnConfigs {
 		if strings.EqualFold(config.Table, tableName) {
 			return config, nil
@@ -225,12 +223,9 @@ func (f _filter) checkInsertTable(insertStmt *ast.InsertStmt) (*ColumnCrypto, er
 }
 
 func (f _filter) checkUpdateTable(updateStmt *ast.UpdateStmt) (*ColumnCrypto, error) {
-	var sb strings.Builder
-	if err := updateStmt.TableRefs.TableRefs.Left.Restore(
-		format.NewRestoreCtx(format.RestoreStringSingleQuotes|format.RestoreKeyWordUppercase, &sb)); err != nil {
-		return nil, err
-	}
-	tableName := sb.String()
+	tn := &visitor.TableNameVisitor{}
+	updateStmt.Accept(tn)
+	tableName := tn.TableName
 	for _, config := range f.ColumnConfigs {
 		if strings.EqualFold(config.Table, tableName) {
 			return config, nil
@@ -240,12 +235,9 @@ func (f _filter) checkUpdateTable(updateStmt *ast.UpdateStmt) (*ColumnCrypto, er
 }
 
 func (f _filter) checkSelectTable(selectStmt *ast.SelectStmt) (*ColumnCrypto, error) {
-	var sb strings.Builder
-	if err := selectStmt.From.TableRefs.Left.Restore(
-		format.NewRestoreCtx(format.RestoreStringSingleQuotes|format.RestoreKeyWordUppercase, &sb)); err != nil {
-		return nil, err
-	}
-	tableName := sb.String()
+	tn := &visitor.TableNameVisitor{}
+	selectStmt.Accept(tn)
+	tableName := tn.TableName
 	for _, config := range f.ColumnConfigs {
 		if strings.EqualFold(config.Table, tableName) {
 			return config, nil

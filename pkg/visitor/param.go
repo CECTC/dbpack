@@ -63,3 +63,18 @@ func (v *FuncVisitor) Enter(in ast.Node) (out ast.Node, skipChildren bool) {
 func (v *FuncVisitor) Leave(in ast.Node) (out ast.Node, ok bool) {
 	return in, true
 }
+
+type TableNameVisitor struct {
+	TableName string
+}
+
+func (v *TableNameVisitor) Enter(in ast.Node) (out ast.Node, skipChildren bool) {
+	if tn, ok := in.(*ast.TableName); ok {
+		v.TableName = tn.Name.O
+	}
+	return in, false
+}
+
+func (v *TableNameVisitor) Leave(in ast.Node) (out ast.Node, ok bool) {
+	return in, true
+}
