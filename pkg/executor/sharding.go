@@ -38,6 +38,7 @@ import (
 	"github.com/cectc/dbpack/pkg/topo"
 	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/third_party/parser/ast"
+	"github.com/cectc/dbpack/third_party/parser/format"
 )
 
 type ShardingExecutor struct {
@@ -207,15 +208,23 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 		}
 	}()
 
-	var plan proto.Plan
+	var (
+		plan proto.Plan
+		sb   strings.Builder
+	)
 
-	log.Debugf("query: %s", sql)
 	connectionID := proto.ConnectionID(spanCtx)
 	queryStmt := proto.QueryStmt(spanCtx)
 	if queryStmt == nil {
 		return nil, 0, errors.New("query stmt should not be nil")
 	}
+	if err := queryStmt.Restore(format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)); err != nil {
+		return nil, 0, err
+	}
+	newSql := sb.String()
+	spanCtx = proto.WithSqlText(spanCtx, newSql)
 
+	log.Debugf("connectionID: %d, query: %s", connectionID, newSql)
 	switch stmt := queryStmt.(type) {
 	case *ast.SetStmt:
 		if shouldStartTransaction(stmt) {
@@ -278,7 +287,7 @@ func (executor *ShardingExecutor) ExecutorComQuery(ctx context.Context, sql stri
 	case *ast.SelectStmt:
 		if stmt.Fields != nil && len(stmt.Fields.Fields) > 0 {
 			if _, ok := stmt.Fields.Fields[0].Expr.(*ast.VariableExpr); ok {
-				return executor.executors[0].Query(spanCtx, sql)
+				return executor.executors[0].Query(spanCtx, newSql)
 			}
 		}
 		txi, ok := executor.localTransactionMap.Load(connectionID)

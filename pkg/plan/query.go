@@ -101,21 +101,22 @@ func (p *QueryOnSingleDBPlan) Execute(ctx context.Context, hints ...*ast.TableOp
 }
 
 func (p *QueryOnSingleDBPlan) generate(ctx context.Context, sb *strings.Builder, args *[]interface{}) (err error) {
+	schema := proto.Schema(ctx)
 	stmtVal := deepcopy.Copy(p.Stmt)
 	stmt := stmtVal.(*ast.SelectStmt)
 	switch len(p.Tables) {
 	case 0:
-		err = p.generateSelect("", stmt, sb, p.Limit)
+		err = p.generateSelect(schema, "", stmt, sb, p.Limit)
 		p.appendArgs(args)
 	case 1:
 		// single shard table
-		err = p.generateSelect(p.Tables[0], stmt, sb, p.Limit)
+		err = p.generateSelect(schema, p.Tables[0], stmt, sb, p.Limit)
 		p.appendArgs(args)
 	default:
 		sb.WriteString("SELECT * FROM (")
 
 		sb.WriteByte('(')
-		if err = p.generateSelect(p.Tables[0], stmt, sb, p.Limit); err != nil {
+		if err = p.generateSelect(schema, p.Tables[0], stmt, sb, p.Limit); err != nil {
 			return
 		}
 		sb.WriteByte(')')
@@ -127,7 +128,7 @@ func (p *QueryOnSingleDBPlan) generate(ctx context.Context, sb *strings.Builder,
 
 			sb.WriteString(" UNION ALL ")
 			sb.WriteByte('(')
-			if err = p.generateSelect(p.Tables[i], stmt, sb, p.Limit); err != nil {
+			if err = p.generateSelect(schema, p.Tables[i], stmt, sb, p.Limit); err != nil {
 				return
 			}
 			sb.WriteByte(')')
@@ -242,11 +243,12 @@ func (p *QueryOnMultiDBPlan) Execute(ctx context.Context, _ ...*ast.TableOptimiz
 	return result, warn, nil
 }
 
-func (p *QueryOnSingleDBPlan) generateSelect(table string, stmt *ast.SelectStmt, sb *strings.Builder, limit *Limit) error {
+func (p *QueryOnSingleDBPlan) generateSelect(schema, table string, stmt *ast.SelectStmt, sb *strings.Builder, limit *Limit) error {
 	vi := &JoinVisitor{
 		fieldList:    stmt.Fields,
 		where:        stmt.Where,
 		orderBy:      stmt.OrderBy,
+		schema:       schema,
 		table:        table,
 		algorithms:   p.Algorithms,
 		globalTables: p.GlobalTables,
@@ -339,6 +341,7 @@ type JoinVisitor struct {
 	where     ast.ExprNode
 	orderBy   *ast.OrderByClause
 
+	schema       string
 	table        string
 	algorithms   map[string]cond.ShardingAlgorithm
 	globalTables map[string]bool
@@ -410,11 +413,13 @@ func (s *JoinVisitor) Leave(n ast.Node) (node ast.Node, ok bool) {
 							s.orderBy.Accept(visitor2)
 						}
 					}
+					secondTable.Schema = model.NewCIStr(s.schema)
 					secondTable.Name = model.NewCIStr(joinTable)
 				}
 			}
 		}
 	}
+	firstTable.Schema = model.NewCIStr(s.schema)
 	firstTable.Name = model.NewCIStr(s.table)
 	return n, true
 }

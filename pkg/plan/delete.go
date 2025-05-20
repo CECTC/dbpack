@@ -66,9 +66,10 @@ func (p *DeletePlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHi
 			return nil, 0, errors.WithStack(err)
 		}
 	}
+	schema := proto.Schema(ctx)
 	for _, table := range p.Tables {
 		sb.Reset()
-		if err = p.generate(&sb, table, hints...); err != nil {
+		if err = p.generate(&sb, schema, table, hints...); err != nil {
 			return nil, 0, errors.Wrap(err, "failed to generate sql for delete")
 		}
 		sql := sb.String()
@@ -114,7 +115,7 @@ func (p *DeletePlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHi
 	return mysqlResult, warnings, nil
 }
 
-func (p *DeletePlan) generate(sb *strings.Builder, table string, hints ...*ast.TableOptimizerHint) error {
+func (p *DeletePlan) generate(sb *strings.Builder, schema, table string, hints ...*ast.TableOptimizerHint) error {
 	ctx := format.NewRestoreCtx(constant.DBPackRestoreFormat, sb)
 	ctx.WriteKeyWord("DELETE ")
 
@@ -133,7 +134,7 @@ func (p *DeletePlan) generate(sb *strings.Builder, table string, hints ...*ast.T
 	}
 
 	ctx.WriteKeyWord("FROM ")
-	ctx.WritePlain(table)
+	ctx.WritePlainf("%s.%s", schema, table)
 	if p.Stmt.Where != nil {
 		ctx.WriteKeyWord(" WHERE ")
 		if err := p.Stmt.Where.Restore(ctx); err != nil {

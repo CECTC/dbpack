@@ -36,7 +36,7 @@ func TestInsertPlan(t *testing.T) {
 		{
 			insertSql:           "insert into student(id, name, gender, age) values(?,?,?,?)",
 			table:               "student_5",
-			expectedGenerateSql: "INSERT INTO student_5(id,name,gender,age) VALUES (?,?,?,?)",
+			expectedGenerateSql: "INSERT INTO school.student_5(id,name,gender,age) VALUES (?,?,?,?)",
 		},
 	}
 
@@ -59,7 +59,7 @@ func TestInsertPlan(t *testing.T) {
 				Executor: nil,
 			}
 			var sb strings.Builder
-			err = plan.generate(&sb)
+			err = plan.generate(&sb, "school")
 			assert.Nil(t, err)
 			assert.Equal(t, c.expectedGenerateSql, sb.String())
 		})

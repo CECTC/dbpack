@@ -243,6 +243,8 @@ func (suite *_DistributedTransactionSuite) TearDownSuite() {
 	suite.db.Exec(deleteDeptEmpForDT, 1)
 	suite.db.Exec(deleteSalariesForDT, 1)
 	suite.db.Exec(deleteDeptManagerForDT, 1)
-
 	suite.db2.Exec(deleteSalariesForDT, 2)
+
+	suite.db.Close()
+	suite.db2.Close()
 }

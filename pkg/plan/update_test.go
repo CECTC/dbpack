@@ -37,15 +37,15 @@ func TestUpdateOnSingleDBPlan(t *testing.T) {
 			deleteSql: "update student set name = ?, age = ? where id in (?,?)",
 			tables:    []string{"student_1", "student_5"},
 			expectedGenerateSqls: []string{
-				"UPDATE student_1 SET `name`=?, `age`=? WHERE `id` IN (?,?)",
-				"UPDATE student_5 SET `name`=?, `age`=? WHERE `id` IN (?,?)",
+				"UPDATE school.student_1 SET `name`=?, `age`=? WHERE `id` IN (?,?)",
+				"UPDATE school.student_5 SET `name`=?, `age`=? WHERE `id` IN (?,?)",
 			},
 		},
 		{
 			deleteSql: "update student set name = ?, age = ? where id = 9",
 			tables:    []string{"student_9"},
 			expectedGenerateSqls: []string{
-				"UPDATE student_9 SET `name`=?, `age`=? WHERE `id`=9",
+				"UPDATE school.student_9 SET `name`=?, `age`=? WHERE `id`=9",
 			},
 		},
 	}
@@ -68,7 +68,7 @@ func TestUpdateOnSingleDBPlan(t *testing.T) {
 			}
 			for i, table := range plan.Tables {
 				var sb strings.Builder
-				err := plan.generate(&sb, table)
+				err := plan.generate(&sb, "school", table)
 				assert.Nil(t, err)
 				assert.Equal(t, c.expectedGenerateSqls[i], sb.String())
 			}

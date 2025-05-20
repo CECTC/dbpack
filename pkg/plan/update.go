@@ -66,9 +66,10 @@ func (p *UpdatePlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHi
 			return nil, 0, errors.WithStack(err)
 		}
 	}
+	schema := proto.Schema(ctx)
 	for _, table := range p.Tables {
 		sb.Reset()
-		if err = p.generate(&sb, table, hints...); err != nil {
+		if err = p.generate(&sb, schema, table, hints...); err != nil {
 			return nil, 0, errors.Wrap(err, "failed to generate sql")
 		}
 		sql := sb.String()
@@ -114,7 +115,7 @@ func (p *UpdatePlan) Execute(ctx context.Context, hints ...*ast.TableOptimizerHi
 	return mysqlResult, warnings, nil
 }
 
-func (p *UpdatePlan) generate(sb *strings.Builder, table string, hints ...*ast.TableOptimizerHint) error {
+func (p *UpdatePlan) generate(sb *strings.Builder, schema, table string, hints ...*ast.TableOptimizerHint) error {
 	ctx := format.NewRestoreCtx(constant.DBPackRestoreFormat, sb)
 	ctx.WriteKeyWord("UPDATE ")
 
@@ -132,7 +133,7 @@ func (p *UpdatePlan) generate(sb *strings.Builder, table string, hints ...*ast.T
 		ctx.WritePlain("*/ ")
 	}
 
-	ctx.WritePlain(table)
+	ctx.WritePlainf("%s.%s", schema, table)
 	ctx.WriteKeyWord(" SET ")
 	for i, assignment := range p.Stmt.List {
 		if i != 0 {

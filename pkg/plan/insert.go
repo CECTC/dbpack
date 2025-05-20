@@ -44,7 +44,8 @@ func (p *InsertPlan) Execute(ctx context.Context, _ ...*ast.TableOptimizerHint) 
 		tx  proto.Tx
 		err error
 	)
-	if err = p.generate(&sb); err != nil {
+	schema := proto.Schema(ctx)
+	if err = p.generate(&sb, schema); err != nil {
 		return nil, 0, errors.WithStack(err)
 	}
 	sql := sb.String()
@@ -77,13 +78,13 @@ func (p *InsertPlan) Execute(ctx context.Context, _ ...*ast.TableOptimizerHint) 
 	}
 }
 
-func (p *InsertPlan) generate(sb *strings.Builder) (err error) {
+func (p *InsertPlan) generate(sb *strings.Builder, schema string) (err error) {
 	ctx := format.NewRestoreCtx(constant.DBPackRestoreFormat, sb)
 
 	ctx.WriteKeyWord("INSERT ")
 	ctx.WriteKeyWord("INTO ")
 
-	ctx.WritePlain(p.Table)
+	ctx.WritePlainf("%s.%s", schema, p.Table)
 
 	ctx.WritePlain("(")
 	columnLen := len(p.Columns)
