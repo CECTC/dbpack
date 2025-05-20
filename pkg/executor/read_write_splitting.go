@@ -132,7 +132,8 @@ func (executor *ReadWriteSplittingExecutor) ExecuteUseDB(ctx context.Context, db
 // As of MySQL 5.7.11, COM_FIELD_LIST is deprecated and will be removed in a future version of MySQL.
 // Instead, use mysql_query() to execute a SHOW COLUMNS statement.
 func (executor *ReadWriteSplittingExecutor) ExecuteFieldList(ctx context.Context, table, wildcard string) ([]proto.Field, error) {
-	return nil, errors.New("unimplemented COM_FIELD_LIST in read write splitting mode")
+	withSlaveCtx := proto.WithSlave(ctx)
+	return executor.dbGroup.ExecuteFieldList(withSlaveCtx, table, wildcard)
 }
 
 func (executor *ReadWriteSplittingExecutor) ExecutorComQuery(

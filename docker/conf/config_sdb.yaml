@@ -34,7 +34,7 @@ app_config:
         capacity: 10
         max_capacity: 20
         idle_timeout: 60s
-        dsn: root:123456@tcp(dbpack-mysql:3306)/employees?timeout=60s&readTimeout=60s&writeTimeout=60s&parseTime=true&loc=Local&charset=utf8mb4,utf8
+        dsn: root:123456@tcp(dbpack-mysql:3306)/?timeout=60s&readTimeout=60s&writeTimeout=60s&parseTime=true&loc=Local&charset=utf8mb4,utf8
         ping_interval: 20s
         ping_times_for_change_status: 3
         filters:

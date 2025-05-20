@@ -28,6 +28,7 @@ import (
 	"github.com/cectc/dbpack/pkg/constant"
 	"github.com/cectc/dbpack/pkg/driver"
 	"github.com/cectc/dbpack/pkg/log"
+	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/tracing"
 	"github.com/cectc/dbpack/third_party/pools"
@@ -264,7 +265,11 @@ func (db *DB) UseDB(ctx context.Context, schema string) error {
 	defer db.pool.Put(r)
 
 	conn := r.(*driver.BackendConnection)
-	return conn.WriteComInitDB(schema)
+	if err := conn.WriteComInitDB(schema); err != nil {
+		return err
+	}
+	_, _, _, _, _, err = conn.ReadComQueryResponse()
+	return err
 }
 
 func (db *DB) ExecuteFieldList(ctx context.Context, table, wildcard string) ([]proto.Field, error) {
@@ -283,6 +288,16 @@ func (db *DB) ExecuteFieldList(ctx context.Context, table, wildcard string) ([]p
 	defer db.pool.Put(r)
 
 	conn := r.(*driver.BackendConnection)
+
+	schema := proto.Schema(ctx)
+	if !misc.IsBlank(schema) {
+		if err := conn.WriteComInitDB(schema); err != nil {
+			return nil, err
+		}
+		if _, _, _, _, _, err := conn.ReadComQueryResponse(); err != nil {
+			return nil, err
+		}
+	}
 	if err := conn.WriteComFieldList(table, wildcard); err != nil {
 		return nil, err
 	}
@@ -292,7 +307,7 @@ func (db *DB) ExecuteFieldList(ctx context.Context, table, wildcard string) ([]p
 		return nil, err
 	}
 
-	result := make([]proto.Field, 0, len(fields))
+	result := make([]proto.Field, len(fields))
 	for i, field := range fields {
 		result[i] = field
 	}

@@ -53,7 +53,6 @@ app_config:
                 type: snowflake
                 config:
                   worker_id: 123
-                  # dsn: root:123456@tcp(dbpack-mysql1:3306)/world?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8
               topology:
                 "0": 0-4
                 "1": 5-9
@@ -68,7 +67,7 @@ app_config:
         capacity: 10
         max_capacity: 20
         idle_timeout: 60s
-        dsn: root:123456@tcp(dbpack-mysql1:3306)/world?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8
+        dsn: root:123456@tcp(dbpack-mysql1:3306)/?timeout=10s&readTimeout=10s&writeTimeout=10s&parseTime=true&loc=Local&charset=utf8mb4,utf8
         ping_interval: 20s
         ping_times_for_change_status: 3
         filters:
@@ -78,7 +77,7 @@ app_config:
         capacity: 10
         max_capacity: 20
         idle_timeout: 60s
-        dsn: root:123456@tcp(dbpack-mysql2:3306)/world?timeout=60s&readTimeout=60s&writeTimeout=60s&parseTime=true&loc=Local&charset=utf8mb4,utf8
+        dsn: root:123456@tcp(dbpack-mysql2:3306)/?timeout=60s&readTimeout=60s&writeTimeout=60s&parseTime=true&loc=Local&charset=utf8mb4,utf8
         ping_interval: 20s
         ping_times_for_change_status: 3
         filters:

@@ -31,12 +31,12 @@ import (
 )
 
 const (
-	DeleteUndoLogByIDSql     = "DELETE FROM undo_log WHERE id = ?"
-	DeleteUndoLogByXIDSql    = "DELETE FROM undo_log WHERE xid = ?"
-	DeleteUndoLogByCreateSql = "DELETE FROM undo_log WHERE log_created <= ? LIMIT ?"
-	InsertUndoLogSql         = `INSERT INTO undo_log (xid, branch_id, context, rollback_info, log_status, log_created,
+	DeleteUndoLogByIDSql     = "DELETE FROM meta.undo_log WHERE id = ?"
+	DeleteUndoLogByXIDSql    = "DELETE FROM meta.undo_log WHERE xid = ?"
+	DeleteUndoLogByCreateSql = "DELETE FROM meta.undo_log WHERE log_created <= ? LIMIT ?"
+	InsertUndoLogSql         = `INSERT INTO meta.undo_log (xid, branch_id, context, rollback_info, log_status, log_created,
 		log_modified) VALUES (?, ?, ?, ?, ?, now(), now())`
-	SelectUndoLogSql = `SELECT branch_id, context, rollback_info, log_status FROM undo_log
+	SelectUndoLogSql = `SELECT branch_id, context, rollback_info, log_status FROM meta.undo_log
        WHERE xid = ? ORDER BY id DESC FOR UPDATE`
 )
 

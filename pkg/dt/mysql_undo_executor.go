@@ -225,7 +225,7 @@ func (executor MysqlUndoExecutor) queryCurrentRecords(tx proto.Tx) (*schema.Tabl
 	pkName := tableMeta.GetPKName()
 
 	pkFields := undoRecords.PKFields()
-	if pkFields == nil || len(pkFields) == 0 {
+	if len(pkFields) == 0 {
 		return nil, nil
 	}
 

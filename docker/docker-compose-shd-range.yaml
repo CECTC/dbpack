@@ -60,4 +60,4 @@ services:
     command: ["./wait-for-mysql.sh","--","/dbpack", "start", "-c", "range_config.yaml"]
 networks:
   local:
-    name: dbpack
+    name: dbpack-network

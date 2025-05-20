@@ -740,20 +740,21 @@ func (conn *BackendConnection) ReadColumnDefinition(field *mysql.Field, index in
 	}
 	field.Decimals = decimals
 
-	//if more Content, command was field list
-	if len(colDef) > pos+8 {
-		//length of default value lenenc-int
-		field.DefaultValueLength, pos, ok = misc.ReadUint64(colDef, pos)
-		if !ok {
-			return err2.NewSQLError(constant.CRMalformedPacket, constant.SSUnknownSQLState, "extracting col %v default value failed", index)
-		}
+	// If we didn't get column length or character set,
+	// we assume the original row on the other side was encoded from
+	// a Field without that data, so we don't return the flags.
+	if field.ColumnLength != 0 || field.CharSet != 0 {
+		field.Flags = uint(flags)
 
-		if pos+int(field.DefaultValueLength) > len(colDef) {
-			return err2.NewSQLError(constant.CRMalformedPacket, constant.SSUnknownSQLState, "extracting col %v default value failed", index)
+		// FIXME(alainjobart): This is something the MySQL
+		// client library does: If the type is numerical, it
+		// adds a NUM_FLAG to the flags.  We're doing it here
+		// only to be compatible with the C library. Once
+		// we're not using that library any more, we'll remove this.
+		// See doc.go.
+		if constant.IsNum(t) {
+			field.Flags |= uint(constant.MySqlFlag_NUM_FLAG)
 		}
-
-		//default value string[$len]
-		field.DefaultValue = colDef[pos:(pos + int(field.DefaultValueLength))]
 	}
 	return nil
 }
