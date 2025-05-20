@@ -114,6 +114,8 @@ func (suite *_CRUDSuite) TestInsertEncryption() {
 			suite.T().Logf("id: %d, dept name: %s", id, deptName)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_CRUDSuite) TestSelect() {
@@ -131,6 +133,8 @@ func (suite *_CRUDSuite) TestSelect() {
 		}
 		suite.Equal("scott", firstName)
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_CRUDSuite) TestUpdate() {
@@ -164,6 +168,8 @@ func (suite *_CRUDSuite) TestUpdateEncryption() {
 			suite.T().Logf("id: %d, dept name: %s", id, deptName)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_CRUDSuite) TestXATransaction() {
@@ -185,6 +191,8 @@ func (suite *_CRUDSuite) TestXATransaction() {
 	assert.Nil(suite.T(), err)
 	_, err = conn.ExecContext(ctx, "XA COMMIT 'abc'")
 	assert.Nil(suite.T(), err)
+	err = conn.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_CRUDSuite) TearDownSuite() {
@@ -195,4 +203,5 @@ func (suite *_CRUDSuite) TearDownSuite() {
 			suite.Equal(int64(1), affected)
 		}
 	}
+	suite.db.Close()
 }

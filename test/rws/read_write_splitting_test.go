@@ -110,6 +110,8 @@ func (suite *_ReadWriteSplittingSuite) TestDelete() {
 		}
 		suite.Equal(0, exists)
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ReadWriteSplittingSuite) TestInsert() {
@@ -134,6 +136,8 @@ func (suite *_ReadWriteSplittingSuite) TestInsert() {
 		}
 		suite.Equal("master", firstName)
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ReadWriteSplittingSuite) TestSelect1() {
@@ -151,6 +155,8 @@ func (suite *_ReadWriteSplittingSuite) TestSelect1() {
 		}
 		suite.Equal("slave", firstName)
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ReadWriteSplittingSuite) TestInsertEncryption() {
@@ -174,6 +180,8 @@ func (suite *_ReadWriteSplittingSuite) TestInsertEncryption() {
 			suite.T().Logf("id: %d, dept name: %s", id, deptName)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ReadWriteSplittingSuite) TestSelect2() {
@@ -191,6 +199,8 @@ func (suite *_ReadWriteSplittingSuite) TestSelect2() {
 		}
 		suite.Equal("master", firstName)
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ReadWriteSplittingSuite) TestUpdate() {
@@ -215,6 +225,8 @@ func (suite *_ReadWriteSplittingSuite) TestUpdate() {
 		}
 		suite.Equal("louis", lastName)
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ReadWriteSplittingSuite) TestUpdateEncryption() {
@@ -238,6 +250,8 @@ func (suite *_ReadWriteSplittingSuite) TestUpdateEncryption() {
 			suite.T().Logf("id: %d, dept name: %s", id, deptName)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ReadWriteSplittingSuite) TestXATransaction() {
@@ -259,7 +273,10 @@ func (suite *_ReadWriteSplittingSuite) TestXATransaction() {
 	assert.Nil(suite.T(), err)
 	_, err = conn.ExecContext(ctx, "XA COMMIT 'abc'")
 	assert.Nil(suite.T(), err)
+	err = conn.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ReadWriteSplittingSuite) TearDownSuite() {
+	suite.db.Close()
 }

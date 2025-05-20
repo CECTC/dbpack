@@ -19,6 +19,7 @@ package sql
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -31,6 +32,7 @@ import (
 	"github.com/cectc/dbpack/pkg/misc"
 	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/tracing"
+	"github.com/cectc/dbpack/third_party/parser/format"
 	"github.com/cectc/dbpack/third_party/pools"
 )
 
@@ -363,7 +365,11 @@ func (db *DB) QueryDirectly(query string) (proto.Result, uint16, error) {
 }
 
 func (db *DB) ExecuteStmt(ctx context.Context, stmt *proto.Stmt) (proto.Result, uint16, error) {
-	query := stmt.StmtNode.Text()
+	var sb strings.Builder
+	if err := stmt.StmtNode.Restore(format.NewRestoreCtx(constant.DBPackRestoreFormat, &sb)); err != nil {
+		return nil, 0, err
+	}
+	query := sb.String()
 	spanCtx, span := tracing.GetTraceSpan(ctx, tracing.DBExecStmt)
 	span.SetAttributes(attribute.KeyValue{Key: "db", Value: attribute.StringValue(db.name)},
 		attribute.KeyValue{Key: "sql", Value: attribute.StringValue(query)})

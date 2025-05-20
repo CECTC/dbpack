@@ -86,6 +86,8 @@ func (suite *_ShardingSuite) TestSelect() {
 				id, name, countryCode, district, population)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestSelectLimit() {
@@ -105,6 +107,8 @@ func (suite *_ShardingSuite) TestSelectLimit() {
 				id, name, countryCode, district, population)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestSelectOrderBy() {
@@ -124,6 +128,8 @@ func (suite *_ShardingSuite) TestSelectOrderBy() {
 				id, name, countryCode, district, population)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestSelectOrderBy2() {
@@ -143,6 +149,8 @@ func (suite *_ShardingSuite) TestSelectOrderBy2() {
 				id, name, countryCode, district, population)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestSelectOrderByAndLimit() {
@@ -162,6 +170,8 @@ func (suite *_ShardingSuite) TestSelectOrderByAndLimit() {
 				id, name, countryCode, district, population)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestSelectOrderByAndLimit2() {
@@ -181,6 +191,8 @@ func (suite *_ShardingSuite) TestSelectOrderByAndLimit2() {
 				id, name, countryCode, district, population)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestSelectJoin1() {
@@ -201,6 +213,8 @@ func (suite *_ShardingSuite) TestSelectJoin1() {
 				id, name, countryCode, district, population, countryName)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestSelectJoin2() {
@@ -221,6 +235,8 @@ func (suite *_ShardingSuite) TestSelectJoin2() {
 				id, name, countryCode, district, population, countryName)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestSelectCount() {
@@ -235,6 +251,8 @@ func (suite *_ShardingSuite) TestSelectCount() {
 			suite.T().Logf("count: %d", count)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestShowDatabases() {
@@ -249,6 +267,8 @@ func (suite *_ShardingSuite) TestShowDatabases() {
 			suite.T().Logf("database: %s", database)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestShowEngines() {
@@ -263,6 +283,8 @@ func (suite *_ShardingSuite) TestShowEngines() {
 			suite.T().Logf("%s	%s	%s	%s	%s	%s", engine, support, comment, transactions, xa, savepoints)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestShowCreateDatabase() {
@@ -289,6 +311,8 @@ func (suite *_ShardingSuite) TestShowCreateDatabase() {
 			suite.T().Logf("%s	%s", database, createDatabase)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestShowTableStatus() {
@@ -326,6 +350,8 @@ func (suite *_ShardingSuite) TestShowTableStatus() {
 				autoIncrement, createTime, updateTime, checkTime, collation, checkSum, createOption, comment)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestShowTables() {
@@ -340,6 +366,8 @@ func (suite *_ShardingSuite) TestShowTables() {
 			suite.T().Logf("%s", table)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestShowTableMeta() {
@@ -371,6 +399,8 @@ func (suite *_ShardingSuite) TestShowTableMeta() {
 				comment, index_comment, visible, expression)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestCreateIndexAndDropIndex() {
@@ -468,6 +498,8 @@ func (suite *_ShardingSuite) TestExprShadow() {
 				id, name, countryCode, district, population)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TestHintShadow() {
@@ -491,7 +523,10 @@ func (suite *_ShardingSuite) TestHintShadow() {
 				id, name, countryCode, district, population)
 		}
 	}
+	err = rows.Close()
+	assert.Nil(suite.T(), err)
 }
 
 func (suite *_ShardingSuite) TearDownSuite() {
+	suite.db.Close()
 }

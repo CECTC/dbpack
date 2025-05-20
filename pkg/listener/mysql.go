@@ -518,7 +518,6 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 		connectionID := proto.ConnectionID(ctx)
 		l.executor.ConnectionClose(proto.WithConnectionID(ctx, connectionID))
 		log.Debugf("connection closed, id: %d", connectionID)
-		return errors.New("ComQuit")
 	case constant.ComInitDB:
 		db := string(data[1:])
 		c.RecycleReadPacket()
@@ -549,8 +548,14 @@ func (l *MysqlListener) ExecuteCommand(ctx context.Context, c *mysql.Conn, data 
 				return nil
 			}
 
-			if showStmt, ok := stmt.(*ast.ShowStmt); ok && showStmt.Tp == ast.ShowTables {
-				showStmt.DBName = c.Database()
+			if showStmt, ok := stmt.(*ast.ShowStmt); ok {
+				switch showStmt.Tp {
+				case ast.ShowTables, ast.ShowTableStatus, ast.ShowColumns, ast.ShowIndex, ast.ShowTriggers:
+					if misc.IsBlank(showStmt.DBName) {
+						showStmt.DBName = c.Database()
+					}
+				default:
+				}
 			}
 
 			if !misc.IsBlank(c.Database()) {

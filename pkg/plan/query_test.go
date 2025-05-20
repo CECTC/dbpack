@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/cectc/dbpack/pkg/cond"
+	"github.com/cectc/dbpack/pkg/proto"
 	"github.com/cectc/dbpack/pkg/topo"
 	"github.com/cectc/dbpack/pkg/visitor"
 	"github.com/cectc/dbpack/third_party/parser"
@@ -43,24 +44,24 @@ func TestQueryOnSingleDBPlan(t *testing.T) {
 			tables:    []string{"student_1", "student_5"},
 			pk:        "id",
 			args:      []interface{}{1, 5},
-			expectedGenerateSql: "SELECT * FROM ((SELECT * FROM `student_1` WHERE `id` IN (?,?)) UNION ALL (SELECT * " +
-				"FROM `student_5` WHERE `id` IN (?,?))) t ORDER BY `t`.`id` ASC",
+			expectedGenerateSql: "SELECT * FROM ((SELECT * FROM `school`.`student_1` WHERE `id` IN (?,?)) UNION ALL " +
+				"(SELECT * FROM `school`.`student_5` WHERE `id` IN (?,?))) t ORDER BY `t`.`id` ASC",
 		},
 		{
 			selectSql: "select * from student where id in (?,?) order by id desc",
 			tables:    []string{"student_1", "student_5"},
 			pk:        "id",
 			args:      []interface{}{1, 5},
-			expectedGenerateSql: "SELECT * FROM ((SELECT * FROM `student_1` WHERE `id` IN (?,?) ORDER BY `id` DESC) " +
-				"UNION ALL (SELECT * FROM `student_5` WHERE `id` IN (?,?) ORDER BY `id` DESC)) t ORDER BY `t`.`id` DESC",
+			expectedGenerateSql: "SELECT * FROM ((SELECT * FROM `school`.`student_1` WHERE `id` IN (?,?) ORDER BY `id` DESC) " +
+				"UNION ALL (SELECT * FROM `school`.`student_5` WHERE `id` IN (?,?) ORDER BY `id` DESC)) t ORDER BY `t`.`id` DESC",
 		},
 		{
 			selectSql: "select * from student where id in (?,?) order by id desc limit ?, ?",
 			tables:    []string{"student_1", "student_5"},
 			pk:        "id",
 			args:      []interface{}{1, 5, 1000, 20},
-			expectedGenerateSql: "SELECT * FROM ((SELECT * FROM `student_1` WHERE `id` IN (?,?) ORDER BY `id` DESC " +
-				"LIMIT 1020) UNION ALL (SELECT * FROM `student_5` WHERE `id` IN (?,?) ORDER BY `id` DESC LIMIT 1020)) t ORDER BY `t`.`id` DESC",
+			expectedGenerateSql: "SELECT * FROM ((SELECT * FROM `school`.`student_1` WHERE `id` IN (?,?) ORDER BY `id` DESC " +
+				"LIMIT 1020) UNION ALL (SELECT * FROM `school`.`student_5` WHERE `id` IN (?,?) ORDER BY `id` DESC LIMIT 1020)) t ORDER BY `t`.`id` DESC",
 		},
 		{
 			selectSql: "select student.id, student.name, city.province from student left join city on city.name = " +
@@ -68,10 +69,10 @@ func TestQueryOnSingleDBPlan(t *testing.T) {
 			tables: []string{"student_1", "student_5"},
 			pk:     "id",
 			args:   []interface{}{1, 5, 1000, 20},
-			expectedGenerateSql: "SELECT * FROM ((SELECT `student_1`.`id`,`student_1`.`name`,`city`.`province` FROM `student_1` " +
+			expectedGenerateSql: "SELECT * FROM ((SELECT `student_1`.`id`,`student_1`.`name`,`city`.`province` FROM `school`.`student_1` " +
 				"LEFT JOIN `city` ON `city`.`name`=`student_1`.`native_place` WHERE `student_1`.`id` IN (?,?) " +
 				"ORDER BY `student_1`.`id` DESC LIMIT 1020) UNION ALL (SELECT `student_5`.`id`,`student_5`.`name`,`city`.`province` " +
-				"FROM `student_5` LEFT JOIN `city` ON `city`.`name`=`student_5`.`native_place` WHERE `student_5`.`id` IN (?,?) " +
+				"FROM `school`.`student_5` LEFT JOIN `city` ON `city`.`name`=`student_5`.`native_place` WHERE `student_5`.`id` IN (?,?) " +
 				"ORDER BY `student_5`.`id` DESC LIMIT 1020)) t ORDER BY `t`.`id` DESC",
 		},
 		{
@@ -80,9 +81,9 @@ func TestQueryOnSingleDBPlan(t *testing.T) {
 			tables: []string{"student_1", "student_5"},
 			pk:     "id",
 			args:   []interface{}{1, 5, 1000, 20},
-			expectedGenerateSql: "SELECT * FROM ((SELECT `s`.`id`,`s`.`name`,`city`.`province` FROM `student_1` AS `s` " +
+			expectedGenerateSql: "SELECT * FROM ((SELECT `s`.`id`,`s`.`name`,`city`.`province` FROM `school`.`student_1` AS `s` " +
 				"LEFT JOIN `city` ON `city`.`name`=`s`.`native_place` WHERE `s`.`id` IN (?,?) ORDER BY `s`.`id` DESC LIMIT 1020) " +
-				"UNION ALL (SELECT `s`.`id`,`s`.`name`,`city`.`province` FROM `student_5` AS `s` LEFT JOIN `city` " +
+				"UNION ALL (SELECT `s`.`id`,`s`.`name`,`city`.`province` FROM `school`.`student_5` AS `s` LEFT JOIN `city` " +
 				"ON `city`.`name`=`s`.`native_place` WHERE `s`.`id` IN (?,?) ORDER BY `s`.`id` DESC LIMIT 1020)) t ORDER BY `t`.`id` DESC",
 		},
 		{
@@ -91,10 +92,10 @@ func TestQueryOnSingleDBPlan(t *testing.T) {
 			tables: []string{"student_1", "student_5"},
 			pk:     "id",
 			args:   []interface{}{1, 5, 1000, 20},
-			expectedGenerateSql: "SELECT * FROM ((SELECT `student_1`.`id`,`student_1`.`name`,`exam_1`.`grade` FROM `student_1` " +
-				"LEFT JOIN `exam_1` ON `exam_1`.`student_id`=`student_1`.`id` WHERE `student_1`.`id` IN (?,?) " +
+			expectedGenerateSql: "SELECT * FROM ((SELECT `student_1`.`id`,`student_1`.`name`,`exam_1`.`grade` FROM `school`.`student_1` " +
+				"LEFT JOIN `school`.`exam_1` ON `exam_1`.`student_id`=`student_1`.`id` WHERE `student_1`.`id` IN (?,?) " +
 				"ORDER BY `student_1`.`id` DESC LIMIT 1020) UNION ALL (SELECT `student_5`.`id`,`student_5`.`name`,`exam_5`.`grade` " +
-				"FROM `student_5` LEFT JOIN `exam_5` ON `exam_5`.`student_id`=`student_5`.`id` WHERE `student_5`.`id` IN (?,?) " +
+				"FROM `school`.`student_5` LEFT JOIN `school`.`exam_5` ON `exam_5`.`student_id`=`student_5`.`id` WHERE `student_5`.`id` IN (?,?) " +
 				"ORDER BY `student_5`.`id` DESC LIMIT 1020)) t ORDER BY `t`.`id` DESC",
 		},
 		{
@@ -103,9 +104,9 @@ func TestQueryOnSingleDBPlan(t *testing.T) {
 			tables: []string{"student_1", "student_5"},
 			pk:     "id",
 			args:   []interface{}{1, 5, 1000, 20},
-			expectedGenerateSql: "SELECT * FROM ((SELECT `s`.`id`,`s`.`name`,`e`.`grade` FROM `student_1` AS `s` " +
-				"LEFT JOIN `exam_1` AS `e` ON `e`.`student_id`=`s`.`id` WHERE `s`.`id` IN (?,?) ORDER BY `s`.`id` DESC LIMIT 1020) " +
-				"UNION ALL (SELECT `s`.`id`,`s`.`name`,`e`.`grade` FROM `student_5` AS `s` LEFT JOIN `exam_5` AS `e` " +
+			expectedGenerateSql: "SELECT * FROM ((SELECT `s`.`id`,`s`.`name`,`e`.`grade` FROM `school`.`student_1` AS `s` " +
+				"LEFT JOIN `school`.`exam_1` AS `e` ON `e`.`student_id`=`s`.`id` WHERE `s`.`id` IN (?,?) ORDER BY `s`.`id` DESC LIMIT 1020) " +
+				"UNION ALL (SELECT `s`.`id`,`s`.`name`,`e`.`grade` FROM `school`.`student_5` AS `s` LEFT JOIN `school`.`exam_5` AS `e` " +
 				"ON `e`.`student_id`=`s`.`id` WHERE `s`.`id` IN (?,?) ORDER BY `s`.`id` DESC LIMIT 1020)) t ORDER BY `t`.`id` DESC",
 		},
 	}
@@ -137,7 +138,8 @@ func TestQueryOnSingleDBPlan(t *testing.T) {
 				args []interface{}
 			)
 			plan.castLimit()
-			err = plan.generate(context.Background(), &sb, &args)
+			ctx := proto.WithSchema(context.Background(), "school")
+			err = plan.generate(ctx, &sb, &args)
 			assert.Nil(t, err)
 			assert.Equal(t, c.expectedGenerateSql, sb.String())
 		})

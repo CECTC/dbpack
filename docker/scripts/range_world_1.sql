@@ -2966,6 +2966,10 @@ COMMIT;
 
 SET FOREIGN_KEY_CHECKS = 1;
 
+DROP DATABASE IF EXISTS meta;
+CREATE DATABASE IF NOT EXISTS meta;
+USE meta;
+
 CREATE TABLE `undo_log` (
                             `id` bigint NOT NULL AUTO_INCREMENT,
                             `branch_id` bigint NOT NULL,

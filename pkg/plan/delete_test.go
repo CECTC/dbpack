@@ -37,15 +37,15 @@ func TestDeleteOnSingleDBPlan(t *testing.T) {
 			deleteSql: "delete from student where id in (?,?)",
 			tables:    []string{"student_1", "student_5"},
 			expectedGenerateSqls: []string{
-				"DELETE FROM student_1 WHERE `id` IN (?,?)",
-				"DELETE FROM student_5 WHERE `id` IN (?,?)",
+				"DELETE FROM school.student_1 WHERE `id` IN (?,?)",
+				"DELETE FROM school.student_5 WHERE `id` IN (?,?)",
 			},
 		},
 		{
 			deleteSql: "delete from student where id = 9",
 			tables:    []string{"student_9"},
 			expectedGenerateSqls: []string{
-				"DELETE FROM student_9 WHERE `id`=9",
+				"DELETE FROM school.student_9 WHERE `id`=9",
 			},
 		},
 	}
@@ -68,7 +68,7 @@ func TestDeleteOnSingleDBPlan(t *testing.T) {
 			}
 			for i, table := range plan.Tables {
 				var sb strings.Builder
-				err := plan.generate(&sb, table)
+				err := plan.generate(&sb, "school", table)
 				assert.Nil(t, err)
 				assert.Equal(t, c.expectedGenerateSqls[i], sb.String())
 			}
