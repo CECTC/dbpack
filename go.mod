@@ -44,9 +44,8 @@ require (
 	go.uber.org/goleak v1.1.12
 	go.uber.org/ratelimit v0.2.1-0.20220713224938-b62b799bc9a5
 	go.uber.org/zap v1.21.0
-	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6
-	golang.org/x/net v0.25.0
-	golang.org/x/text v0.21.0
+	golang.org/x/net v0.40.0
+	golang.org/x/text v0.25.0
 	google.golang.org/grpc v1.56.3
 	gopkg.in/yaml.v3 v3.0.0
 	k8s.io/client-go v0.23.5
@@ -88,7 +87,8 @@ require (
 	github.com/ugorji/go/codec v1.1.7 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
-	golang.org/x/crypto v0.31.0 // indirect
+	golang.org/x/crypto v0.38.0 // indirect
+	golang.org/x/tools v0.33.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
@@ -148,7 +148,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.9.0
 	go.uber.org/multierr v1.7.0 // indirect
 	golang.org/x/sync v0.14.0
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	google.golang.org/protobuf v1.30.0
